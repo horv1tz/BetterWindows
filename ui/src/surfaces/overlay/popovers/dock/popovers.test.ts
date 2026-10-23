@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // vitest resolves `svelte` to its SSR entry (vite.config.ts has no `browser` condition): use the client build so mount() works in jsdom.
-// @ts-expect-error untyped deep import (bypasses the package exports map on purpose)
 vi.mock('svelte', () => import('../../../../../node_modules/svelte/src/index-client.js'));
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
