@@ -342,7 +342,7 @@ public sealed class CoreAudioEndpoint : IAudioEndpoint, IDisposable
         public void OnDeviceAdded(string pwstrDeviceId) => Schedule();
         public void OnDeviceRemoved(string deviceId) => Schedule();
         public void OnDefaultDeviceChanged(DataFlow flow, Role role, string defaultDeviceId) => Schedule();
-        public void OnPropertyValueChanged(string pwstrDeviceId, PropertyKey key) { }
+        public void OnPropertyValueChanged(string pwstrDeviceId, NAudio.CoreAudioApi.PropertyKey key) { }
 
         private void Schedule()
         {
