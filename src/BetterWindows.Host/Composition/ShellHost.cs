@@ -34,7 +34,7 @@ public sealed class ShellHost : IDisposable
     public static readonly TimeSpan SmokeTimeout = TimeSpan.FromSeconds(40);
     /// <summary>How long Explorer's taskbar may take to appear for <c>--autostart</c>.</summary>
     public static readonly TimeSpan ExplorerWait = TimeSpan.FromSeconds(30);
-    /// <summary>Explorer may restart; the Windows layer then re-attaches. This is only the wait for the first taskbar.</summary>
+    /// <summary>Evergreen runtime download page shown when the runtime is missing.</summary>
     private const string WebView2RuntimeUrl = "https://developer.microsoft.com/microsoft-edge/webview2/";
 
 #if DEBUG
@@ -73,9 +73,6 @@ public sealed class ShellHost : IDisposable
         _smoke = cli.Mode == LaunchMode.Smoke;
         _log = new LoggerFactory().AddSerilog(serilog).CreateLogger<ShellHost>();
     }
-
-    /// <summary>The Win32 application runs in this process: some of the work is done by the shell only.</summary>
-    public bool IsSmoke => _smoke;
 
     /// <summary>Runs the startup sequence. Returns an exit code when the process must end right away; null when the shell is running.</summary>
     public int? Start()
@@ -197,7 +194,7 @@ public sealed class ShellHost : IDisposable
     /// <summary>The Host's own steps of the ordered shutdown (docs/IPC.md section 13, rule 7). Built lazily, so the list reflects what exists at shutdown time.</summary>
     private IReadOnlyList<ShutdownStep> BuildShutdownSteps(bool restart)
     {
-        // Captured now: the steps run later on the UI thread and must not re-read fields that a failed startup may have left null.
+        // Captured when the plan is built (at shutdown time): the steps then use exactly the objects that exist, not whatever the fields hold later.
         var surfaces = _surfaces;
         var runtime = _runtime;
         var provider = _provider;
@@ -206,20 +203,17 @@ public sealed class ShellHost : IDisposable
         var startup = _startup;
         var instance = _instance;
         var shutdown = _shutdown;
-        var steps = new List<ShutdownStep>
-        {
-            new("surfaces", () => surfaces?.Stop()),
-            new("controllers", () => runtime?.Stop()),
-            new("taskbar", () => provider?.GetService<ITaskbarController>()?.Restore()),
-            new("desktop icons", () => provider?.GetService<IDesktopIconsController>()?.Restore()),
-            new("tray", () => tray?.Dispose()),
-            new("webview", () => bridge?.Dispose()),
-            new("startup state", () => startup?.MarkCleanExit()),
-            new("single instance", () => instance?.Dispose()),
-        };
-        if (restart && !_smoke) steps.Add(new("relaunch", Relaunch));
-        steps.Add(new("application", () => _exitApp(shutdown?.ExitCode ?? ExitCodes.Ok)));
-        return steps;
+        return ShutdownPlan.Build(new ShutdownActions(
+            StopSurfaces: () => surfaces?.Stop(),
+            StopControllers: () => runtime?.Stop(),
+            RestoreTaskbar: () => provider?.GetService<ITaskbarController>()?.Restore(),
+            RestoreDesktopIcons: () => provider?.GetService<IDesktopIconsController>()?.Restore(),
+            DisposeTray: () => tray?.Dispose(),
+            DisposeWebView: () => bridge?.Dispose(),
+            MarkCleanExit: () => startup?.MarkCleanExit(),
+            ReleaseInstance: () => instance?.Dispose(),
+            Relaunch: Relaunch,
+            ExitApplication: () => _exitApp(shutdown?.ExitCode ?? ExitCodes.Ok)), relaunch: restart && !_smoke);
     }
 
     /// <summary>Starts a fresh process after the mutex was released (this instance has already disposed it).</summary>
