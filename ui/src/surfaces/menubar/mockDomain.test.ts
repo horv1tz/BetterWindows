@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MockBridge } from '../mockBridge';
-import { getMockHost, resetMockHost } from '../host';
-import { appByName } from '../fixtures';
+// Lives here, not next to the domain: mock/host.ts globs ./domains/*.ts (test files included) and would execute it inside every other test file.
+import { MockBridge } from '$mock/mockBridge';
+import { getMockHost, resetMockHost } from '$mock/host';
+import { appByName } from '$mock/fixtures';
 
 vi.spyOn(console, 'info').mockImplementation(() => {});
 
