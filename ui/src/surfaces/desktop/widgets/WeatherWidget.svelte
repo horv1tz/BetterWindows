@@ -77,6 +77,7 @@
       <div class="now">
         <div class="place"><MapPin size={12} strokeWidth={2.4} />{snap.location}</div>
         <div class="temp">{formatTemp(snap.tempC, unit)}</div>
+        {#if size === 'medium'}<div class="feels">{t('weather.feelsLike', { t: formatTemp(snap.apparentC, unit) })}</div>{/if}
         {#if size === 'small'}
           <div class="cond"><Icon size={15} strokeWidth={2} /><span>{t(desc.labelKey)}</span></div>
           {#if today}<div class="range">{t('weather.high', { t: formatTemp(today.highC, unit) })} · {t('weather.low', { t: formatTemp(today.lowC, unit) })}</div>{/if}
@@ -86,7 +87,6 @@
         <div class="right">
           <div class="hero-icon" aria-hidden="true"><Icon size={size === 'large' ? 52 : 40} strokeWidth={1.5} /></div>
           <div class="cond"><span>{t(desc.labelKey)}</span></div>
-          {#if size === 'medium'}<div class="feels">{t('weather.feelsLike', { t: formatTemp(snap.apparentC, unit) })}</div>{/if}
           {#if today}<div class="range">{t('weather.high', { t: formatTemp(today.highC, unit) })} · {t('weather.low', { t: formatTemp(today.lowC, unit) })}</div>{/if}
         </div>
       {/if}
