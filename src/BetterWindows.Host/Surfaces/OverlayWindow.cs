@@ -27,6 +27,7 @@ internal sealed class OverlayWindow : SurfaceWindowBase
         if (IsShutdown) return;
         Monitor = monitor;
         ContentHidden = false;
+        InvalidateZOrder(); // re-assert the topmost band on every show: a hidden window may have lost it
         PlaceWithDpiFix(_ => MonitorGeometry.BoundsPx(monitor));
         try
         {

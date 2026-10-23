@@ -589,6 +589,8 @@ public sealed class SurfaceManager : ISurfaceManager, ISurfaceHost, IDisposable
             MonitorId = monitor.Id,
             Token = token,
         });
+        // The foreground lock can refuse the activation without any deactivation event: check it once the window settled (same policy as a deactivation).
+        if (!_overlay.IsForeground) ScheduleOverlayCheck();
     }
 
     private void HideOverlayCore(bool raiseHidden)
@@ -618,7 +620,13 @@ public sealed class SurfaceManager : ISurfaceManager, ISurfaceHost, IDisposable
     private void OnOverlayActivationChanged(SurfaceWindowBase _, bool active)
     {
         if (active || _stopped) return;
-        // Debounce: focus moving to the WebView child reports a deactivation that is undone right away.
+        ScheduleOverlayCheck();
+    }
+
+    /// <summary>One deferred look at the overlay's activation (debounced by 100 ms: focus moving to the WebView child reports a deactivation that is undone at once).</summary>
+    private void ScheduleOverlayCheck()
+    {
+        if (_stopped) return;
         _deactivationTimer ??= _clock.CreateTimer(_ => RunOnUi(EvaluateOverlayDeactivation), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _deactivationTimer.Change(OverlayActivationPolicy.Debounce, Timeout.InfiniteTimeSpan);
     }
@@ -634,6 +642,7 @@ public sealed class SurfaceManager : ISurfaceManager, ISurfaceHost, IDisposable
             case DeactivationDecision.RetryActivation:
                 _retries++;
                 _overlay.Reactivate();
+                ScheduleOverlayCheck(); // keep retrying within the grace period (bounded by MaxActivationRetries)
                 return;
             default:
                 HideOverlayCore(raiseHidden: true);

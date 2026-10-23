@@ -17,7 +17,8 @@ internal sealed class MenuBarWindow : SurfaceWindowBase
     private (NativeRect Bounds, int Thickness)? _docked;
     private int _offsetPx;
     private bool _revealed = true;
-    private bool _revealing = true;
+    private int _slideFrom;
+    private int _slideTo;
     private readonly TimeProvider _clock;
     private long _slideStart;
     private ITimer? _slideTimer;
@@ -78,7 +79,8 @@ internal sealed class MenuBarWindow : SurfaceWindowBase
             Reposition();
             return;
         }
-        _revealing = revealed;
+        _slideFrom = _offsetPx;
+        _slideTo = revealed ? 0 : MenuBarPlacement.HeightPx(Scale);
         _slideStart = _clock.GetTimestamp();
         _sliding = true;
         _slideTimer ??= _clock.CreateTimer(_ => OnSlideTimer(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
@@ -97,7 +99,7 @@ internal sealed class MenuBarWindow : SurfaceWindowBase
         if (!_sliding || IsShutdown) return;
         var elapsed = _clock.GetElapsedTime(_slideStart);
         var p = SlideAnimation.Progress(elapsed, SlideAnimation.Duration);
-        _offsetPx = SlideAnimation.OffsetPx(p, MenuBarPlacement.HeightPx(Scale), _revealing);
+        _offsetPx = SlideAnimation.Between(_slideFrom, _slideTo, p);
         Reposition();
         if (p >= 1.0) StopSlide();
     }

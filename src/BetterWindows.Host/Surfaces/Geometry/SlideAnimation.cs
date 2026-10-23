@@ -19,12 +19,14 @@ internal static class SlideAnimation
         return 1.0 - inv * inv * inv;
     }
 
-    /// <summary>How many px the bar is shifted up: 0 = fully shown, <paramref name="heightPx"/> = fully hidden. <paramref name="revealing"/> runs the animation backwards.</summary>
-    public static int OffsetPx(double progress, int heightPx, bool revealing)
+    /// <summary>
+    /// Offset (px the bar is shifted up) at <paramref name="progress"/> of a slide from <paramref name="fromPx"/> to <paramref name="toPx"/>. Interpolating from the
+    /// CURRENT offset means reversing a half-finished slide continues smoothly instead of jumping to the other end.
+    /// </summary>
+    public static int Between(int fromPx, int toPx, double progress)
     {
-        var p = Math.Clamp(progress, 0.0, 1.0);
-        var shown = revealing ? p : 1.0 - p;
-        return (int)Math.Round((1.0 - shown) * Math.Max(0, heightPx), MidpointRounding.AwayFromZero);
+        var p = Math.Clamp(double.IsFinite(progress) ? progress : 1.0, 0.0, 1.0);
+        return (int)Math.Round(fromPx + (toPx - fromPx) * p, MidpointRounding.AwayFromZero);
     }
 
     /// <summary>
