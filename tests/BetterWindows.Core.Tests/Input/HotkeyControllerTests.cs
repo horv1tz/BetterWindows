@@ -19,6 +19,10 @@ public class HotkeyControllerTests
         more?.Invoke(sc);
     });
 
+    /// <summary>The status report for an id has been published (it follows the registrar call, so tests wait for it too).</summary>
+    private static bool Reported(CoreHarness h, string id, bool registered, string? gesture = null) =>
+        h.Get<IHotkeyStatus>().Items.Any(i => i.Id == id && i.Registered == registered && (gesture is null || i.Gesture == gesture));
+
     private static HotkeyGesture G(string text) => HotkeyParser.Parse(text);
 
     // ---- registration ----
@@ -175,7 +179,7 @@ public class HotkeyControllerTests
         var before = reg.Snapshot().Length;
 
         h.Settings().Set(s => s with { Hotkeys = s.Hotkeys with { Launchpad = "Ctrl+Alt+K" } });
-        await Kit.Eventually(() => reg.Registered.TryGetValue("launchpad", out var g) && g == G("Ctrl+Alt+K"));
+        await Kit.Eventually(() => reg.Registered.TryGetValue("launchpad", out var g) && g == G("Ctrl+Alt+K") && Reported(h, "launchpad", true, "Ctrl+Alt+K"));
 
         var after = reg.Snapshot().Skip(before).ToArray();
         after.Should().Equal("unregister:launchpad", $"register:launchpad:{HotkeyGesture.Control | HotkeyGesture.Alt}:{(uint)'K'}");
@@ -191,7 +195,8 @@ public class HotkeyControllerTests
         var before = reg.Snapshot().Length;
 
         h.Settings().Set(s => s with { Hotkeys = s.Hotkeys with { Launchpad = "Ctrl+Alt+M", MissionControl = "Ctrl+Alt+L" } });
-        await Kit.Eventually(() => reg.Registered["launchpad"] == G("Ctrl+Alt+M") && reg.Registered["missionControl"] == G("Ctrl+Alt+L"));
+        await Kit.Eventually(() => reg.Registered.GetValueOrDefault("launchpad") == G("Ctrl+Alt+M") && reg.Registered.GetValueOrDefault("missionControl") == G("Ctrl+Alt+L")
+            && Reported(h, "launchpad", true, "Ctrl+Alt+M") && Reported(h, "missionControl", true, "Ctrl+Alt+L"));
 
         var log = reg.Snapshot().Skip(before).ToArray();
         log.Take(2).Should().OnlyContain(l => l.StartsWith("unregister:"));
@@ -224,9 +229,11 @@ public class HotkeyControllerTests
         var reg = h.Get<RecordingHotkeyRegistrar>();
 
         h.Settings().Set(s => s with { Hotkeys = s.Hotkeys with { MissionControl = "" } });
-        await Kit.Eventually(() => !reg.Registered.ContainsKey("missionControl"));
+        var status = h.Get<IHotkeyStatus>();
+        // Unregistration happens first, the status is cleared in the same pass: wait for both, not just the first.
+        await Kit.Eventually(() => !reg.Registered.ContainsKey("missionControl") && status.Items.All(i => i.Id != "missionControl"));
 
-        h.Get<IHotkeyStatus>().Items.Should().NotContain(i => i.Id == "missionControl");
+        status.Items.Should().NotContain(i => i.Id == "missionControl");
         reg.Registered.Should().HaveCount(4);
     }
 
@@ -238,7 +245,7 @@ public class HotkeyControllerTests
         var reg = h.Get<RecordingHotkeyRegistrar>();
 
         h.Settings().Set(s => s with { Hotkeys = s.Hotkeys with { MissionControl = "garbage" } });
-        await Kit.Eventually(() => !reg.Registered.ContainsKey("missionControl"));
+        await Kit.Eventually(() => !reg.Registered.ContainsKey("missionControl") && Reported(h, "missionControl", false));
 
         var item = h.Get<IHotkeyStatus>().Items.Single(i => i.Id == "missionControl");
         item.Registered.Should().BeFalse();
@@ -255,7 +262,7 @@ public class HotkeyControllerTests
 
         reg.Taken.Clear();                                                  // the other app let go
         h.Settings().Set(s => s with { Dock = s.Dock with { IconSize = 80 } });
-        await Kit.Eventually(() => reg.Registered.ContainsKey("spotlight"));
+        await Kit.Eventually(() => reg.Registered.ContainsKey("spotlight") && Reported(h, "spotlight", true));
 
         h.Get<IHotkeyStatus>().Items.Single(i => i.Id == "spotlight").Registered.Should().BeTrue();
     }
