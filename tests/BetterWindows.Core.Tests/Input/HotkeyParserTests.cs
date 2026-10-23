@@ -42,13 +42,10 @@ public class HotkeyParserTests
     }
 
     [Theory]
-    [InlineData("Cmd+Space")]
-    [InlineData("Command+Space")]
     [InlineData("Win+Space")]
-    [InlineData("Windows+Space")]
     [InlineData("Super+Space")]
     [InlineData("super+space")]
-    public void Win_has_aliases_including_Cmd(string text)
+    public void Win_is_spelled_Win_or_Super(string text)
     {
         HotkeyParser.TryParse(text, out var g).Should().BeTrue();
         g.Should().Be(new HotkeyGesture(Win, 0x20));
@@ -138,31 +135,31 @@ public class HotkeyParserTests
     }
 
     [Theory]
-    [InlineData("Ctrl+Escape", 0x1Bu)]
-    [InlineData("Ctrl+Return", 0x0Du)]
-    [InlineData("Ctrl+Del", 0x2Eu)]
-    [InlineData("Ctrl+Ins", 0x2Du)]
-    [InlineData("Ctrl+PgUp", 0x21u)]
-    [InlineData("Ctrl+PgDn", 0x22u)]
-    [InlineData("Ctrl+Spacebar", 0x20u)]
-    [InlineData("Ctrl+Page Up", 0x21u)]
-    [InlineData("Ctrl+Left Bracket", 0xDBu)]
-    [InlineData("Ctrl+,", 0xBCu)]
-    [InlineData("Ctrl+.", 0xBEu)]
-    [InlineData("Ctrl+/", 0xBFu)]
-    [InlineData("Ctrl+\\", 0xDCu)]
-    [InlineData("Ctrl+;", 0xBAu)]
-    [InlineData("Ctrl+'", 0xDEu)]
-    [InlineData("Ctrl+-", 0xBDu)]
-    [InlineData("Ctrl+=", 0xBBu)]
-    [InlineData("Ctrl+`", 0xC0u)]
-    [InlineData("Ctrl+[", 0xDBu)]
-    [InlineData("Ctrl+]", 0xDDu)]
-    public void Tolerated_key_spellings(string text, uint vk)
-    {
-        HotkeyParser.TryParse(text, out var g).Should().BeTrue();
-        g.Should().Be(new HotkeyGesture(Ctrl, vk));
-    }
+    [InlineData("Ctrl+Escape")]
+    [InlineData("Ctrl+Return")]
+    [InlineData("Ctrl+Del")]
+    [InlineData("Ctrl+Ins")]
+    [InlineData("Ctrl+PgUp")]
+    [InlineData("Ctrl+PgDn")]
+    [InlineData("Ctrl+Spacebar")]
+    [InlineData("Ctrl+Grave")]
+    [InlineData("Ctrl+Page Up")]
+    [InlineData("Ctrl+Left Bracket")]
+    [InlineData("Ctrl+,")]
+    [InlineData("Ctrl+.")]
+    [InlineData("Ctrl+/")]
+    [InlineData("Ctrl+\\")]
+    [InlineData("Ctrl+;")]
+    [InlineData("Ctrl+'")]
+    [InlineData("Ctrl+-")]
+    [InlineData("Ctrl+=")]
+    [InlineData("Ctrl+`")]
+    [InlineData("Ctrl+[")]
+    [InlineData("Ctrl+]")]
+    [InlineData("Cmd+Q")]
+    [InlineData("Command+Q")]
+    [InlineData("Windows+Q")]
+    public void Spellings_outside_the_documented_grammar_are_rejected(string text) => HotkeyParser.TryParse(text, out _).Should().BeFalse();
 
     [Theory]
     [InlineData(null)]
@@ -187,8 +184,8 @@ public class HotkeyParserTests
     [Theory]
     [InlineData("Ctrl+Ctrl+Q")]
     [InlineData("Ctrl+Control+Q")]
-    [InlineData("Win+Cmd+E")]
     [InlineData("Win+Super+E")]
+    [InlineData("Win+Win+E")]
     [InlineData("Alt+Alt+X")]
     [InlineData("shift+SHIFT+x")]
     public void Duplicate_modifiers_are_rejected_even_through_aliases(string text) => HotkeyParser.TryParse(text, out _).Should().BeFalse();
@@ -297,11 +294,10 @@ public class HotkeyParserTests
     [Theory]
     [InlineData("win+shift+ctrl+alt+x", "Ctrl+Alt+Shift+Win+X")]
     [InlineData("  control + q  ", "Ctrl+Q")]
-    [InlineData("cmd+space", "Win+Space")]
-    [InlineData("ctrl+Page Up", "Ctrl+PageUp")]
+    [InlineData("super+space", "Win+Space")]
     [InlineData("alt+esc", "Alt+Esc")]
     [InlineData("f4", "F4")]
-    [InlineData("ctrl+,", "Ctrl+Comma")]
+    [InlineData("ctrl+pageup", "Ctrl+PageUp")]
     public void TryNormalize_returns_the_canonical_spelling(string input, string expected)
     {
         HotkeyParser.TryNormalize(input, out var canonical).Should().BeTrue();

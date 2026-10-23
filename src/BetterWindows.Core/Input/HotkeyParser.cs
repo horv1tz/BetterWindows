@@ -4,10 +4,11 @@ namespace BetterWindows.Core.Input;
 
 /// <summary>
 /// Parses and formats hotkey strings such as "Ctrl+Alt+Q", "Alt+Space", "Win+Shift+S", "F4" (docs/IPC.md section 8.1). Pure and culture-independent.
-/// <para>Grammar: <c>Mod+Mod+Key</c>. Modifiers: Ctrl/Control, Alt, Shift, Win/Windows/Super/Cmd/Command (case-insensitive, any order, spaces around '+' tolerated).
-/// Keys: A-Z, 0-9, F1-F24, Space, Enter, Tab, Esc, Backspace, Delete, Insert, Home, End, PageUp, PageDown, Up/Down/Left/Right, punctuation by name
+/// <para>Grammar (docs/IPC.md 8.1, mirrored exactly by the settings UI): <c>Mod+Mod+Key</c>. Modifiers: Ctrl/Control, Alt, Shift, Win/Super (case-insensitive, any order).
+/// Keys (case-insensitive): A-Z, 0-9, F1-F24, Space, Enter, Tab, Esc, Backspace, Delete, Insert, Home, End, PageUp, PageDown, Up/Down/Left/Right, punctuation by name
 /// (Backtick, Minus, Equals, LeftBracket, RightBracket, Backslash, Semicolon, Quote, Comma, Period, Slash) and Num0-Num9. At least one modifier is required unless the key is F1-F24.
-/// Rejected: empty input, modifier-only, duplicate modifiers (also through aliases), more than one key, unknown keys, input longer than 64 characters.</para>
+/// Whitespace around each token is trimmed; whitespace inside a token is an error ("Page Up" is not "PageUp"). No other aliases exist: "Cmd", "Windows", "Escape", "Del", "," etc. are rejected.
+/// Rejected: empty input, modifier-only, duplicate modifiers, more than one key, unknown keys, input longer than 64 characters.</para>
 /// <para>Modifiers use the Win32 MOD_* values, the key is a Win32 virtual-key code, so a <see cref="HotkeyGesture"/> goes straight into RegisterHotKey.
 /// Canonical output order is <c>Ctrl+Alt+Shift+Win+Key</c>.</para>
 /// </summary>
@@ -27,10 +28,7 @@ public static class HotkeyParser
         ["alt"] = HotkeyGesture.Alt,
         ["shift"] = HotkeyGesture.Shift,
         ["win"] = HotkeyGesture.Win,
-        ["windows"] = HotkeyGesture.Win,
         ["super"] = HotkeyGesture.Win,
-        ["cmd"] = HotkeyGesture.Win,
-        ["command"] = HotkeyGesture.Win,
     };
 
     /// <summary>Canonical key names (VK_* codes). Letters, digits, F-keys and Num-keys are added programmatically.</summary>
@@ -41,15 +39,6 @@ public static class HotkeyParser
         ("Left", 0x25), ("Up", 0x26), ("Right", 0x27), ("Down", 0x28),
         ("Comma", 0xBC), ("Period", 0xBE), ("Slash", 0xBF), ("Backslash", 0xDC), ("Semicolon", 0xBA), ("Quote", 0xDE),
         ("Minus", 0xBD), ("Equals", 0xBB), ("Backtick", 0xC0), ("LeftBracket", 0xDB), ("RightBracket", 0xDD),
-    };
-
-    /// <summary>Tolerated spellings that map to a canonical key name.</summary>
-    private static readonly (string Alias, string Canonical)[] KeyAliases =
-    {
-        ("Escape", "Esc"), ("Return", "Enter"), ("Del", "Delete"), ("Ins", "Insert"), ("PgUp", "PageUp"), ("PgDn", "PageDown"),
-        ("Spacebar", "Space"), ("Grave", "Backtick"),
-        (",", "Comma"), (".", "Period"), ("/", "Slash"), ("\\", "Backslash"), (";", "Semicolon"), ("'", "Quote"),
-        ("-", "Minus"), ("=", "Equals"), ("`", "Backtick"), ("[", "LeftBracket"), ("]", "RightBracket"),
     };
 
     private static readonly Dictionary<string, uint> KeyByName = new(StringComparer.OrdinalIgnoreCase);
@@ -63,7 +52,6 @@ public static class HotkeyParser
         for (var i = 1; i <= 24; i++) Add("F" + i, (uint)(0x70 + i - 1));
         for (var i = 0; i <= 9; i++) Add("Num" + i, (uint)(0x60 + i));
         foreach (var (name, vk) in NamedKeys) Add(name, vk);
-        foreach (var (alias, canonical) in KeyAliases) KeyByName[alias] = KeyByName[canonical];
     }
 
     /// <summary>Parses a hotkey string; false (and a default gesture) for anything the grammar rejects, including null/empty.</summary>
@@ -76,7 +64,7 @@ public static class HotkeyParser
         uint? key = null;
         foreach (var raw in text.Split('+'))
         {
-            var part = Compact(raw);
+            var part = raw.Trim();
             if (part.Length == 0) return false; // "Ctrl++Q", "+Q", "Q+"
             if (Modifiers.TryGetValue(part, out var mod))
             {
@@ -135,15 +123,4 @@ public static class HotkeyParser
     }
 
     private static bool IsFunctionKey(uint vk) => vk is >= 0x70 and <= 0x87;
-
-    /// <summary>Removes all whitespace so "Page Up" and " ctrl " match; whitespace never separates tokens.</summary>
-    private static string Compact(string s)
-    {
-        var any = false;
-        foreach (var c in s) if (char.IsWhiteSpace(c)) { any = true; break; }
-        if (!any) return s;
-        var sb = new System.Text.StringBuilder(s.Length);
-        foreach (var c in s) if (!char.IsWhiteSpace(c)) sb.Append(c);
-        return sb.ToString();
-    }
 }
