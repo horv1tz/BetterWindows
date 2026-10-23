@@ -181,7 +181,8 @@ describe('AppleMenu: confirmation sheet', () => {
     await click(button('Restart'));
     await vi.waitFor(() => expect(document.querySelector('[role="alert"]')?.textContent).toContain("didn't work"));
     expect(onclose).not.toHaveBeenCalled();
-    expect(button('Restart').disabled).toBe(false);
+    expect(button('Restart').getAttribute('aria-disabled')).toBe('false');
+    expect(document.activeElement).toBe(button('Cancel')); // focus returns to the safe button after a failed attempt
     spy('system.power');
     await click(button('Restart'));
     await vi.waitFor(() => expect(onclose).toHaveBeenCalled());
@@ -204,7 +205,7 @@ describe('AppleMenu: confirmation sheet', () => {
     confirm.click(); confirm.click();
     flushSync(); await tick();
     await vi.waitFor(() => expect(called('system.power')).toHaveLength(1));
-    expect(button('Restarting…').disabled).toBe(true);
+    expect(button('Restarting…').getAttribute('aria-disabled')).toBe('true');
     release();
     await vi.waitFor(() => expect(onclose).toHaveBeenCalled());
     expect(called('system.power')).toHaveLength(1);

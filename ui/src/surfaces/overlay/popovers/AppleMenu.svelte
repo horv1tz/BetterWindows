@@ -97,7 +97,8 @@
   ]);
 </script>
 
-<PopoverFrame anchor={request.anchor} placement="below-start" width={sheet.phase === 'confirm' ? 300 : 252} label={t('apple.label')}>
+<!-- Width follows the content (long labels in other languages must not be truncated); the menu and the sheet set their own minimum. -->
+<PopoverFrame anchor={request.anchor} placement="below-start" label={t('apple.label')}>
   {#if sheet.phase === 'confirm'}
     <PowerConfirm
       action={sheet.action}
@@ -107,7 +108,7 @@
       oncancel={() => send({ type: 'cancel' })}
     />
   {:else}
-    <Menu {entries} label={t('apple.label')} />
+    <Menu {entries} label={t('apple.label')} minWidth={236} />
     {#if menuError}
       <p class="error" role="alert">{t(`apple.error.${menuError}`)}</p>
     {/if}

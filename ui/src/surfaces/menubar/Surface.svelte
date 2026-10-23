@@ -76,6 +76,7 @@
   }
 
   // ---- clock ----
+  // Timers may not count time spent asleep: hovering the bar re-reads the time so a stale clock after resume is corrected at once.
   let now = $state(new Date());
   let ticker: ClockTicker | undefined;
   const locale = $derived(currentLocale());
@@ -181,6 +182,7 @@
   tabindex="-1"
   use:glassShape={{ radius: 0 }}
   onkeydown={onKeydown}
+  onpointerenter={() => ticker?.refresh()}
 >
   <div class="group left">
     <MenuBarItem label={t('bar.system')} haspopup="menu" pressed={isPressed('apple')} onactivate={(r) => open('apple', r)}>
@@ -204,7 +206,7 @@
   <div class="group right">
     {#each items as key (key)}
       {#if key === 'tray'}
-        <div class="tray" role="group" aria-label="Tray">
+        <div class="tray" role="group" aria-label={t('bar.tray')}>
           {#each trayIcons as icon (icon.id)}
             <MenuBarItem
               label={icon.tooltip || icon.id}

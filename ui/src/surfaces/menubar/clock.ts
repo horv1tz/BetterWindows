@@ -13,7 +13,10 @@ export interface ClockOptions {
 /** Intl.DateTimeFormat construction is comparatively expensive; the clock formats every second, so cache by key. */
 const formatters = new Map<string, Intl.DateTimeFormat>();
 function formatter(locale: string, timeZone: string | undefined, kind: string, o: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = `${locale}|${timeZone ?? ''}|${kind}`;
+  // With no pinned zone the formatter binds to the system zone when it is created. The current UTC offset is part of the key so a
+  // changed system time zone (travel, DST switch) is picked up without a restart.
+  const zone = timeZone ?? `local${new Date().getTimezoneOffset()}`;
+  const key = `${locale}|${zone}|${kind}`;
   let f = formatters.get(key);
   if (!f) {
     f = new Intl.DateTimeFormat(safeLocale(locale), { ...o, timeZone });

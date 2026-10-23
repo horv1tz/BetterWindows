@@ -21,6 +21,12 @@
 
   // Safe default: the destructive action is never the focused one.
   $effect(() => { cancelBtn?.focus(); });
+  // After a failed attempt the buttons are live again: put the focus back on the safe one.
+  let wasBusy = false;
+  $effect(() => {
+    if (wasBusy && !busy) cancelBtn?.focus();
+    wasBusy = busy;
+  });
 
   function onkeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
@@ -31,7 +37,7 @@
     } else if (e.key === 'Tab' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       // Two buttons: any of these keys toggles between them and focus never leaves the sheet.
       e.preventDefault();
-      (document.activeElement === cancelBtn && !cancelBtn?.disabled ? confirmBtn : cancelBtn)?.focus();
+      (document.activeElement === cancelBtn ? confirmBtn : cancelBtn)?.focus();
     }
   }
 </script>
@@ -46,8 +52,9 @@
     <p class="error" role="alert">{t(`apple.error.${error}`)}</p>
   {/if}
   <div class="buttons">
-    <button type="button" class="btn default" bind:this={cancelBtn} disabled={busy} onclick={oncancel}>{t('confirm.cancel')}</button>
-    <button type="button" class="btn" class:busy bind:this={confirmBtn} disabled={busy} onclick={onconfirm}>
+    <!-- aria-disabled instead of disabled while busy: a disabled button would drop the keyboard focus out of the sheet. -->
+    <button type="button" class="btn default" bind:this={cancelBtn} aria-disabled={busy} onclick={() => !busy && oncancel()}>{t('confirm.cancel')}</button>
+    <button type="button" class="btn" class:busy bind:this={confirmBtn} aria-disabled={busy} onclick={() => !busy && onconfirm()}>
       {#if busy}<span class="spinner" aria-hidden="true"></span>{/if}
       <span>{busy ? t(keys.busy) : t(keys.action)}</span>
     </button>
@@ -57,6 +64,7 @@
 <style>
   .sheet {
     outline: none;
+    width: 288px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -98,11 +106,11 @@
     cursor: default;
     outline: none;
   }
-  .btn:hover:not(:disabled) { background: var(--press); }
+  .btn:hover:not([aria-disabled='true']) { background: var(--press); }
   .btn:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
-  .btn:disabled { opacity: 0.6; }
+  .btn[aria-disabled='true'] { opacity: 0.6; }
   .btn.default { background: var(--accent); border-color: transparent; color: #fff; }
-  .btn.default:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+  .btn.default:hover:not([aria-disabled='true']) { background: var(--accent); filter: brightness(1.08); }
 
   .spinner {
     width: 12px;

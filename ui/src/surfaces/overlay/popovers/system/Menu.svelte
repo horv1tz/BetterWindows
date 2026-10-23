@@ -23,7 +23,7 @@
   import type { Snippet } from 'svelte';
   import { nextIndex, typeahead } from './menuNav';
 
-  let { entries, label, header }: { entries: MenuEntry[]; label: string; header?: Snippet } = $props();
+  let { entries, label, header, minWidth = 0 }: { entries: MenuEntry[]; label: string; header?: Snippet; minWidth?: number } = $props();
 
   let menuEl = $state<HTMLElement>();
   const enabledRows = () => [...(menuEl?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]:not([aria-disabled="true"])') ?? [])];
@@ -64,6 +64,7 @@
   role="menu"
   aria-label={label}
   tabindex="-1"
+  style:min-width="{minWidth}px"
   {onkeydown}
 >
   {#if header}

@@ -40,8 +40,8 @@
   ]);
 </script>
 
-<PopoverFrame anchor={request.anchor} placement="below-start" width={250} label={t('app.label', { app: name })}>
-  <Menu {entries} label={t('app.label', { app: name })}>
+<PopoverFrame anchor={request.anchor} placement="below-start" label={t('app.label', { app: name })}>
+  <Menu {entries} label={t('app.label', { app: name })} minWidth={232}>
     {#snippet header()}
       <div class="head">
         <AppIcon src={info?.iconUrl} {name} size={30} />
@@ -55,7 +55,7 @@
 </PopoverFrame>
 
 <style>
-  .head { display: flex; align-items: center; gap: 10px; padding: 6px 12px 4px; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 10px; padding: 6px 12px 4px; min-width: 0; max-width: 320px; }
   .text { min-width: 0; }
   .name { font-weight: 650; font-size: 13px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .title { font-size: 12px; line-height: 1.3; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
