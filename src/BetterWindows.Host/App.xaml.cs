@@ -62,6 +62,9 @@ public partial class App : Application
             // A startup that throws has changed nothing the gate allows yet, but restore anyway: the shell must never stay half-changed.
             _log?.LogCritical(ex, "Startup failed");
             host.RestoreShellNow();
+            // Closing silently looks like "it starts and disappears": say why and where the log is (never in smoke mode, CI has nobody to click it).
+            if (cli.Mode != LaunchMode.Smoke)
+                NativeHelpers.ShowMessageBox("BetterWindows", $"BetterWindows could not start.\n\n{ex.GetType().Name}: {ex.Message}\n\nLog folder:\n{paths.LogsDir}", false, true);
             exit = ExitCodes.Failed;
         }
         if (exit is { } code)

@@ -186,6 +186,8 @@ public sealed class ShellHost : IDisposable
     public void OnFatal(Exception ex)
     {
         _log.LogCritical(ex, "Unhandled exception; restoring the shell and exiting");
+        if (!_smoke)
+            NativeHelpers.ShowMessageBox("BetterWindows", $"BetterWindows hit an unexpected error and is closing.\n\n{ex.GetType().Name}: {ex.Message}\n\nLog folder:\n{_paths.LogsDir}", false, true);
         var shutdown = _shutdown;
         if (shutdown is null) { RestoreStaticShell(); return; }
         shutdown.RequestExit(restart: false, exitCode: ExitCodes.Failed);
