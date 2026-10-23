@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+TestResults/
+artifacts/
+publish/
+Releases/
+
+# Node / UI
+node_modules/
+ui/dist/
+src/BetterWindows.Host/wwwroot/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+Thumbs.db
+.DS_Store
