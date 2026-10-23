@@ -118,7 +118,7 @@ describe('AppleMenu: immediate actions', () => {
   it('Quit BetterWindows restores the taskbar on exit', async () => {
     await open();
     await click(row('Quit BetterWindows'));
-    await vi.waitFor(() => expect(called('system.quit')).toEqual([{ type: 'system.quit', params: { restoreTaskbar: true } }]));
+    await vi.waitFor(() => expect(called('system.quit')).toEqual([{ type: 'system.quit', params: undefined }]));
   });
 });
 

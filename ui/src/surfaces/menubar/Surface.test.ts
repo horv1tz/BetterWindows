@@ -85,7 +85,7 @@ describe('menu bar: layout and visibility', () => {
   it('shows battery percent text according to settings.menuBar.showBatteryPercent', async () => {
     await boot();
     expect(document.querySelector('.pct')?.textContent).toBe('76%');
-    await bridge.call('settings.patch', { patch: { menuBar: { showBatteryPercent: false } } });
+    await new MockBridge({ surface: 'settings' }).call('settings.patch', { patch: { menuBar: { showBatteryPercent: false } } });
     await settle();
     expect(document.querySelector('.pct')).toBeNull();
     expect(has('Battery')).toBe(true);
@@ -158,7 +158,7 @@ describe('menu bar: layout and visibility', () => {
   it('uses the solid style when translucency is off', async () => {
     await boot();
     expect(document.querySelector('.bar')?.classList.contains('solid')).toBe(false);
-    await bridge.call('settings.patch', { patch: { menuBar: { translucent: false } } });
+    await new MockBridge({ surface: 'settings' }).call('settings.patch', { patch: { menuBar: { translucent: false } } });
     await settle();
     expect(document.querySelector('.bar')?.classList.contains('solid')).toBe(true);
   });
@@ -329,7 +329,7 @@ describe('menu bar: clock', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 23, 15, 42, 7));
     await boot();
-    await bridge.call('settings.patch', { patch: { menuBar: { use24Hour: false, showSeconds: true, showDate: false } } });
+    await new MockBridge({ surface: 'settings' }).call('settings.patch', { patch: { menuBar: { use24Hour: false, showSeconds: true, showDate: false } } });
     await settle();
     expect(clockText()).toBe('3:42:07 PM');
   });

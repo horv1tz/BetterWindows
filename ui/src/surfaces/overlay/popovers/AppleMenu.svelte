@@ -93,7 +93,7 @@
     { kind: 'item', id: 'logout', label: t('apple.logout'), onselect: () => power('logout') },
     { kind: 'separator', id: 's4' },
     { kind: 'item', id: 'taskbar', label: t('apple.taskbar'), checked: taskbar.visible, onselect: () => void toggleTaskbar() },
-    { kind: 'item', id: 'quit', label: t('apple.quit'), onselect: () => fireAndClose(() => bridge.call('system.quit', { restoreTaskbar: true }), 'system.quit') },
+    { kind: 'item', id: 'quit', label: t('apple.quit'), onselect: () => fireAndClose(() => bridge.call('system.quit'), 'system.quit') },
   ]);
 </script>
 

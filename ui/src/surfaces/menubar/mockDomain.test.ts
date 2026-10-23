@@ -60,13 +60,13 @@ describe('mock menubar domain: dock.hide / dock.quit for the app menu', () => {
     const { bar } = await surfaces();
     const host = getMockHost() as any;
     host.setActiveApp(edge);
-    await bar.call('dock.quit', { itemId: edge });
+    await new MockBridge({ surface: 'overlay' }).call('dock.quit', { itemId: edge });
     expect(host.getActiveApp()).not.toBe(edge);
   });
 
   it('validates the payload like the real host: missing id is badRequest, unknown id notFound', async () => {
     const { bar } = await surfaces();
-    await expect(bar.call('dock.quit', { itemId: '' })).rejects.toMatchObject({ code: 'badRequest' });
+    await expect(new MockBridge({ surface: 'overlay' }).call('dock.quit', { itemId: '' })).rejects.toMatchObject({ code: 'badRequest' });
     await expect(bar.call('dock.hide', { itemId: 'exe:c:\\nope.exe' })).rejects.toMatchObject({ code: 'notFound' });
   });
 });
