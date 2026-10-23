@@ -187,7 +187,7 @@ export function boxesIntersect(a: Box, b: Box): boolean {
 /** The part of a cell that is "the icon" for marquee hit testing (icon + label, without the empty margins). */
 export function iconHitBox(m: GridMetrics, c: Cell): Box {
   const b = cellBox(m, c);
-  return { x: b.x + 8, y: b.y + 2, width: b.width - 16, height: b.height - 6 };
+  return { x: b.x + 4, y: b.y + 2, width: b.width - 8, height: b.height - 6 };
 }
 
 export function marqueeHits(placements: ReadonlyMap<string, Cell>, m: GridMetrics, marquee: Box): string[] {

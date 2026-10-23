@@ -183,24 +183,36 @@ function paletteFor(seed: string): Palette {
   return { sky: base.sky.map(shift) as Palette['sky'], glow: shift(base.glow), hills: base.hills.map(shift) as Palette['hills'] };
 }
 
-/** A soft dusk-landscape wallpaper: sky gradient, glow at the horizon and four layered hills. Deterministic per seed. */
+/** A soft dusk-landscape wallpaper: sky gradient, a glowing sun at the horizon and four layered, smoothly curved hills. Deterministic per seed. */
 export function wallpaperArt(seed: string, w = 1920, h = 1200): string {
   const p = paletteFor(seed);
   const r = (k: string, lo: number, hi: number) => lo + ((hash(seed + k) % 1000) / 1000) * (hi - lo);
-  const sunX = r('sx', 0.25, 0.75) * w;
-  const horizon = h * r('hz', 0.5, 0.6);
+  const sunX = r('sx', 0.3, 0.7) * w;
+  const horizon = h * r('hz', 0.52, 0.6);
+  /** A smooth closed hill shape: quadratic curves through the midpoints of a jittered polyline. */
   const hill = (i: number, base: number, amp: number, fill: string) => {
-    const y0 = base + r(`h${i}a`, -amp, amp) * 0.4;
-    const c = (k: string) => base + r(`h${i}${k}`, -amp, amp);
-    return `<path d="M0 ${y0} C ${w * 0.2} ${c('b')}, ${w * 0.35} ${c('c')}, ${w * 0.55} ${c('d')} S ${w * 0.9} ${c('e')}, ${w} ${c('f')} V${h} H0Z" fill="${fill}"/>`;
+    const n = 7;
+    const phase = r(`ph${i}`, 0, Math.PI * 2);
+    const pts = Array.from({ length: n + 1 }, (_, k) => ({
+      x: (k / n) * w,
+      y: base + Math.sin(phase + (k / n) * Math.PI * (1.4 + i * 0.35)) * amp + (r(`j${i}${k}`, -1, 1) * amp) * 0.35,
+    }));
+    let d = `M0 ${pts[0].y.toFixed(1)}`;
+    for (let k = 1; k < n; k++) {
+      const mx = (pts[k].x + pts[k + 1].x) / 2, my = (pts[k].y + pts[k + 1].y) / 2;
+      d += ` Q${pts[k].x.toFixed(1)} ${pts[k].y.toFixed(1)} ${mx.toFixed(1)} ${my.toFixed(1)}`;
+    }
+    d += ` L${w} ${pts[n].y.toFixed(1)} V${h} H0Z`;
+    return `<path d="${d}" fill="${fill}"/>`;
   };
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice"><defs>
 <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.sky[0]}"/><stop offset=".55" stop-color="${p.sky[1]}"/><stop offset="1" stop-color="${p.sky[2]}"/></linearGradient>
-<radialGradient id="glow" cx="${sunX / w}" cy="${horizon / h}" r=".55"><stop offset="0" stop-color="${p.glow}" stop-opacity=".95"/><stop offset=".35" stop-color="${p.glow}" stop-opacity=".28"/><stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>
-<linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs>
+<radialGradient id="glow" cx="${sunX / w}" cy="${horizon / h}" r=".6"><stop offset="0" stop-color="${p.glow}" stop-opacity=".9"/><stop offset=".3" stop-color="${p.glow}" stop-opacity=".32"/><stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>
+<radialGradient id="sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".55" stop-color="${p.glow}" stop-opacity=".9"/><stop offset="1" stop-color="${p.glow}" stop-opacity="0"/></radialGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".4"/></linearGradient></defs>
 <rect width="${w}" height="${h}" fill="url(#sky)"/><rect width="${w}" height="${h}" fill="url(#glow)"/>
-<circle cx="${sunX}" cy="${horizon - h * 0.04}" r="${h * 0.045}" fill="${p.glow}" fill-opacity=".9"/>
-${hill(0, horizon, h * 0.08, p.hills[0])}${hill(1, horizon + h * 0.12, h * 0.09, p.hills[1])}${hill(2, horizon + h * 0.25, h * 0.08, p.hills[2])}${hill(3, horizon + h * 0.37, h * 0.07, p.hills[3])}
+<circle cx="${sunX}" cy="${horizon - h * 0.015}" r="${h * 0.11}" fill="url(#sun)"/>
+${hill(0, horizon + h * 0.02, h * 0.035, p.hills[0])}${hill(1, horizon + h * 0.13, h * 0.05, p.hills[1])}${hill(2, horizon + h * 0.26, h * 0.06, p.hills[2])}${hill(3, horizon + h * 0.38, h * 0.05, p.hills[3])}
 <rect width="${w}" height="${h}" fill="url(#shade)"/></svg>`;
   return svgUrl(svg);
 }
