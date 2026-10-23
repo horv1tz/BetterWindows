@@ -14,11 +14,13 @@ internal sealed class StaWorker : IDisposable
     private readonly Thread _thread;
     private int _disposed;
 
-    public StaWorker(string name)
+    /// <param name="name">Thread name (diagnostics).</param>
+    /// <param name="sta">Always true in production. False exists only so the queue/timeout logic can be unit tested on operating systems without apartments.</param>
+    public StaWorker(string name, bool sta = true)
     {
         _thread = new Thread(Loop) { IsBackground = true, Name = name };
         // Must be set before Start: the CLR then calls CoInitializeEx(COINIT_APARTMENTTHREADED) when the thread starts and CoUninitialize when it ends.
-        _thread.SetApartmentState(ApartmentState.STA);
+        if (sta) _thread.SetApartmentState(ApartmentState.STA);
         _thread.Start();
     }
 
@@ -78,15 +80,17 @@ internal sealed class StaWorker : IDisposable
 internal sealed class StaPool : IDisposable
 {
     private readonly string _name;
+    private readonly bool _sta;
     private readonly SemaphoreSlim _gate;
     private readonly ConcurrentStack<StaWorker> _idle = new();
     private int _counter;
     private int _disposed;
 
-    public StaPool(string name, int size)
+    public StaPool(string name, int size, bool sta = true)
     {
         if (size < 1) throw new ArgumentOutOfRangeException(nameof(size));
         _name = name;
+        _sta = sta;
         _gate = new SemaphoreSlim(size, size);
     }
 
@@ -102,7 +106,7 @@ internal sealed class StaPool : IDisposable
         try
         {
             if (!_idle.TryPop(out worker!))
-                worker = new StaWorker($"{_name}-{Interlocked.Increment(ref _counter)}");
+                worker = new StaWorker($"{_name}-{Interlocked.Increment(ref _counter)}", _sta);
             work = worker.RunAsync(func);
         }
         catch
