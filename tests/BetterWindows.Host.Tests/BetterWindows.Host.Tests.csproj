@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <!-- The Host references WPF; the tests only touch its pure helpers, so the test host must not require Microsoft.WindowsDesktop.App
+         (keeps `dotnet test` runnable on Linux CI and on Windows alike). -->
+    <DisableTransitiveFrameworkReferences>true</DisableTransitiveFrameworkReferences>
+    <!-- Microsoft.Web.WebView2.Wpf (a Host dependency) references WindowsBase 4.0 while the net8.0 reference pack has 8.0: the test host never loads WPF types,
+         so the conflict is harmless here and is the only warning this project emits. -->
+    <NoWarn>$(NoWarn);MSB3277</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BetterWindows.Core\BetterWindows.Core.csproj" />
+    <ProjectReference Include="..\..\src\BetterWindows.Windows\BetterWindows.Windows.csproj" />
+    <ProjectReference Include="..\..\src\BetterWindows.Host\BetterWindows.Host.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+</Project>
