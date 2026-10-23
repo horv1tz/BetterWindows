@@ -26,8 +26,13 @@ public interface IWebViewBridge
 {
     /// <param name="route">"dock" | "menubar" | "overlay" | "desktop" | "settings" (settings may carry a page: "settings/dock").</param>
     Task AttachAsync(IWebView2 webView, SurfaceId id, string route);
-    /// <summary>Unregisters the channel of THIS attachment only (a newer attachment with the same id is untouched).</summary>
+    /// <summary>Unconditionally detaches whatever is attached under <paramref name="id"/>. Prefer the overload that names the WebView.</summary>
     void Detach(SurfaceId id);
+    /// <summary>
+    /// Detaches only if <paramref name="webView"/> is still the attachment of <paramref name="id"/>: a late Closed handler of a window that was already replaced
+    /// by a newer attachment with the same id does nothing (its channel was retired by the replacement).
+    /// </summary>
+    void Detach(SurfaceId id, IWebView2 webView);
     /// <summary>Open DevTools for the surface (debug builds / --devtools).</summary>
     void OpenDevTools(SurfaceId id);
     event Action<SurfaceFailure>? Failed;

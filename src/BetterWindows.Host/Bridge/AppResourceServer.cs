@@ -154,3 +154,25 @@ public sealed class AppResourceServer
         return false;
     }
 }
+
+/// <summary>Header blocks for answers produced by <see cref="AppResourceServer"/> (pure; the bridge only wraps them into a WebView2 response).</summary>
+public static class AppHttpResponse
+{
+    /// <summary>Headers for a served file: type, length, cache policy, nosniff, same-origin only, and the CSP for index.html.</summary>
+    public static string StaticHeaders(AppResource r)
+    {
+        var h = new System.Text.StringBuilder(320);
+        h.Append("Content-Type: ").Append(r.ContentType).Append("\r\n");
+        h.Append("Content-Length: ").Append(r.Data.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("\r\n");
+        h.Append("Cache-Control: ").Append(r.CacheControl).Append("\r\n");
+        h.Append("X-Content-Type-Options: nosniff\r\n");
+        h.Append("Referrer-Policy: no-referrer\r\n");
+        h.Append("Cross-Origin-Resource-Policy: same-origin");
+        if (r.IsIndex) h.Append("\r\nContent-Security-Policy: ").Append(NavigationPolicy.Csp);
+        return h.ToString();
+    }
+
+    /// <summary>Plain-text answer for an error status (403/404/405/500). Never cached.</summary>
+    public static string ErrorHeaders() =>
+        "Content-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; sandbox";
+}
