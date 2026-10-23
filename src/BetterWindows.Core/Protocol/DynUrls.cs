@@ -12,7 +12,7 @@ public static class DynUrls
     public const string Origin = "https://app.local";
     public const string Prefix = "/dyn/";
 
-    /// <summary>Icon of a catalog/running app. size = requested px (the provider rounds to 32/64/128/256).</summary>
+    /// <summary>Icon of a catalog/running app. size = requested px (the provider rounds up to 32/64/128/256/512).</summary>
     public static string AppIcon(string appId, int size = 128) => $"{Prefix}icon/app/{Uri.EscapeDataString(appId)}?s={size}";
     /// <summary>Icon of one window (WM_GETICON fallback for windows without a known app).</summary>
     public static string WindowIcon(long handle, int size = 128) => $"{Prefix}icon/window/{handle.ToString(CultureInfo.InvariantCulture)}?s={size}";

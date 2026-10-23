@@ -10,5 +10,6 @@ public sealed class CoreAudioEndpoint : IAudioEndpoint
     public event Action? Changed { add { } remove { } }
     public void SetVolume(double volume01) { }
     public void SetMuted(bool muted) { }
-    public void SetDefaultDevice(string deviceId) { }
+    public bool CanSetDefaultDevice => false;
+    public bool SetDefaultDevice(string deviceId) => false;
 }

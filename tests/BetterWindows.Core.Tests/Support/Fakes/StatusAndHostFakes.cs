@@ -33,7 +33,8 @@ public class FakeAudioEndpoint : IAudioEndpoint
     public void RaiseChanged() => Changed?.Invoke();
     public void SetVolume(double volume01) { Calls.Add($"volume:{volume01}"); Current = Current with { Volume = volume01 }; }
     public void SetMuted(bool muted) { Calls.Add($"muted:{muted}"); Current = Current with { Muted = muted }; }
-    public void SetDefaultDevice(string deviceId) => Calls.Add("device:" + deviceId);
+    public bool CanSetDefaultDevice { get; set; } = true;
+    public bool SetDefaultDevice(string deviceId) { Calls.Add("device:" + deviceId); return CanSetDefaultDevice; }
 }
 
 public class FakeBrightnessControl : IBrightnessControl

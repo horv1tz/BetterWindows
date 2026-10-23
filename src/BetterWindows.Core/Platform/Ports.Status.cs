@@ -14,7 +14,9 @@ public interface IAudioEndpoint
     event Action? Changed;
     void SetVolume(double volume01);
     void SetMuted(bool muted);
-    void SetDefaultDevice(string deviceId);
+    /// <summary>True if the platform can switch the default output device (undocumented IPolicyConfig, flag-gated): false -> StatusController answers ProtocolException.Unsupported.</summary>
+    bool CanSetDefaultDevice { get; }
+    bool SetDefaultDevice(string deviceId);
 }
 
 public interface IBrightnessControl

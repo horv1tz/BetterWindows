@@ -19,6 +19,10 @@ public sealed record RawWindow
     public string ClassName { get; init; } = "";
     /// <summary>Full path of the owning process image, null if inaccessible (elevated/protected process).</summary>
     public string? ExePath { get; init; }
+    // NOTE (UWP/packaged windows): for class ApplicationFrameWindow the Windows layer reports the HOSTED app: ProcessId/ExePath/Aumid come from the visible child
+    // Windows.UI.Core.CoreWindow whose process differs from the frame (GetApplicationUserModelId on that process). With no CoreWindow child (minimised/suspended) it
+    // uses the frame's SHGetPropertyStoreForWindow AUMID and leaves ExePath null. It NEVER reports ApplicationFrameHost.exe as the app; ClassName stays
+    // "ApplicationFrameWindow". An explicit per-window AUMID (property store) wins over the process AUMID.
     /// <summary>Explicit AppUserModelID of the window (property store) or of the packaged process; null if none.</summary>
     public string? Aumid { get; init; }
     public bool IsVisible { get; init; }
@@ -52,6 +56,7 @@ public sealed record RawWindow
     public bool IsOwnProcess { get; init; }
     /// <summary>Taskbar-button flash requested (FlashWindowEx / HSHELL_FLASH).</summary>
     public bool IsFlashing { get; init; }
+    /// <summary>DWMWA_EXTENDED_FRAME_BOUNDS (the VISIBLE frame) in virtual-screen physical px, falling back to GetWindowRect.</summary>
     public NativeRect Bounds { get; init; }
 }
 

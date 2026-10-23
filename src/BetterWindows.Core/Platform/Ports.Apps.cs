@@ -12,7 +12,7 @@ public interface IAppCatalogSource
 
 public interface IIconSource
 {
-    /// <summary>PNG (square, transparent background) at roughly <paramref name="size"/> px; null if unavailable.</summary>
+    /// <summary>PNG (square) at roughly <paramref name="size"/> px; null if unavailable. Packaged apps may return an opaque plated tile: callers must not rely on transparency. Sizes are rounded by Core to 32/64/128/256/512.</summary>
     Task<byte[]?> GetIconPngAsync(IconKey key, int size, CancellationToken ct = default);
 }
 
