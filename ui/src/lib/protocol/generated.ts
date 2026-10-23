@@ -509,6 +509,10 @@ export interface MonitorInfo {
   devicePath?: string;
 }
 
+export interface MonitorList {
+  monitors: MonitorInfo[];
+}
+
 export interface MoveWidgetParams {
   id: string;
   x: number;
@@ -1376,6 +1380,12 @@ export function defaultMonitorInfo(): MonitorInfo {
   };
 }
 
+export function defaultMonitorList(): MonitorList {
+  return {
+    monitors: [],
+  };
+}
+
 export function defaultMoveWidgetParams(): MoveWidgetParams {
   return {
     id: '',
@@ -1926,6 +1936,8 @@ export interface Calls {
   'diag.report': { params: void; result: DiagReport };
   /** Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). */
   'system.pickPath': { params: PickPathParams; result: PickPathResult };
+  /** All connected monitors (for per-monitor wallpaper/widget pickers in the settings window). */
+  'system.monitors': { params: void; result: MonitorList };
   /** Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer. */
   'dock.activate': { params: DockItemParams; result: void };
   'dock.activateWindow': { params: WindowHandleParams; result: void };
@@ -2045,6 +2057,7 @@ export const CALL_TYPES: readonly CallType[] = [
   'system.about',
   'diag.report',
   'system.pickPath',
+  'system.monitors',
   'dock.activate',
   'dock.activateWindow',
   'dock.closeWindow',

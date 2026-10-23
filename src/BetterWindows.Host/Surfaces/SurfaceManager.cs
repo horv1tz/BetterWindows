@@ -12,6 +12,7 @@ public sealed class SurfaceManager : ISurfaceManager, ISurfaceHost
     public void HideOverlay() { }
     public bool IsOverlayVisible => false;
     public OverlayMode? CurrentOverlayMode => null;
+    public bool SupportsGlassOverflow => false;
     public event Action? OverlayHidden { add { } remove { } }
     public void SetDockRevealed(SurfaceId dock, bool revealed) { }
     public void SetSurfaceShape(SurfaceId surface, SurfaceShapeParams shape) { }

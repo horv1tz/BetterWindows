@@ -85,6 +85,7 @@ public class FakeSurfaceManager : ISurfaceManager
     public int HideCount { get; private set; }
     public bool IsOverlayVisible { get; private set; }
     public OverlayMode? CurrentOverlayMode { get; private set; }
+    public bool SupportsGlassOverflow { get; set; }
     public event Action? OverlayHidden;
     /// <summary>Simulate the HOST hiding the overlay by itself (deactivation).</summary>
     public void SimulateHostHide() { IsOverlayVisible = false; CurrentOverlayMode = null; OverlayHidden?.Invoke(); }

@@ -19,6 +19,8 @@ public interface ISurfaceManager
     void HideOverlay();
     bool IsOverlayVisible { get; }
     OverlayMode? CurrentOverlayMode { get; }
+    /// <summary>True if the host restricts the blur backdrop to SurfaceShapeParams.rects while hitRects stay un-blurred (becomes SurfaceInit.glassOverflow). A whole-window backdrop (DWMWA_SYSTEMBACKDROP_TYPE) cannot, so the default honest answer is false.</summary>
+    bool SupportsGlassOverflow { get; }
     /// <summary>Raised whenever the HOST hides the overlay on its own (deactivation, monitor change, other app activated), so controllers can cancel searches / clear state.</summary>
     event Action? OverlayHidden;
     /// <summary>

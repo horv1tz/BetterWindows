@@ -63,6 +63,7 @@ export default function register(host: MockHost) {
     const sample = { file: 'C:\\Users\\you\\Documents\\notes.txt', folder: 'C:\\Users\\you\\Downloads', image: 'C:\\Users\\you\\Pictures\\wallpaper.jpg', app: 'C:\\Program Files\\Tool\\tool.exe' }[p.kind];
     return { paths: q.get('pick') === 'cancel' ? [] : [sample] };
   });
+  host.handle('system.monitors', () => ({ monitors: [monitor, { ...monitor, id: '2', index: 1, primary: false, name: 'Mock display 2', boundsPx: { x: width, y: 0, width: 1920, height: 1080 }, workAreaPx: { x: width, y: 0, width: 1920, height: 1080 } }] }));
   host.handle('system.about', () => ({ version: 'mock', build: 'mock', os: 'Mock OS', webView2: 'n/a' }));
   host.handle('system.open', (p) => { console.info('[mock] system.open', p.target); });
   host.handle('system.power', (p) => { console.info('[mock] system.power', p.action); });

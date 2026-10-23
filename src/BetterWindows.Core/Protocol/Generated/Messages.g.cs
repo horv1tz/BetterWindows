@@ -280,6 +280,10 @@ public static class Msg
     /// </summary>
     public const string SystemPickPath = "system.pickPath";
     /// <summary>
+    /// Call (ui -&gt; host). All connected monitors (for per-monitor wallpaper/widget pickers in the settings window).
+    /// </summary>
+    public const string SystemMonitors = "system.monitors";
+    /// <summary>
     /// Event (host -&gt; ui). Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name.
     /// </summary>
     public const string ActiveAppChanged = "activeApp.changed";
@@ -448,6 +452,7 @@ public static class MessageCatalog
         new("system.about", MessageKind.Call, "system", null, typeof(AboutInfo)),
         new("diag.report", MessageKind.Call, "system", null, typeof(DiagReport)),
         new("system.pickPath", MessageKind.Call, "system", typeof(PickPathParams), typeof(PickPathResult)),
+        new("system.monitors", MessageKind.Call, "system", null, typeof(MonitorList)),
         new("activeApp.changed", MessageKind.HostEvent, "windows", typeof(ActiveAppState), null),
         new("dock.state", MessageKind.HostEvent, "windows", typeof(DockState), null),
         new("dock.reveal", MessageKind.HostEvent, "windows", typeof(DockRevealState), null),

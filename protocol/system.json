@@ -45,6 +45,9 @@
         "type": "string[]",
         "doc": "Absolute paths; empty = cancelled."
       }
+    },
+    "MonitorList": {
+      "monitors": "MonitorInfo[]"
     }
   },
   "calls": {
@@ -79,6 +82,11 @@
       "params": "PickPathParams",
       "result": "PickPathResult",
       "doc": "Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest)."
+    },
+    "system.monitors": {
+      "params": null,
+      "result": "MonitorList",
+      "doc": "All connected monitors (for per-monitor wallpaper/widget pickers in the settings window)."
     }
   },
   "enums": {

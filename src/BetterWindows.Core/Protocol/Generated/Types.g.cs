@@ -815,6 +815,11 @@ public sealed record MonitorInfo
     [JsonPropertyName("devicePath")] public string? DevicePath { get; init; }
 }
 
+public sealed record MonitorList
+{
+    [JsonPropertyName("monitors")] public IReadOnlyList<MonitorInfo> Monitors { get; init; } = Array.Empty<MonitorInfo>();
+}
+
 public sealed record MoveWidgetParams
 {
     [JsonPropertyName("id")] public string Id { get; init; } = "";

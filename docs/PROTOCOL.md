@@ -907,6 +907,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `system.about` | call (ui→host) | – | `AboutInfo` |  |
 | `diag.report` | call (ui→host) | – | `DiagReport` | Runs every platform self-check (also: BetterWindows.exe --diagnose). |
 | `system.pickPath` | call (ui→host) | `PickPathParams` | `PickPathResult` | Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). |
+| `system.monitors` | call (ui→host) | – | `MonitorList` | All connected monitors (for per-monitor wallpaper/widget pickers in the settings window). |
 
 **enum `PickKind`**: `file` · `folder` · `image` · `app` — file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk.
 
@@ -972,6 +973,12 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | field | type | default | notes |
 |---|---|---|---|
 | `paths` | `string[]` |  | Absolute paths; empty = cancelled. |
+
+**`MonitorList`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `monitors` | `MonitorInfo[]` |  |  |
 
 ## windows
 

@@ -110,7 +110,7 @@ what is verified vs. unverifiable here, known gaps, and `contractRequests`.
 | messages | handler / publisher (Core controller) |
 |---|---|
 | `surface.ready`, `surface.resize`, `surface.shape`, `surface.log`, `settings.get/patch/openWindow`, `settings.changed`, `theme.changed`, `locale.changed`, `settings.navigate` | SurfaceController (core-settings) |
-| `system.power/open/quit/showTaskbar/about/pickPath`, `diag.report` (+ applies autostart and taskbar mode from settings) | SystemController (core-settings) |
+| `system.power/open/quit/showTaskbar/about/pickPath/monitors`, `diag.report` (+ applies autostart and taskbar mode from settings) | SystemController (core-settings) |
 | `apps.list/launch/reveal`, `apps.changed` | AppsController (core-settings) |
 | `dock.*` (all calls incl. `dock.pinPath`), `dock.state`, `dock.bounce`; `dock.reveal` is published by the Host's SurfaceManager | DockController (core-windows) |
 | `activeApp.changed` | ActiveAppController (core-windows) |
