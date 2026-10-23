@@ -67,14 +67,15 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 | win-desktops | `Windows/Desktops/**`, `tests/Windows.Tests/Desktops/**`, its block in `NativeMethods.txt` |
 | host-lifecycle | `Host/App.xaml(.cs)`, `Host/Lifecycle/**`, `Host/Bridge/**`, `Host/Composition/**`, `Host/Logging/**`, `Host/Tray/**`, `Host/Cli/**` |
 | host-surfaces | `Host/Surfaces/**` (dock, menubar, overlay, desktop AND the settings window), `Host/Interop/**` |
-| ui-dock | `ui/src/surfaces/dock/**`, `ui/src/mock/domains/dock.ts` |
-| ui-menubar | `ui/src/surfaces/menubar/**`, `ui/src/mock/domains/{status,menubar}.ts` |
-| ui-overlay-search | `ui/src/surfaces/overlay/Surface.svelte`, `overlay/{spotlight,launchpad}/**`, `ui/src/mock/domains/{search,apps}.ts` |
-| ui-overlay-popovers | `ui/src/surfaces/overlay/{missioncontrol,popovers}/**`, `ui/src/mock/domains/{mc,popovers}.ts` |
+| ui-dock | `ui/src/surfaces/dock/**`, `popovers/{DockMenu,WindowList}.svelte`, `ui/src/mock/domains/dock.ts` (dock.state from pins + fixture windows, dock.* calls, bounce) |
+| ui-menubar | `ui/src/surfaces/menubar/**`, `popovers/AppleMenu.svelte`, `ui/src/mock/domains/menubar.ts` (activeApp.changed + fixtures for the app menu) |
+| ui-overlay-search | `ui/src/surfaces/overlay/Surface.svelte`, `overlay/{spotlight,launchpad}/**`, `ui/src/mock/domains/search.ts` (apps.ts is frozen) |
+| ui-overlay-mc | `ui/src/surfaces/overlay/missioncontrol/**`, `popovers/DesktopMenu.svelte`, `ui/src/mock/domains/mc.ts` |
+| ui-status-popovers | `popovers/{ControlCenter,Calendar,Battery,Network,Sound,Bluetooth,MediaPopover}.svelte` (+ helpers in `popovers/status/**`); uses the frozen `mock/domains/status.ts`; no mock file of its own |
 | ui-settings | `ui/src/surfaces/settings/**`, `ui/src/mock/domains/settings.ts` |
 | ui-desktop | `ui/src/surfaces/{desktop,playground}/**`, `ui/src/mock/domains/{desktop,widgets,weather,reminders}.ts` |
 
-Shared UI helpers (`ui/src/lib/**`, `styles/tokens.css`) are frozen; put stream-specific helpers in your surface folder.
+Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`, `mock/domains/{common,apps,status}.ts`, `styles/tokens.css`, `overlay/popovers/{Popover,PopoverFrame}.svelte`) are frozen; put stream-specific helpers in your surface folder.
 
 ## Quality bar
 

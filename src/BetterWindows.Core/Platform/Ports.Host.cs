@@ -22,6 +22,11 @@ public interface ISurfaceManager
     void SetDockRevealed(bool revealed);
     /// <summary>Open or focus the settings window (a normal window, not click-through) and navigate to <paramref name="page"/>.</summary>
     void ShowSettingsWindow(string? page);
+    /// <summary>
+    /// A surface reported its glass panels (surface.shape). The host applies DWM blur-behind to exactly these rounded rects
+    /// (DIPs, window-client relative) and uses them as the click-through window region (dock/menubar/desktop widgets).
+    /// </summary>
+    void SetSurfaceShape(SurfaceId surface, SurfaceShapeParams shape);
     /// <summary>Show/hide a whole surface kind (e.g. hide menubar+dock while a fullscreen app is active).</summary>
     void SetSurfacesVisible(bool visible, string reason);
 }
@@ -34,4 +39,10 @@ public interface IAppLifecycle
     string BuildInfo { get; }
     string OsDescription { get; }
     string WebView2Version { get; }
+}
+
+/// <summary>Owner of the clipboard (needs an STA UI thread, so implemented by the Host).</summary>
+public interface IClipboard
+{
+    void SetText(string text);
 }

@@ -24,6 +24,12 @@ public sealed record RawWindow
     public bool IsVisible { get; init; }
     /// <summary>DWMWA_CLOAKED != 0 (UWP suspended windows, windows on other virtual desktops).</summary>
     public bool IsCloaked { get; init; }
+    /// <summary>
+    /// Cloaked because it lives on ANOTHER virtual desktop (DWM_CLOAKED_SHELL). Such windows are real, running windows:
+    /// they must still appear in the dock's running state and in Mission Control (with their desktop id), unlike windows
+    /// cloaked by the app itself (suspended UWP, DWM_CLOAKED_APP), which are hidden.
+    /// </summary>
+    public bool IsCloakedByShell { get; init; }
     public bool IsMinimized { get; init; }
     public bool IsMaximized { get; init; }
     /// <summary>WS_EX_TOOLWINDOW.</summary>

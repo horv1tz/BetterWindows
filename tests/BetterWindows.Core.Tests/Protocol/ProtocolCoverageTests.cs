@@ -12,10 +12,21 @@ namespace BetterWindows.Core.Tests.Protocol;
 /// </summary>
 public class ProtocolCoverageTests
 {
+    /// <summary>Guards DI: every controller/service can be constructed from the real registrations + fake ports, and start/stop cleanly.</summary>
+    [Fact]
+    public void Full_graph_resolves_starts_and_stops()
+    {
+        using var h = new CoreHarness(addAllControllers: true);
+        var runtime = h.Services.GetRequiredService<ShellRuntime>();
+        runtime.Start();
+        runtime.Started.Should().NotBeEmpty();
+        runtime.Stop();
+    }
+
     [Fact(Skip = "Enabled during integration: controllers are still stubs.")]
     public void Every_call_and_ui_event_has_a_handler()
     {
-        using var h = new CoreHarness(addAllControllers: true, configure: sc => TestPorts.AddFakePorts(sc));
+        using var h = new CoreHarness(addAllControllers: true);
         h.Services.GetRequiredService<ShellRuntime>().Start();
 
         var registered = h.Router.RegisteredTypes.ToHashSet();
