@@ -25,6 +25,7 @@ public sealed class AppBarFactory : IAppBarFactory
 /// short of it. THREAD-AFFINE: create it, call <see cref="Dock"/>/<see cref="Undock"/>/<see cref="ProcessWindowMessage"/> and dispose it on the
 /// UI thread that owns the window (the shell delivers the callback through that thread's message loop). The Host must pass EVERY message of the
 /// window to <see cref="ProcessWindowMessage"/>; notifications are raised synchronously inside that call. See <see cref="IAppBar"/>.
+/// Deliberately NEVER uses ABM_SETAUTOHIDEBAR (the shell allows one auto-hide appbar per edge system-wide); dock auto-hide is a plain topmost window.
 /// </summary>
 public sealed class AppBar : IAppBar
 {

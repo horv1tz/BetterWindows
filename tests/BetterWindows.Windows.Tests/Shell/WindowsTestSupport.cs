@@ -72,6 +72,18 @@ internal static class TestNative
     [DllImport("user32.dll")] public static extern nint GetDesktopWindow();
     [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
     [DllImport("kernel32.dll")] public static extern nint GetConsoleWindow();
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct FlashInfo
+    {
+        public uint Size;
+        public nint Hwnd;
+        public uint Flags;
+        public uint Count;
+        public uint Timeout;
+    }
+
+    [DllImport("user32.dll")] public static extern bool FlashWindowEx(ref FlashInfo info);
 }
 
 /// <summary>

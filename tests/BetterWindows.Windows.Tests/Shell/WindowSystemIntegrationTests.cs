@@ -297,4 +297,90 @@ public class WindowSystemIntegrationTests
         double used = (proc.TotalProcessorTime - cpu0).TotalMilliseconds / (t0.Elapsed.TotalMilliseconds * Environment.ProcessorCount);
         used.Should().BeLessThan(0.25, "an idle window system must not burn CPU (generous bound: CI machines are noisy)");
     }
+
+    [SkippableFact]
+    public void UWP_frames_never_report_ApplicationFrameHost_as_the_app()
+    {
+        RequireWindows();
+        using var ws = new Win32WindowSystem();
+        var frames = ws.EnumerateTopLevel().Where(w => w.ClassName == "ApplicationFrameWindow").ToList();
+        Skip.If(frames.Count == 0, "no UWP window is open on this machine");
+
+        foreach (var f in frames)
+        {
+            (f.ExePath ?? "").Should().NotEndWith("ApplicationFrameHost.exe", "the hosted app is reported, never the frame host");
+            if (f.ExePath != null)
+            {
+                f.ProcessId.Should().NotBe(0);
+            }
+        }
+    }
+
+    [SkippableFact]
+    public void A_full_enumeration_is_fast_enough_to_be_called_at_startup()
+    {
+        RequireWindows();
+        using var ws = new Win32WindowSystem();
+        ws.EnumerateTopLevel(); // warm up JIT and process cache
+        var sw = Stopwatch.StartNew();
+        var all = ws.EnumerateTopLevel();
+        sw.Stop();
+
+        all.Should().NotBeEmpty();
+        sw.ElapsedMilliseconds.Should().BeLessThan(3000, $"{all.Count} windows");
+    }
+
+    [SkippableFact]
+    public void Starting_and_stopping_repeatedly_does_not_leak_threads()
+    {
+        RequireWindows();
+        using var warm = new Win32WindowSystem();
+        warm.Start();
+        warm.Stop();
+        int before = Process.GetCurrentProcess().Threads.Count;
+
+        for (int i = 0; i < 12; i++)
+        {
+            using var ws = new Win32WindowSystem();
+            ws.FullscreenChanged += () => { };
+            ws.Start();
+            ws.Stop();
+        }
+
+        Poll.Until(() => Process.GetCurrentProcess().Threads.Count <= before + 4, 5000).Should().BeTrue("hook and delivery threads must end with Stop");
+    }
+
+    [SkippableFact]
+    public void Flash_requests_set_IsFlashing_until_the_window_is_activated()
+    {
+        RequireWindows();
+        using var ws = new Win32WindowSystem();
+        var events = new ConcurrentQueue<WindowEvent>();
+        ws.WindowChanged += events.Enqueue;
+        ws.Start();
+        using var notepad = ExternalWindow.TryLaunchNotepad(ws);
+        Skip.If(notepad == null, "Notepad could not be launched on this machine");
+        long h = notepad!.Handle;
+
+        // Put another window in front so that Notepad is a background window (only those flash).
+        using var front = TestWindow.Create("BW flash front");
+        Skip.If(front.Handle == 0, "could not create a test window");
+        ws.Activate(front.Handle);
+        // FLASHW_ALL (3) | FLASHW_TIMERNOFG (12): flash the caption and the taskbar button until the window comes to the foreground.
+        var info = new TestNative.FlashInfo
+        {
+            Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<TestNative.FlashInfo>(),
+            Hwnd = (nint)h,
+            Flags = 3 | 12,
+            Count = 3,
+        };
+        TestNative.FlashWindowEx(ref info);
+
+        Skip.IfNot(Poll.Until(() => events.Any(e => e.Handle == h && e.Kind == WindowEventKind.Flashed), 4000), "the shell did not report the flash on this session");
+        ws.TryDescribe(h)!.IsFlashing.Should().BeTrue();
+
+        ws.Activate(h);
+        Skip.IfNot(Poll.Until(() => ws.GetForegroundWindow() == h, 2000), "the foreground lock prevented activation");
+        Poll.Until(() => ws.TryDescribe(h)?.IsFlashing == false, 3000).Should().BeTrue("activation ends the flash");
+    }
 }

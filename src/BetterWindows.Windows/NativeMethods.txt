@@ -29,9 +29,7 @@ GetProcessTimes
 OpenProcessToken
 GetTokenInformation
 GetCurrentProcess
-GetCurrentProcessId
 GetCurrentThreadId
-GetExitCodeProcess
 CloseHandle
 // window commands
 ShowWindow
@@ -50,7 +48,6 @@ RegisterShellHookWindow
 DeregisterShellHookWindow
 RegisterWindowMessage
 RegisterClassEx
-UnregisterClass
 CreateWindowEx
 DestroyWindow
 DefWindowProc
@@ -67,8 +64,6 @@ EnumDisplayMonitors
 GetMonitorInfo
 MONITORINFOEXW
 GetDpiForMonitor
-MonitorFromPoint
-MonitorFromWindow
 EnumDisplayDevices
 // appbar / hotkeys / input / cursor
 SHAppBarMessage

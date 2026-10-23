@@ -163,6 +163,71 @@ public class AppBarIntegrationTests
     }
 }
 
+/// <summary>End-to-end appbar callback plumbing with a REAL window procedure (hidden window on a message-loop thread).</summary>
+[Collection(ShellCollection.Name)]
+public class AppBarCallbackIntegrationTests
+{
+    [SkippableFact]
+    public void A_second_appbar_on_the_same_edge_makes_the_shell_notify_the_first_with_PosChanged()
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows only");
+        var monitors = new Win32MonitorProvider().GetMonitors();
+        Skip.If(monitors.Count == 0, "no display attached to this session");
+        Skip.If(TestNative.FindWindow("Shell_TrayWnd", null) == 0, "Explorer is not running");
+        var primary = RectMath.FromProtocol(monitors.First(m => m.Primary).BoundsPx);
+        var before = monitors.First(m => m.Primary).WorkAreaPx;
+
+        IAppBar? first = null;
+        var notes = new System.Collections.Concurrent.ConcurrentQueue<AppBarNotification>();
+        using var loopA = new MessageLoopThread("appbar-A", NullLogger.Instance, messageOnly: false, handler: (uint msg, nuint w, nint l, out nint result) =>
+        {
+            result = 0;
+            return first != null && first.ProcessWindowMessage(msg, (nint)w, l);
+        });
+        loopA.Start(TimeSpan.FromSeconds(5)).Should().BeTrue();
+        using var loopB = new MessageLoopThread("appbar-B", NullLogger.Instance, messageOnly: false);
+        loopB.Start(TimeSpan.FromSeconds(5)).Should().BeTrue();
+
+        IAppBar? second = null;
+        try
+        {
+            loopA.TryInvoke(() =>
+            {
+                first = new AppBarFactory().Create(loopA.WindowHandle);
+                first.Notification += notes.Enqueue;
+                first.Dock(AppBarEdge.Top, primary, 28);
+                return first.IsRegistered;
+            }, TimeSpan.FromSeconds(5), out bool registered).Should().BeTrue();
+            Skip.IfNot(registered, "the shell refused the appbar registration");
+
+            loopB.TryInvoke(() =>
+            {
+                second = new AppBarFactory().Create(loopB.WindowHandle);
+                second.Dock(AppBarEdge.Top, primary, 40);
+                return second.IsRegistered;
+            }, TimeSpan.FromSeconds(5), out bool registeredB).Should().BeTrue();
+            Skip.IfNot(registeredB, "the shell refused the second appbar registration");
+
+            Skip.IfNot(Poll.Until(() => notes.Contains(AppBarNotification.PosChanged), 4000), "the shell did not send ABN_POSCHANGED in this environment");
+        }
+        finally
+        {
+            loopB.TryInvoke(() =>
+            {
+                second?.Dispose();
+                return true;
+            }, TimeSpan.FromSeconds(5), out bool _);
+            loopA.TryInvoke(() =>
+            {
+                first?.Dispose();
+                return true;
+            }, TimeSpan.FromSeconds(5), out bool _);
+            Poll.Until(() => new Win32MonitorProvider().GetMonitors().First(m => m.Primary).WorkAreaPx == before, 5000)
+                .Should().BeTrue("the work area is released again");
+        }
+    }
+}
+
 /// <summary>
 /// Real taskbar tests against Explorer's Shell_TrayWnd with a TEMPORARY snapshot file (never the real marker). Every test restores the
 /// original state in a finally block. Skipped when the runner has no taskbar.
