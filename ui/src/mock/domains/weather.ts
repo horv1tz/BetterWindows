@@ -1,6 +1,6 @@
 // Mock of the weather service (Open-Meteo in the real host): weather.get / weather.search / weather.setLocation with a deterministic,
 // realistic fixture (current conditions, 24 hourly entries, 7 daily). Owner: ui-desktop.
-// Query flags (before the hash):  ?weather=error | error-once | unavailable | none | slow
+// Query flags (before the hash):  ?weather=error | error-once | unavailable | none | slow ;  ?wxcode=<WMO code>[&wxnight=1] forces the current conditions
 import { BridgeError } from '../../lib/ipc/bridge';
 import type { WeatherDay, WeatherHour, WeatherLocation, WeatherSnapshot } from '../../lib/protocol/generated';
 import type { MockHost } from '../host';
@@ -135,6 +135,12 @@ export default function register(host: MockHost) {
     if (mode === 'unavailable') return { ...EMPTY, error: 'Request timed out', location: w.locationName };
     if (mode === 'none' || !hasLoc) return { ...EMPTY };
     const snap = makeWeather({ name: w.locationName, latitude: w.latitude!, longitude: w.longitude! }, new Date());
+    const forced = Number(query().get('wxcode'));
+    if (query().has('wxcode') && Number.isFinite(forced)) {
+      snap.code = forced;
+      snap.isDay = query().get('wxnight') !== '1';
+      snap.hourly = snap.hourly.map((h, i) => (i < 4 ? { ...h, code: forced } : h));
+    }
     cache = { key, at: Date.now(), snap };
     return structuredClone(snap);
   });

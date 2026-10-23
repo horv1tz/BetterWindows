@@ -86,6 +86,7 @@
         <div class="right">
           <div class="hero-icon" aria-hidden="true"><Icon size={size === 'large' ? 52 : 40} strokeWidth={1.5} /></div>
           <div class="cond"><span>{t(desc.labelKey)}</span></div>
+          {#if size === 'medium'}<div class="feels">{t('weather.feelsLike', { t: formatTemp(snap.apparentC, unit) })}</div>{/if}
           {#if today}<div class="range">{t('weather.high', { t: formatTemp(today.highC, unit) })} · {t('weather.low', { t: formatTemp(today.lowC, unit) })}</div>{/if}
         </div>
       {/if}
@@ -182,6 +183,7 @@
   .temp { font-size: 50px; font-weight: 300; line-height: 1.02; letter-spacing: -0.03em; margin: 2px 0 0 -2px; }
   .wx.small .temp { font-size: 58px; }
   .cond { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .feels { font-size: 12px; opacity: 0.88; }
   .range { font-size: 12.5px; opacity: 0.9; margin-top: 1px; font-variant-numeric: tabular-nums; }
   .hero-icon { opacity: 0.95; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.22)); margin-bottom: 2px; }
   .hours { list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-between; }

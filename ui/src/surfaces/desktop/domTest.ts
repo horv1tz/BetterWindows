@@ -7,6 +7,11 @@ import { mount, unmount, flushSync, tick } from '../../../node_modules/svelte/sr
 import { fireEvent, screen, within, waitFor } from '@testing-library/dom';
 import type { Component } from 'svelte';
 
+// jsdom lacks Element.getAnimations (used by svelte/animate flip in lists); no animations run under test.
+if (typeof Element !== 'undefined' && !('getAnimations' in Element.prototype)) {
+  (Element.prototype as unknown as { getAnimations: () => unknown[] }).getAnimations = () => [];
+}
+
 // jsdom lacks ResizeObserver (used by bind:offsetWidth and lib/shape.ts); nothing here depends on real layout.
 if (!('ResizeObserver' in globalThis)) {
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
