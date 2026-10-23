@@ -1,0 +1,78 @@
+import { createT, currentLocale, plural } from '$lib/i18n.svelte';
+
+/** Spotlight strings. Result titles/subtitles/action labels come from the host already localised; this is the chrome around them. */
+export const t = createT({
+  en: {
+    'sp.dialog': 'Search',
+    'sp.placeholder': 'Search apps, files, settings…',
+    'sp.clear': 'Clear search',
+    'sp.group.apps': 'Applications',
+    'sp.group.calc': 'Calculator',
+    'sp.group.settings': 'System Settings',
+    'sp.group.commands': 'Commands',
+    'sp.group.windows': 'Windows',
+    'sp.group.files': 'Files',
+    'sp.group.web': 'Web',
+    'sp.group.recent': 'Recent',
+    'sp.kind.apps': 'Application',
+    'sp.kind.calc': 'Calculation',
+    'sp.kind.settings': 'System Settings',
+    'sp.kind.commands': 'Command',
+    'sp.kind.windows': 'Open window',
+    'sp.kind.files': 'File',
+    'sp.kind.web': 'Web search',
+    'sp.empty': 'No results',
+    'sp.empty.hint': 'Check the spelling or try a different search.',
+    'sp.empty.start': 'Nothing here yet',
+    'sp.empty.startHint': 'Start typing to search apps, files, settings and more.',
+    'sp.searching': 'Searching…',
+    'sp.error': 'Search is not available right now.',
+    'sp.results': 'Search results',
+    'sp.hint.more': 'More actions',
+    'sp.hint.confirm': 'Press Enter again to confirm',
+    'sp.hint.confirmShort': 'Confirm',
+    'sp.preview': 'Preview',
+    'sp.quick': 'Ctrl+{n}',
+    'sp.calc.copy': 'Copy answer',
+  },
+  ru: {
+    'sp.dialog': 'Поиск',
+    'sp.placeholder': 'Поиск приложений, файлов, настроек…',
+    'sp.clear': 'Очистить запрос',
+    'sp.group.apps': 'Приложения',
+    'sp.group.calc': 'Калькулятор',
+    'sp.group.settings': 'Системные настройки',
+    'sp.group.commands': 'Команды',
+    'sp.group.windows': 'Окна',
+    'sp.group.files': 'Файлы',
+    'sp.group.web': 'Интернет',
+    'sp.group.recent': 'Недавнее',
+    'sp.kind.apps': 'Приложение',
+    'sp.kind.calc': 'Вычисление',
+    'sp.kind.settings': 'Системные настройки',
+    'sp.kind.commands': 'Команда',
+    'sp.kind.windows': 'Открытое окно',
+    'sp.kind.files': 'Файл',
+    'sp.kind.web': 'Поиск в интернете',
+    'sp.empty': 'Ничего не найдено',
+    'sp.empty.hint': 'Проверьте написание или попробуйте другой запрос.',
+    'sp.empty.start': 'Пока пусто',
+    'sp.empty.startHint': 'Начните вводить: приложения, файлы, настройки и не только.',
+    'sp.searching': 'Ищем…',
+    'sp.error': 'Поиск сейчас недоступен.',
+    'sp.results': 'Результаты поиска',
+    'sp.hint.more': 'Другие действия',
+    'sp.hint.confirm': 'Нажмите Enter ещё раз для подтверждения',
+    'sp.hint.confirmShort': 'Подтвердить',
+    'sp.preview': 'Предпросмотр',
+    'sp.quick': 'Ctrl+{n}',
+    'sp.calc.copy': 'Скопировать ответ',
+  },
+});
+
+/** Screen-reader status line: "5 results" / "5 результатов". */
+export function resultsCount(n: number): string {
+  if (n === 0) return t('sp.empty');
+  if (currentLocale() === 'ru') return `${n} ${plural(n, { one: 'результат', few: 'результата', many: 'результатов', other: 'результата' })}`;
+  return `${n} ${plural(n, { one: 'result', other: 'results' })}`;
+}
