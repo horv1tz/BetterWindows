@@ -1,9 +1,25 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import {
-    Sun, Moon, CloudSun, CloudMoon, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudRainWind, CloudSunRain, CloudMoonRain, CloudSnow, Snowflake,
-    CloudLightning, CloudHail, MapPin, TriangleAlert, RefreshCw, Droplets, Wind,
-  } from '@lucide/svelte';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Moon from '@lucide/svelte/icons/moon';
+  import CloudSun from '@lucide/svelte/icons/cloud-sun';
+  import CloudMoon from '@lucide/svelte/icons/cloud-moon';
+  import Cloud from '@lucide/svelte/icons/cloud';
+  import CloudFog from '@lucide/svelte/icons/cloud-fog';
+  import CloudDrizzle from '@lucide/svelte/icons/cloud-drizzle';
+  import CloudRain from '@lucide/svelte/icons/cloud-rain';
+  import CloudRainWind from '@lucide/svelte/icons/cloud-rain-wind';
+  import CloudSunRain from '@lucide/svelte/icons/cloud-sun-rain';
+  import CloudMoonRain from '@lucide/svelte/icons/cloud-moon-rain';
+  import CloudSnow from '@lucide/svelte/icons/cloud-snow';
+  import Snowflake from '@lucide/svelte/icons/snowflake';
+  import CloudLightning from '@lucide/svelte/icons/cloud-lightning';
+  import CloudHail from '@lucide/svelte/icons/cloud-hail';
+  import MapPin from '@lucide/svelte/icons/map-pin';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Droplets from '@lucide/svelte/icons/droplets';
+  import Wind from '@lucide/svelte/icons/wind';
   import type { Component } from 'svelte';
   import { getBridge } from '$lib/ipc';
   import { liveSettings, locale, use24Hour } from '../shared.svelte';

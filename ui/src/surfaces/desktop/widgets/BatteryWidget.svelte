@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { Zap, Headphones, Mouse, Keyboard, Smartphone, Watch, Gamepad2, Speaker, Bluetooth, Laptop, PlugZap } from '@lucide/svelte';
+  import Zap from '@lucide/svelte/icons/zap';
+  import Headphones from '@lucide/svelte/icons/headphones';
+  import Mouse from '@lucide/svelte/icons/mouse';
+  import Keyboard from '@lucide/svelte/icons/keyboard';
+  import Smartphone from '@lucide/svelte/icons/smartphone';
+  import Watch from '@lucide/svelte/icons/watch';
+  import Gamepad2 from '@lucide/svelte/icons/gamepad-2';
+  import Speaker from '@lucide/svelte/icons/speaker';
+  import Bluetooth from '@lucide/svelte/icons/bluetooth';
+  import Laptop from '@lucide/svelte/icons/laptop';
+  import PlugZap from '@lucide/svelte/icons/plug-zap';
   import type { Component } from 'svelte';
   import { defaultBatteryState, defaultBluetoothState } from '$lib/protocol/generated';
   import { useHostState } from '../shared.svelte';

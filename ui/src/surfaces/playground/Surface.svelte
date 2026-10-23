@@ -3,7 +3,12 @@
   // Same-origin iframes: desktop (bottom) < faux windows < menu bar < dock < overlay (top). The iframes share ONE MockHost through
   // window.top, so a popover opened in the menu bar iframe is rendered by the overlay iframe, exactly like in the real multi-WebView app.
   import { onMount } from 'svelte';
-  import { Moon, Sun, RotateCcw, Settings as SettingsIcon, Monitor, MonitorUp } from '@lucide/svelte';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Sun from '@lucide/svelte/icons/sun';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import SettingsIcon from '@lucide/svelte/icons/settings';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import MonitorUp from '@lucide/svelte/icons/monitor-up';
   import type { DockPosition, OverlayShow } from '$lib/protocol/generated';
   import { i18n } from '$lib/i18n.svelte';
   import { applyTheme } from '$lib/theme';
@@ -32,7 +37,8 @@
 
   const monitorCount = params.get('monitors') === '2' ? 2 : 1;
   const showStrip = params.get('strip') !== '0';
-  const showWindows = params.get('windows') !== '0';
+  // faux windows: on for one monitor, off for two (the point there is to compare the two desktops) unless ?windows=1
+  const showWindows = params.get('windows') === '1' || (params.get('windows') !== '0' && monitorCount === 1);
   const base = `${location.pathname}${new URLSearchParams([...params].filter(([k]) => k !== 'theme' && k !== 'monitors')).toString().replace(/^(?=.)/, '?')}`;
 
   let ready = $state(false);

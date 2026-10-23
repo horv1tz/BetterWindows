@@ -1,7 +1,7 @@
 <script lang="ts">
   // Compact in-surface context menu (icons, widgets). Desktop-menu popovers for the empty desktop live in the overlay instead.
   import { onMount } from 'svelte';
-  import { Check } from '@lucide/svelte';
+  import Check from '@lucide/svelte/icons/check';
   import { clamp } from './layout';
   import type { MenuItem } from './menu';
 
@@ -22,7 +22,7 @@
 
   function focusAt(n: number) {
     active = (n + actionable.length) % Math.max(1, actionable.length);
-    el.querySelector<HTMLElement>(`[data-id="${CSS.escape(actionable[active]?.id ?? '')}"]`)?.focus();
+    [...el.querySelectorAll<HTMLElement>('[data-id]')].find((b) => b.dataset.id === actionable[active]?.id)?.focus();
   }
 
   function onkey(e: KeyboardEvent) {

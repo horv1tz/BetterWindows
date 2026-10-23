@@ -17,6 +17,11 @@ export const MAX_ICON = 128;
 export const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
 export const cellKey = (c: Cell) => `${c.x},${c.y}`;
 
+/** setPointerCapture that never throws (it does when the pointer is already gone, and jsdom lacks it). */
+export function capturePointer(el: Element, pointerId: number): void {
+  try { el.setPointerCapture?.(pointerId); } catch { /* the pointer ended already */ }
+}
+
 /** Space the desktop must leave free for the other shell surfaces (menu bar on top, a reserved dock on its edge). */
 export function surfaceInsets(s: Pick<Settings, 'menuBar' | 'dock'>): Insets {
   const top = s.menuBar.enabled ? MENUBAR_HEIGHT : 0;

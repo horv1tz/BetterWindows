@@ -3,15 +3,18 @@
   // right-click menu hook. The content component is chosen by the registry.
   import { onDestroy } from 'svelte';
   import type { WidgetInstance, WidgetSize } from '$lib/protocol/generated';
-  import { clamp, clampWidget, snapWidget, widgetBox, WIDGET_SNAP, type Insets, type Point, type Size } from './layout';
+  import { capturePointer, clamp, clampWidget, snapWidget, widgetBox, WIDGET_SNAP, type Insets, type Point, type Size } from './layout';
   import { createDebouncer } from './debounce';
   import { WIDGETS } from './widgets/registry';
   import { t } from './strings';
 
-  let { widget, viewport, insets, onmove, onmenu, onconfig }: {
+  let { widget, viewport, insets, raised = false, onraise, onmove, onmenu, onconfig }: {
     widget: WidgetInstance;
     viewport: Size;
     insets: Insets;
+    /** The most recently used widget is drawn above its neighbours (a widget that was just enlarged must not hide behind another). */
+    raised?: boolean;
+    onraise?: () => void;
     onmove: (p: Point) => void;
     onmenu: (at: Point) => void;
     onconfig: (config: Record<string, unknown>) => void;
@@ -37,8 +40,11 @@
   const INTERACTIVE = 'button, input, textarea, select, a, [data-nodrag], [contenteditable="true"]';
 
   function onpointerdown(e: PointerEvent) {
+    onraise?.();
     if (e.button !== 0 || (e.target as HTMLElement).closest(INTERACTIVE)) return;
     drag = { pointerId: e.pointerId, start: { x: e.clientX, y: e.clientY }, origin: pos, pos, active: false };
+    // Capture right away: a fast flick can leave the card before the first move event is delivered to it.
+    capturePointer(e.currentTarget as HTMLElement, e.pointerId);
   }
 
   function onpointermove(e: PointerEvent) {
@@ -46,7 +52,6 @@
     const dx = e.clientX - drag.start.x, dy = e.clientY - drag.start.y;
     if (!drag.active) {
       if (Math.hypot(dx, dy) < 4) return;
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       drag.active = true;
     }
     drag.pos = snapWidget({ x: drag.origin.x + dx, y: drag.origin.y + dy }, size, viewport, insets);
@@ -84,12 +89,13 @@
   function oncontextmenu(e: MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    onraise?.();
     onmenu({ x: e.clientX, y: e.clientY });
   }
 </script>
 
 <div
-  class="slot" class:dragging={drag?.active}
+  class="slot" class:dragging={drag?.active} class:raised
   style:transform="translate3d({pos.x}px, {pos.y}px, 0)" style:width="{box.width}px" style:height="{box.height}px"
 >
   <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
@@ -97,7 +103,7 @@
     class="card glass {widget.type}" class:dragging={drag?.active}
     role="group" aria-roledescription="widget" aria-label={t(`w.name.${widget.type}`)} tabindex="0"
     data-widget-id={widget.id} data-type={widget.type} data-size={size}
-    {onpointerdown} {onpointermove} onpointerup={(e) => end(e, false)} onpointercancel={(e) => end(e, true)} {onkeydown} {oncontextmenu}
+    {onpointerdown} {onpointermove} onpointerup={(e) => end(e, false)} onpointercancel={(e) => end(e, true)} {onkeydown} {oncontextmenu} onfocusin={() => onraise?.()}
   >
     {#key size}
       <div class="content">
@@ -111,6 +117,7 @@
 
 <style>
   .slot { position: absolute; left: 0; top: 0; will-change: transform; animation: appear 280ms var(--ease-out) both; }
+  .slot.raised { z-index: 10; }
   .slot.dragging { z-index: 20; }
   .card {
     position: absolute; inset: 0; border-radius: 22px; overflow: hidden; outline: none; touch-action: none;

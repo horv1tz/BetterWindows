@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { NotebookPen } from '@lucide/svelte';
+  import NotebookPen from '@lucide/svelte/icons/notebook-pen';
   import { createDebouncer } from '../debounce';
   import { t } from '../strings';
   import type { WidgetProps } from './registry';

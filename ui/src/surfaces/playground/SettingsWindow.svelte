@@ -36,6 +36,7 @@
   .win {
     position: absolute; left: 0; top: 0; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: var(--glass-bg-strong);
     border: 0.5px solid var(--glass-edge); box-shadow: 0 26px 70px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.3); will-change: transform;
+    backdrop-filter: blur(30px) saturate(160%);
   }
   .bar { flex: none; position: relative; height: 38px; display: flex; align-items: center; padding: 0 13px; border-bottom: 0.5px solid var(--separator); touch-action: none; cursor: default; }
   .lights { display: flex; gap: 8px; z-index: 1; }

@@ -49,7 +49,8 @@
 
   const moveWidget = (w: WidgetInstance, p: Point) => optimistic(w.id, { x: p.x, y: p.y }, () => bridge.call('desktop.moveWidget', { id: w.id, x: p.x, y: p.y }));
   const saveConfig = (w: WidgetInstance, config: Record<string, unknown>) => optimistic(w.id, { config }, () => bridge.call('desktop.updateWidget', { id: w.id, config }));
-  const resizeWidget = (w: WidgetInstance, size: WidgetSize) => optimistic(w.id, { size }, () => bridge.call('desktop.updateWidget', { id: w.id, size }));
+  const resizeWidget = (w: WidgetInstance, size: WidgetSize) => { raisedId = w.id; optimistic(w.id, { size }, () => bridge.call('desktop.updateWidget', { id: w.id, size })); };
+  let raisedId = $state<string | null>(null);
   function removeWidget(w: WidgetInstance) {
     removing = new Set([...removing, w.id]);
     bridge.call('desktop.removeWidget', { id: w.id }).catch((e) => report('removeWidget', e)).finally(() => {
@@ -116,7 +117,7 @@
     <div class="widgets">
       {#each widgets as w (w.id)}
         <WidgetFrame
-          widget={w} {viewport} {insets}
+          widget={w} {viewport} {insets} raised={raisedId === w.id} onraise={() => (raisedId = w.id)}
           onmove={(p) => moveWidget(w, p)}
           onmenu={(at) => widgetMenuAt(w, at)}
           onconfig={(c) => saveConfig(w, c)}

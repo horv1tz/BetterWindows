@@ -1,6 +1,9 @@
 <script lang="ts">
   // One desktop icon: artwork (with a glyph fallback when the shell icon fails to load), a 2-line label with a legibility shadow.
-  import { Monitor, Trash2, Folder, FileText } from '@lucide/svelte';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Folder from '@lucide/svelte/icons/folder';
+  import FileText from '@lucide/svelte/icons/file-text';
   import AppIcon from '$lib/components/AppIcon.svelte';
   import type { DesktopIcon } from '$lib/protocol/generated';
 

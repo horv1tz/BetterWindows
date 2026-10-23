@@ -1,7 +1,10 @@
 <script lang="ts">
   // A decorative application window (pure HTML/CSS): title bar with traffic lights, draggable, raised on click. Gives Mission Control,
   // the dock and the menu bar something to look at in the playground; it has no behaviour beyond moving and closing.
-  import { ChevronLeft, ChevronRight, Lock, RotateCw } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Lock from '@lucide/svelte/icons/lock';
+  import RotateCw from '@lucide/svelte/icons/rotate-cw';
   import { clampWindow, type FauxSpec, type Frame, type Size } from './layout';
   import { t } from './strings';
 

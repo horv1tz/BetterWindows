@@ -5,7 +5,7 @@
   import DesktopIconItem from './DesktopIconItem.svelte';
   import {
     applyClick, applyMarquee, cellBox, cellFromPoint, cellKey, emptySelection, marqueeHits, neighbour, planMove, readingOrder, rectFromPoints,
-    resolvePlacements, selectOnly, clamp, type Cell, type Direction, type GridMetrics, type Point, type Selection, type Box,
+    resolvePlacements, selectOnly, clamp, capturePointer, type Cell, type Direction, type GridMetrics, type Point, type Selection, type Box,
   } from './layout';
   import { t } from './strings';
 
@@ -61,6 +61,8 @@
     | { kind: 'marquee'; pointerId: number; start: Point; current: Point; base: Selection; additive: boolean };
   let gesture = $state<Gesture>({ kind: 'none' });
   let root: HTMLDivElement;
+  /** Icon of the latest pointerdown: with pointer capture the dblclick event targets the layer, not the icon. */
+  let lastPressId: string | null = null;
 
   const pointOf = (e: PointerEvent | MouseEvent): Point => {
     const r = root.getBoundingClientRect();
@@ -77,15 +79,19 @@
       const plainOnSelected = !mods.ctrl && !mods.shift && sel.ids.has(id) && sel.ids.size > 1;
       if (!plainOnSelected) sel = applyClick(order, sel, id, mods);
       gesture = { kind: 'press', id, start: pointOf(e), pointerId: e.pointerId, plainOnSelected };
+      // Capture right away (a flick may leave the icon before the first move event); dblclick is then resolved from lastPressId.
+      lastPressId = id;
+      capturePointer(root, e.pointerId);
       return;
     }
     // empty desktop: start a rubber band (a plain click on empty space clears the selection)
+    lastPressId = null;
     const additive = mods.ctrl || mods.shift;
     const base = additive ? sel : emptySelection();
     if (!additive) sel = base;
     focusedId = null;
     root.focus({ preventScroll: true });
-    root.setPointerCapture(e.pointerId);
+    capturePointer(root, e.pointerId);
     const p = pointOf(e);
     gesture = { kind: 'marquee', pointerId: e.pointerId, start: p, current: p, base, additive };
   }
@@ -96,14 +102,14 @@
     const p = pointOf(e);
     if (g.kind === 'press') {
       if (Math.hypot(p.x - g.start.x, p.y - g.start.y) < DRAG_THRESHOLD) return;
-      root.setPointerCapture(e.pointerId);
       const moving = sel.ids.has(g.id) ? order.filter((id) => sel.ids.has(id)) : [g.id];
       gesture = { kind: 'drag', id: g.id, start: g.start, pointerId: g.pointerId, moving, dx: 0, dy: 0, plan: new Map() };
       updateDrag(p);
     } else if (g.kind === 'drag') {
       updateDrag(p);
     } else if (g.kind === 'marquee') {
-      const cur: Point = { x: clamp(p.x, 0, root.clientWidth), y: clamp(p.y, 0, root.clientHeight) };
+      // the layer fills the viewport: keep the band inside it
+      const cur: Point = { x: clamp(p.x, 0, window.innerWidth), y: clamp(p.y, 0, window.innerHeight) };
       const band = rectFromPoints(g.start, cur);
       sel = applyMarquee(g.base, marqueeHits(placements, metrics, band), g.additive);
       gesture = { ...g, current: cur };
@@ -156,8 +162,8 @@
   }
 
   function ondblclick(e: MouseEvent) {
-    const id = iconIdOf(e.target);
-    if (id) onopen([id]);
+    const id = iconIdOf(e.target) ?? lastPressId;
+    if (id && byId.has(id)) onopen([id]);
   }
 
   // ---- keyboard
@@ -165,7 +171,7 @@
 
   function focusIcon(id: string) {
     focusedId = id;
-    root.querySelector<HTMLElement>(`[data-icon-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+    [...root.querySelectorAll<HTMLElement>('[data-icon-id]')].find((el) => el.dataset.iconId === id)?.focus({ preventScroll: true });
   }
 
   function onkeydown(e: KeyboardEvent) {

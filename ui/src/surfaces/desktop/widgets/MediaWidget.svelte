@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Play, Pause, SkipBack, SkipForward, Music } from '@lucide/svelte';
+  import Play from '@lucide/svelte/icons/play';
+  import Pause from '@lucide/svelte/icons/pause';
+  import SkipBack from '@lucide/svelte/icons/skip-back';
+  import SkipForward from '@lucide/svelte/icons/skip-forward';
+  import Music from '@lucide/svelte/icons/music';
   import { getBridge } from '$lib/ipc';
   import { defaultMediaState } from '$lib/protocol/generated';
   import { useHostState, callQuiet } from '../shared.svelte';

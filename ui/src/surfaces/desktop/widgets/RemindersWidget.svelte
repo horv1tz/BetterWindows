@@ -1,6 +1,7 @@
 <script lang="ts">
   import { flip } from 'svelte/animate';
-  import { Plus, Check } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Check from '@lucide/svelte/icons/check';
   import { getBridge } from '$lib/ipc';
   import type { Reminder } from '$lib/protocol/generated';
   import { locale, use24Hour, useHostState } from '../shared.svelte';
