@@ -56,6 +56,10 @@ public static class Msg
     /// </summary>
     public const string SurfaceShape = "surface.shape";
     /// <summary>
+    /// Event (host -&gt; ui). Settings window is already open: switch to this page.
+    /// </summary>
+    public const string SettingsNavigate = "settings.navigate";
+    /// <summary>
     /// Call (ui -&gt; host). First message every surface sends. After replying the host pushes all current state events to this surface.
     /// </summary>
     public const string SurfaceReady = "surface.ready";
@@ -67,6 +71,10 @@ public static class Msg
     /// Call (ui -&gt; host). Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result.
     /// </summary>
     public const string SettingsPatch = "settings.patch";
+    /// <summary>
+    /// Call (ui -&gt; host). Open (or focus) the settings window, optionally on a page.
+    /// </summary>
+    public const string SettingsOpenWindow = "settings.openWindow";
     /// <summary>
     /// Event (host -&gt; ui)
     /// </summary>
@@ -364,9 +372,11 @@ public static class MessageCatalog
         new("theme.changed", MessageKind.HostEvent, "common", typeof(ThemeState), null),
         new("settings.changed", MessageKind.HostEvent, "common", typeof(Settings), null),
         new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null),
+        new("settings.navigate", MessageKind.HostEvent, "common", typeof(SettingsOpenParams), null),
         new("surface.ready", MessageKind.Call, "common", typeof(SurfaceReadyParams), typeof(SurfaceInit)),
         new("settings.get", MessageKind.Call, "common", null, typeof(Settings)),
         new("settings.patch", MessageKind.Call, "common", typeof(SettingsPatchParams), typeof(Settings)),
+        new("settings.openWindow", MessageKind.Call, "common", typeof(SettingsOpenParams), null),
         new("desktop.state", MessageKind.HostEvent, "desktop", typeof(DesktopState), null),
         new("reminders.changed", MessageKind.HostEvent, "desktop", typeof(ReminderList), null),
         new("reminders.due", MessageKind.HostEvent, "desktop", typeof(Reminder), null),

@@ -7,7 +7,7 @@ rules that the catalog cannot express. **Source of truth for shapes: `protocol/*
 ## 1. Transport
 
 * Four WebView2 surfaces load the same bundle: `https://app.local/index.html#/<surface>[/<monitorId>]`
-  (`dock`, `menubar`, `overlay`, `desktop`). In a normal browser the page falls back to the in-browser mock host.
+  (`dock`, `menubar`, `overlay`, `desktop`, `settings`). In a normal browser the page falls back to the in-browser mock host.
 * **Both directions carry JSON strings.** web→host: `chrome.webview.postMessage(JSON.stringify(envelope))`, read with
   `TryGetWebMessageAsString()`. host→web: `CoreWebView2.PostWebMessageAsString(json)` (the page `JSON.parse`s `event.data`).
 * Envelope (`v` = protocol version):
@@ -39,6 +39,7 @@ rules that the catalog cannot express. **Source of truth for shapes: `protocol/*
    * `dock`: `dock.state`
    * `menubar`: `activeApp.changed`, `status.battery`, `status.network`, `status.audio`, `status.brightness`, `status.bluetooth`, `media.state`, `tray.state`
    * `overlay`: `dock.state`, `activeApp.changed`, `status.*`, `media.state`, `reminders.changed`, `apps.changed`
+   * `settings`: nothing extra (it reads via `settings.get`, `apps.list`, `weather.search`, `system.about`, `diag.report`); the host sends `settings.navigate` when the window is already open
    * `desktop`: `desktop.state` (per monitor), `reminders.changed`, `status.battery`, `status.bluetooth`, `media.state`
 6. Settings changes (from any surface or the file) → `settings.changed` to everyone; theme-relevant changes also → `theme.changed`.
 

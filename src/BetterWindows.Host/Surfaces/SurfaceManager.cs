@@ -13,6 +13,7 @@ public sealed class SurfaceManager : ISurfaceManager, ISurfaceHost
     public bool IsOverlayVisible => false;
     public OverlayMode? CurrentOverlayMode => null;
     public void SetDockRevealed(bool revealed) { }
+    public void ShowSettingsWindow(string? page) { }
     public void SetSurfacesVisible(bool visible, string reason) { }
     public void Start() { }
     public void Stop() { }

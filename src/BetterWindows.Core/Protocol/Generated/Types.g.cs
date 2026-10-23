@@ -150,7 +150,7 @@ public enum SearchProviderId
 }
 
 /// <summary>
-/// The four WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop) selects the surface.
+/// The five WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop, #/settings) selects the surface. 'settings' is a normal resizable window (System-Settings-like preferences + onboarding), opened from the Apple menu / tray icon.
 /// </summary>
 [JsonConverter(typeof(CamelEnumConverter))]
 public enum SurfaceKind
@@ -159,6 +159,7 @@ public enum SurfaceKind
     Menubar,
     Overlay,
     Desktop,
+    Settings,
 }
 
 /// <summary>
@@ -943,6 +944,14 @@ public sealed record Settings
     [JsonPropertyName("weather")] public WeatherSettings Weather { get; init; } = new();
     [JsonPropertyName("launchpad")] public LaunchpadSettings Launchpad { get; init; } = new();
     [JsonPropertyName("general")] public GeneralSettings General { get; init; } = new();
+}
+
+public sealed record SettingsOpenParams
+{
+    /// <summary>
+    /// 'general'|'appearance'|'dock'|'menubar'|'spotlight'|'hotCorners'|'desktop'|'widgets'|'shortcuts'|'about'|'onboarding'.
+    /// </summary>
+    [JsonPropertyName("page")] public string? Page { get; init; }
 }
 
 public sealed record SettingsPatchParams

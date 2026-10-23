@@ -11,11 +11,11 @@ export interface SurfaceRoute {
   monitorId?: string;
 }
 
-/** `#/dock`, `#/menubar/2`, `#/overlay`, `#/desktop/1`, `#/playground` */
+/** `#/dock`, `#/menubar/2`, `#/overlay`, `#/desktop/1`, `#/settings`, `#/playground` */
 export function parseRoute(hash: string = location.hash): SurfaceRoute | 'playground' {
   const parts = hash.replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean);
   if (parts[0] === 'playground') return 'playground';
-  const surface = (['dock', 'menubar', 'overlay', 'desktop'] as const).find((s) => s === parts[0]) ?? 'dock';
+  const surface = (['dock', 'menubar', 'overlay', 'desktop', 'settings'] as const).find((s) => s === parts[0]) ?? 'dock';
   return { surface, monitorId: parts[1] };
 }
 

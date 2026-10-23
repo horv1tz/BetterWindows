@@ -53,11 +53,13 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `theme.changed` | event (host→ui) | `ThemeState` |  |  |
 | `settings.changed` | event (host→ui) | `Settings` |  | Full settings after any change (from any surface, file edit, or reset). |
 | `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces. |
+| `settings.navigate` | event (host→ui) | `SettingsOpenParams` |  | Settings window is already open: switch to this page. |
 | `surface.ready` | call (ui→host) | `SurfaceReadyParams` | `SurfaceInit` | First message every surface sends. After replying the host pushes all current state events to this surface. |
 | `settings.get` | call (ui→host) | – | `Settings` |  |
 | `settings.patch` | call (ui→host) | `SettingsPatchParams` | `Settings` | Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result. |
+| `settings.openWindow` | call (ui→host) | `SettingsOpenParams` | – | Open (or focus) the settings window, optionally on a page. |
 
-**enum `SurfaceKind`**: `dock` · `menubar` · `overlay` · `desktop` — The four WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop) selects the surface.
+**enum `SurfaceKind`**: `dock` · `menubar` · `overlay` · `desktop` · `settings` — The five WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop, #/settings) selects the surface. 'settings' is a normal resizable window (System-Settings-like preferences + onboarding), opened from the Apple menu / tray icon.
 
 **enum `ThemeMode`**: `light` · `dark`
 
@@ -177,6 +179,12 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `rects` | `ShapeRect[]` |  |  |
 | `blur` | `bool` | `true` | Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window). |
+
+**`SettingsOpenParams`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `page` | `string?` |  | 'general'\|'appearance'\|'dock'\|'menubar'\|'spotlight'\|'hotCorners'\|'desktop'\|'widgets'\|'shortcuts'\|'about'\|'onboarding'. |
 
 ## desktop
 

@@ -57,7 +57,7 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 | stream | owns |
 |---|---|
 | core-windows | `Core/Windows/**`, `Core/Dock/**`, `Core/Services/{WindowTracker,AppIdentityResolver}.cs`, `Controllers/{DockController,ActiveAppController}.cs`, `tests/Core.Tests/{Windows,Dock}/**` |
-| core-settings | `Core/Settings/**`, `Core/Diagnostics/**`, `Core/Resources/**`, `Core/Services/{SettingsService,ThemeService,AppCatalog,DynamicResourceRouter}.cs`, `Controllers/{Surface,System,Apps}Controller.cs`, `tests/Core.Tests/{Settings,Apps,Resources,Diagnostics}/**` |
+| core-settings | `Core/Settings/**`, `Core/Diagnostics/**`, `Core/Resources/**`, `Core/Services/{SettingsService,ThemeService,AppCatalog,DynamicResourceRouter}.cs`, `Controllers/{Surface,System,Apps}Controller.cs` (SurfaceController owns surface.ready/resize/log/shape, settings.get/patch/openWindow, theme.changed + settings.changed broadcasts), `tests/Core.Tests/{Settings,Apps,Resources,Diagnostics}/**` |
 | core-search | `Core/Search/**`, `Controllers/SearchController.cs`, `tests/Core.Tests/Search/**` |
 | core-status | `Core/Status/**`, `Core/Input/**`, `Core/Overlay/**`, `Controllers/{Status,Media,Tray,Overlay,Hotkey,HotCorner}Controller.cs`, `tests/Core.Tests/{Status,Input,Overlay}/**` |
 | core-desktop | `Core/Desktop/**`, `Core/Widgets/**`, `Core/MissionControl/**`, `Controllers/{MissionControl,Desktop,Weather,Reminders}Controller.cs`, `tests/Core.Tests/{Desktop,Widgets,MissionControl}/**` |
@@ -66,11 +66,12 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 | win-status | `Windows/Status/**`, `tests/Windows.Tests/Status/**`, its block in `NativeMethods.txt` |
 | win-desktops | `Windows/Desktops/**`, `tests/Windows.Tests/Desktops/**`, its block in `NativeMethods.txt` |
 | host-lifecycle | `Host/App.xaml(.cs)`, `Host/Lifecycle/**`, `Host/Bridge/**`, `Host/Composition/**`, `Host/Logging/**`, `Host/Tray/**`, `Host/Cli/**` |
-| host-surfaces | `Host/Surfaces/**`, `Host/Interop/**` |
+| host-surfaces | `Host/Surfaces/**` (dock, menubar, overlay, desktop AND the settings window), `Host/Interop/**` |
 | ui-dock | `ui/src/surfaces/dock/**`, `ui/src/mock/domains/dock.ts` |
 | ui-menubar | `ui/src/surfaces/menubar/**`, `ui/src/mock/domains/{status,menubar}.ts` |
 | ui-overlay-search | `ui/src/surfaces/overlay/Surface.svelte`, `overlay/{spotlight,launchpad}/**`, `ui/src/mock/domains/{search,apps}.ts` |
 | ui-overlay-popovers | `ui/src/surfaces/overlay/{missioncontrol,popovers}/**`, `ui/src/mock/domains/{mc,popovers}.ts` |
+| ui-settings | `ui/src/surfaces/settings/**`, `ui/src/mock/domains/settings.ts` |
 | ui-desktop | `ui/src/surfaces/{desktop,playground}/**`, `ui/src/mock/domains/{desktop,widgets,weather,reminders}.ts` |
 
 Shared UI helpers (`ui/src/lib/**`, `styles/tokens.css`) are frozen; put stream-specific helpers in your surface folder.

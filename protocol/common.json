@@ -6,9 +6,10 @@
         "dock",
         "menubar",
         "overlay",
-        "desktop"
+        "desktop",
+        "settings"
       ],
-      "doc": "The four WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop) selects the surface."
+      "doc": "The five WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop, #/settings) selects the surface. 'settings' is a normal resizable window (System-Settings-like preferences + onboarding), opened from the Apple menu / tray icon."
     },
     "ThemeMode": [
       "light",
@@ -131,6 +132,12 @@
         "default": true,
         "doc": "Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window)."
       }
+    },
+    "SettingsOpenParams": {
+      "page": {
+        "type": "string?",
+        "doc": "'general'|'appearance'|'dock'|'menubar'|'spotlight'|'hotCorners'|'desktop'|'widgets'|'shortcuts'|'about'|'onboarding'."
+      }
     }
   },
   "events": {
@@ -162,6 +169,11 @@
       "dir": "ui",
       "payload": "SurfaceShapeParams",
       "doc": "The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces."
+    },
+    "settings.navigate": {
+      "dir": "host",
+      "payload": "SettingsOpenParams",
+      "doc": "Settings window is already open: switch to this page."
     }
   },
   "calls": {
@@ -178,6 +190,11 @@
       "params": "SettingsPatchParams",
       "result": "Settings",
       "doc": "Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result."
+    },
+    "settings.openWindow": {
+      "params": "SettingsOpenParams",
+      "result": null,
+      "doc": "Open (or focus) the settings window, optionally on a page."
     }
   }
 }

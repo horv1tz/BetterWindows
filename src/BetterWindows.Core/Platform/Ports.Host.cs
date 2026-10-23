@@ -7,7 +7,6 @@ namespace BetterWindows.Core.Platform;
 
 public interface ISurfaceManager
 {
-    /// <summary>Currently connected monitors' surfaces' geometry helpers.</summary>
     /// <summary>Resize/reposition a surface window (dock): size in DIPs. Host clamps and keeps the dock edge-aligned/centred.</summary>
     void ResizeSurface(SurfaceId surface, double widthDip, double heightDip);
     /// <summary>
@@ -21,6 +20,8 @@ public interface ISurfaceManager
     OverlayMode? CurrentOverlayMode { get; }
     /// <summary>Tell the dock surface to slide in/out (auto-hide) and size its window accordingly.</summary>
     void SetDockRevealed(bool revealed);
+    /// <summary>Open or focus the settings window (a normal window, not click-through) and navigate to <paramref name="page"/>.</summary>
+    void ShowSettingsWindow(string? page);
     /// <summary>Show/hide a whole surface kind (e.g. hide menubar+dock while a fullscreen app is active).</summary>
     void SetSurfacesVisible(bool visible, string reason);
 }

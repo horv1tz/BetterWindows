@@ -46,9 +46,9 @@ export const SearchPreviewKindValues: readonly SearchPreviewKind[] = ['none', 't
 export type SearchProviderId = 'apps' | 'files' | 'calc' | 'settings' | 'commands' | 'web' | 'windows';
 export const SearchProviderIdValues: readonly SearchProviderId[] = ['apps', 'files', 'calc', 'settings', 'commands', 'web', 'windows'];
 
-/** The four WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop) selects the surface. */
-export type SurfaceKind = 'dock' | 'menubar' | 'overlay' | 'desktop';
-export const SurfaceKindValues: readonly SurfaceKind[] = ['dock', 'menubar', 'overlay', 'desktop'];
+/** The five WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop, #/settings) selects the surface. 'settings' is a normal resizable window (System-Settings-like preferences + onboarding), opened from the Apple menu / tray icon. */
+export type SurfaceKind = 'dock' | 'menubar' | 'overlay' | 'desktop' | 'settings';
+export const SurfaceKindValues: readonly SurfaceKind[] = ['dock', 'menubar', 'overlay', 'desktop', 'settings'];
 
 /** What happens to the native Windows taskbar. */
 export type TaskbarMode = 'hidden' | 'autoHide' | 'visible';
@@ -633,6 +633,11 @@ export interface Settings {
   weather: WeatherSettings;
   launchpad: LaunchpadSettings;
   general: GeneralSettings;
+}
+
+export interface SettingsOpenParams {
+  /** 'general'|'appearance'|'dock'|'menubar'|'spotlight'|'hotCorners'|'desktop'|'widgets'|'shortcuts'|'about'|'onboarding'. */
+  page?: string;
 }
 
 export interface SettingsPatchParams {
@@ -1446,6 +1451,10 @@ export function defaultSettings(): Settings {
   };
 }
 
+export function defaultSettingsOpenParams(): SettingsOpenParams {
+  return {};
+}
+
 export function defaultSettingsPatchParams(): SettingsPatchParams {
   return {};
 }
@@ -1677,6 +1686,8 @@ export interface HostEvents {
   'theme.changed': ThemeState;
   /** Full settings after any change (from any surface, file edit, or reset). */
   'settings.changed': Settings;
+  /** Settings window is already open: switch to this page. */
+  'settings.navigate': SettingsOpenParams;
   'desktop.state': DesktopState;
   'reminders.changed': ReminderList;
   /** A reminder's due time passed (fires once). */
@@ -1727,6 +1738,8 @@ export interface Calls {
   'settings.get': { params: void; result: Settings };
   /** Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result. */
   'settings.patch': { params: SettingsPatchParams; result: Settings };
+  /** Open (or focus) the settings window, optionally on a page. */
+  'settings.openWindow': { params: SettingsOpenParams; result: void };
   'desktop.moveIcon': { params: DesktopMoveParams; result: void };
   'desktop.open': { params: IdParams; result: void };
   'desktop.addShortcut': { params: AddShortcutParams; result: DesktopIcon };
@@ -1800,6 +1813,7 @@ export const HOST_EVENT_TYPES: readonly HostEventType[] = [
   'surface.visibility',
   'theme.changed',
   'settings.changed',
+  'settings.navigate',
   'desktop.state',
   'reminders.changed',
   'reminders.due',
@@ -1826,6 +1840,7 @@ export const CALL_TYPES: readonly CallType[] = [
   'surface.ready',
   'settings.get',
   'settings.patch',
+  'settings.openWindow',
   'desktop.moveIcon',
   'desktop.open',
   'desktop.addShortcut',
