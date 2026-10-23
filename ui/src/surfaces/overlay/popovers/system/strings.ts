@@ -1,7 +1,7 @@
 import { createT } from '$lib/i18n.svelte';
 
 /** Strings of the system menu (kind 'apple'), its confirmation sheet and the app menu (kind 'appMenu'). */
-export const t = createT({
+export const dicts = {
   en: {
     'apple.label': 'System menu',
     'apple.about': 'About This PC',
@@ -70,4 +70,6 @@ export const t = createT({
     'app.quit': 'Завершить «{app}»',
     'app.unknown': 'Приложение',
   },
-});
+};
+
+export const t = createT(dicts);

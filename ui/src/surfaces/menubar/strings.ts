@@ -1,7 +1,7 @@
 import { createT } from '$lib/i18n.svelte';
 
 /** Menu bar strings (en + ru). */
-export const t = createT({
+export const dicts = {
   en: {
     'bar.label': 'Menu bar',
     'bar.labelFor': 'Menu bar, {monitor}',
@@ -62,4 +62,6 @@ export const t = createT({
     'bar.mediaBy': '{title} — {artist}',
     'bar.clock': 'Дата и время, {full}',
   },
-});
+};
+
+export const t = createT(dicts);

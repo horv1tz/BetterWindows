@@ -22,7 +22,8 @@
     pressed?: boolean;
     dim?: boolean;
     disabled?: boolean;
-    haspopup?: 'dialog' | 'menu';
+    /** What the item opens; null for items that open nothing in the overlay (tray icons): no aria-haspopup / aria-expanded then. */
+    haspopup?: 'dialog' | 'menu' | null;
     /** Semibold text (the app name). */
     strong?: boolean;
     /** Primary activation (click / Enter / Space) with the item's bounding rect in client DIPs. */
@@ -45,8 +46,8 @@
   data-bar-item
   data-pressed={pressed || undefined}
   aria-label={label}
-  aria-haspopup={haspopup}
-  aria-expanded={pressed}
+  aria-haspopup={haspopup ?? undefined}
+  aria-expanded={haspopup ? pressed : undefined}
   {disabled}
   onclick={() => onactivate?.(rect())}
   oncontextmenu={(e) => { if (onsecondary) { e.preventDefault(); onsecondary('right', rect()); } }}
@@ -62,6 +63,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    min-width: 0; /* lets the app name shrink (ellipsis) when the bar is narrow */
     height: 22px;
     padding: 0 7px;
     margin: 0;

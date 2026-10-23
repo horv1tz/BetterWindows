@@ -210,7 +210,7 @@
           {#each trayIcons as icon (icon.id)}
             <MenuBarItem
               label={icon.tooltip || icon.id}
-              pressed={false}
+              haspopup={null}
               onactivate={(r) => clickTray(icon, 'left', r)}
               onsecondary={(kind, r) => clickTray(icon, kind, r)}
             >
@@ -285,7 +285,7 @@
   :global(:root[data-theme='dark']) .bar.solid { background: #1c1c20; backdrop-filter: none; -webkit-backdrop-filter: none; }
 
   .group { display: flex; align-items: center; min-width: 0; }
-  .group.left { flex: 0 1 auto; gap: 1px; }
+  .group.left { flex: 0 1 auto; gap: 1px; overflow: hidden; }
   .group.right { flex: 0 0 auto; gap: 1px; }
   .tray { display: flex; align-items: center; gap: 1px; margin-right: 2px; }
 

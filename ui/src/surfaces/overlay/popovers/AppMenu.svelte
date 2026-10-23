@@ -17,6 +17,7 @@
 
   const bridge = getBridge();
   const active = hostState('activeApp.changed', {});
+  $effect(() => active.dispose); // hostState does not unsubscribe by itself; the popover is mounted anew on every open
 
   /** request.data comes from the (untrusted) menu bar page: accept only a plain non-empty string. */
   const requestedId = $derived.by(() => {
