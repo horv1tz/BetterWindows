@@ -54,21 +54,20 @@ internal sealed unsafe class ProcessInfoCache : IDisposable
             return created.Info;
         }
 
-        // Replace a stale negative entry; if another thread won the race, drop our handle and use theirs.
-        _entries.AddOrUpdate(
-            pid,
-            created,
-            (_, old) =>
+        // Publish under a lock (no side effects inside a ConcurrentDictionary factory, which may run more than once): replace a stale negative
+        // entry; if another thread already published a live entry, keep theirs and release our duplicate handle.
+        lock (_pruneGate)
+        {
+            if (_entries.TryGetValue(pid, out var existing) && existing.Handle != null)
             {
-                if (old.Handle != null)
-                {
-                    created.Handle?.Dispose();
-                    return old;
-                }
+                created.Handle?.Dispose();
+                return existing.Info;
+            }
 
-                return created;
-            });
-        return _entries.TryGetValue(pid, out var final) ? final.Info : created.Info;
+            _entries[pid] = created;
+        }
+
+        return created.Info;
     }
 
     private static Entry Create(int pid)
