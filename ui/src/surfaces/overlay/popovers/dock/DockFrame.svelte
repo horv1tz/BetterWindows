@@ -41,7 +41,7 @@
 
 <style>
   .frame {
-    position: fixed; border-radius: 14px; padding: 6px; overflow: auto; box-shadow: var(--shadow-lg);
+    position: fixed; border-radius: 14px; padding: 6px; overflow: auto; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
     opacity: 0; scrollbar-width: thin;
   }
   .frame.ready { opacity: 1; animation: pop var(--dur) var(--ease-out); }

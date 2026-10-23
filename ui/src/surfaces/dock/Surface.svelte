@@ -139,18 +139,23 @@
     pos, strip, m, mag, mode, hop, dragExtra: dragMode === 'pin' ? m.size + m.gap : 0, monitorMain, collapsed: autoHide && collapsed,
   }));
 
+  // The first size is sent synchronously (a host that keeps the window hidden until it knows its size must not wait for a frame: rAF is
+  // paused for hidden pages); later changes are coalesced in a microtask so a burst of state updates yields one message.
   let sentKey = '';
-  let resizeRaf = 0;
-  $effect(() => {
+  let sizeQueued = false;
+  function sendSize() {
+    sizeQueued = false;
     const s = sizing;
-    cancelAnimationFrame(resizeRaf);
-    resizeRaf = requestAnimationFrame(() => {
-      const key = `${s.width}x${s.height}/${s.barThickness}`;
-      if (key === sentKey) return;
-      sentKey = key;
-      bridge.emit('surface.resize', { width: s.width, height: s.height, barThickness: s.barThickness });
-      queueMicrotask(refreshRect);
-    });
+    const key = `${s.width}x${s.height}/${s.barThickness}`;
+    if (key === sentKey) return;
+    sentKey = key;
+    bridge.emit('surface.resize', { width: s.width, height: s.height, barThickness: s.barThickness });
+    refreshRect();
+  }
+  $effect(() => {
+    void sizing;
+    if (sentKey === '') { sendSize(); return; }
+    if (!sizeQueued) { sizeQueued = true; queueMicrotask(sendSize); }
   });
 
   // ------------------------------------------------------------------ auto-hide: the host owns edge detection, we animate
@@ -529,7 +534,7 @@
       window.removeEventListener('mouseout', onOut);
       window.removeEventListener('blur', leave);
       window.removeEventListener('resize', refreshRect);
-      cancelAnimationFrame(raf); cancelAnimationFrame(resizeRaf);
+      cancelAnimationFrame(raf);
       for (const x of [modeTimer, tipTimer, holdTimer, settleTimer, optimisticTimer]) clearTimeout(x);
       dock.dispose(); settings.dispose(); theme.dispose();
     };
@@ -569,6 +574,7 @@
   onpointerdown={onDown}
   onpointerup={onUp}
   onpointercancel={onCancel}
+  oncontextmenu={(e) => e.preventDefault()}
   style:--gap="{m.gap}px"
   style:--ext={ext}
   style:--ext-in={extIn}
@@ -604,7 +610,7 @@
               {#if e.kind === 'item'}
                 <ItemView
                   item={e.item} size={m.size} {pos} label={labelOf(e)} tabbable={tabKey === e.key}
-                  hidden={hiddenKey === e.key} loop={loopOf(e)} burst={bounces[e.item.id]?.kind === 'launch' ? bounces[e.item.id].n : 0}
+                  hidden={hiddenKey === e.key} loop={loopOf(e)} burst={bounces[e.item.id]?.n ?? 0}
                   motionOk={!reduceMotion} hit={hitMode}
                 />
               {:else if e.kind === 'tile'}
@@ -670,7 +676,11 @@
   .left .stage.slid { transform: translate3d(calc(-100% - var(--edge) - 24px), 0, 0); pointer-events: none; }
   .right .stage.slid { transform: translate3d(calc(100% + var(--edge) + 24px), 0, 0); pointer-events: none; }
 
-  .pill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  /* the host clips the window to the glass rects, so an outer shadow can only live inside the small safety margin: keep it tight and lean on the rim light */
+  .pill {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 0 0 0.5px var(--glass-edge), 0 2px 7px rgba(0, 0, 0, 0.2);
+  }
   .strip { position: absolute; inset: 0; outline: none; }
   .slot { position: absolute; }
   .mag { position: absolute; inset: 0; }

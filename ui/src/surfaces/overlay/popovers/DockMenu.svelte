@@ -165,7 +165,7 @@
   .titles { min-width: 0; }
   .name { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sub { font-size: 11.5px; color: var(--text-2); }
-  .label { padding: 7px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-3); }
+  .label { padding: 7px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-2); }
   .sep { height: 1px; margin: 5px 8px; background: var(--separator); }
   .wins { display: flex; flex-direction: column; max-height: 232px; overflow: auto; scrollbar-width: thin; }
 

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // vitest resolves `svelte` to its SSR entry (vite.config.ts has no `browser` condition): use the client build so mount() works in jsdom.
+// @ts-expect-error untyped deep import (bypasses the package exports map on purpose)
 vi.mock('svelte', () => import('../../../../../node_modules/svelte/src/index-client.js'));
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
@@ -126,7 +127,7 @@ describe('DockMenu', () => {
 
   it('elevated windows show a shield with the explanation and cannot be activated or closed', async () => {
     const t = await open('dockMenu', terminal);
-    t.host.dockWorld.windows.find((w: any) => w.appId === terminal).elevated = true;
+    t.host.dockWorld.windows.find((w) => w.appId === terminal)!.elevated = true;
     t.host.emit('dock.state', t.host.dockWorld.state());
     await tick(20);
     const hint = 'Running as administrator: cannot be controlled';
@@ -192,8 +193,8 @@ describe('WindowList', () => {
 
   it('falls back to a list with large icons when there are no thumbnails, and shows minimised state', async () => {
     const t = await boot('overlay');
-    t.host.dockWorld.windows.forEach((w: any) => { delete w.thumbUrl; });
-    t.host.dockWorld.windows.find((w: any) => w.appId === edge && !w.active).minimized = true;
+    t.host.dockWorld.windows.forEach((w) => { delete w.thumbUrl; });
+    t.host.dockWorld.windows.find((w) => w.appId === edge && !w.active)!.minimized = true;
     t.host.emit('dock.state', t.host.dockWorld.state());
     await tick(5); // let the state event land before the popover subscribes (the bridge replays the cached value to late subscribers)
     const onclose = vi.fn();
@@ -206,7 +207,7 @@ describe('WindowList', () => {
 
   it('elevated windows are marked, explained and inert', async () => {
     const t = await boot('overlay');
-    t.host.dockWorld.windows.find((w: any) => w.appId === edge).elevated = true;
+    t.host.dockWorld.windows.find((w) => w.appId === edge)!.elevated = true;
     t.host.emit('dock.state', t.host.dockWorld.state());
     await tick(5); // let the state event land before the popover subscribes (the bridge replays the cached value to late subscribers)
     const onclose = vi.fn();

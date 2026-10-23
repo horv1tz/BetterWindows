@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vitest resolves `svelte` to its SSR entry (vite.config.ts has no `browser` condition): use the client build so mount() works in jsdom.
+// @ts-expect-error untyped deep import (bypasses the package exports map on purpose)
 vi.mock('svelte', () => import('../../../node_modules/svelte/src/index-client.js'));
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
@@ -111,7 +112,7 @@ describe('dock surface', () => {
   });
 
   it('follows dock.state: unpinning in the host removes the pinned flag, closing windows updates the label', async () => {
-    await env.bridge.call('dock.closeWindow', { handle: env.host.dockWorld.state().items.find((i: any) => i.id === edge).windows[0].handle });
+    await env.bridge.call('dock.closeWindow', { handle: env.host.dockWorld.state().items.find((i) => i.id === edge)!.windows[0].handle });
     await tick(20);
     expect(btn(edge).getAttribute('aria-label')).toBe('Microsoft Edge, 2 windows');
     await env.bridge.call('dock.quit', { itemId: terminal });
@@ -141,5 +142,96 @@ describe('dock surface with a left dock', () => {
     const last = env.events.filter((e) => e.type === 'surface.resize').at(-1)!.payload;
     expect(last.width).toBeLessThan(200);
     expect(last.height).toBeGreaterThan(400);
+  });
+});
+
+// ---- drag & drop through real pointer events (jsdom has no layout: the stage rectangle is 0x0 at the origin, so a pointer at (x, -y) is y px above the dock's bottom edge)
+describe('dock drag and drop', () => {
+  const slotCentre = (key: string) => {
+    const slot = btn(key).closest<HTMLElement>('.slot')!;
+    return parseFloat(slot.style.left) + parseFloat(slot.style.width) / 2;
+  };
+  const ptr = (el: Element, type: string, x: number, y: number) =>
+    fireEvent(el, new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+  async function dragTo(key: string, x: number, y: number, release = true) {
+    const from = slotCentre(key);
+    await ptr(btn(key), 'pointerdown', from, -30);
+    for (let i = 1; i <= 6; i++) await ptr(btn(key), 'pointermove', from + ((x - from) * i) / 6, -30 + ((y + 30) * i) / 6);
+    if (release) await ptr(btn(key), 'pointerup', x, y);
+    await tick(10);
+  }
+  const pinnedOrder = (env: Awaited<ReturnType<typeof mountDock>>) => env.host.settings.dock.pins.map((p) => p.id);
+
+  it('a short press is still a click, not a drag', async () => {
+    const env = await mountDock();
+    await ptr(btn(terminal), 'pointerdown', slotCentre(terminal), -30);
+    await ptr(btn(terminal), 'pointermove', slotCentre(terminal) + 2, -30);
+    await ptr(btn(terminal), 'pointerup', slotCentre(terminal) + 2, -30);
+    await fireEvent.click(btn(terminal));
+    expect(env.calls.some((c) => c.type === 'dock.activate' && c.params.itemId === terminal)).toBe(true);
+    expect(env.calls.some((c) => c.type === 'dock.reorder')).toBe(false);
+  });
+
+  it('dropping a pinned app on another slot sends the full new pinned order and updates the dock', async () => {
+    const env = await mountDock();
+    const before = pinnedOrder(env);
+    await dragTo(edge, slotCentre(before[3]) + 5, -30);
+    const reorder = env.calls.find((c) => c.type === 'dock.reorder')!;
+    expect(reorder.params.itemIds).toEqual([before[0], before[2], before[3], before[1], ...before.slice(4)]);
+    await tick(30);
+    expect(pinnedOrder(env)).toEqual(reorder.params.itemIds);
+    // the dragged click must not also activate
+    expect(env.calls.some((c) => c.type === 'dock.activate')).toBe(false);
+  });
+
+  it('dropping on its own slot sends nothing', async () => {
+    const env = await mountDock();
+    await dragTo(edge, slotCentre(edge), -30);
+    expect(env.calls.some((c) => c.type === 'dock.reorder')).toBe(false);
+  });
+
+  it('dragging a pinned app far out of the dock unpins it', async () => {
+    const env = await mountDock();
+    await dragTo(terminal, slotCentre(terminal), -260);
+    expect(env.calls.find((c) => c.type === 'dock.unpin')!.params).toEqual({ itemId: terminal });
+    await tick(30);
+    expect(pinnedOrder(env)).not.toContain(terminal);
+  });
+
+  it('shows the Remove hint only while the drag is beyond the unpin distance, and Escape cancels', async () => {
+    const env = await mountDock();
+    await dragTo(terminal, slotCentre(terminal), -260, false);
+    expect(document.querySelector('.ghost .remove')).not.toBeNull();
+    await fireEvent.keyDown(window, { key: 'Escape' });
+    await tick(260);
+    expect(document.querySelector('.ghost')).toBeNull();
+    expect(env.calls.some((c) => c.type === 'dock.unpin')).toBe(false);
+  });
+
+  it('dragging a running unpinned app into the pinned area pins it at that index', async () => {
+    const env = await mountDock();
+    const pinned = pinnedOrder(env);
+    await dragTo(appByName('Notepad').id, slotCentre(pinned[1]) + 5, -30);
+    const pin = env.calls.find((c) => c.type === 'dock.pin')!;
+    expect(pin.params).toEqual({ appId: appByName('Notepad').id, index: 2 });
+    await tick(30);
+    expect(pinnedOrder(env)[2]).toBe(appByName('Notepad').id);
+  });
+
+  it('dropping a running unpinned app among the running apps / folders does nothing', async () => {
+    const env = await mountDock();
+    await dragTo(appByName('Notepad').id, slotCentre(appByName('Notepad').id) + 90, -30);
+    expect(env.calls.some((c) => c.type === 'dock.pin' || c.type === 'dock.reorder' || c.type === 'dock.unpin')).toBe(false);
+  });
+
+  it('folders can be dragged but only among folders; minimised tiles and separators are not draggable', async () => {
+    const env = await mountDock();
+    const tile = document.querySelector<HTMLButtonElement>('button[data-key^="win:"]')!;
+    const from = parseFloat(tile.closest<HTMLElement>('.slot')!.style.left);
+    await ptr(tile, 'pointerdown', from, -30);
+    await ptr(tile, 'pointermove', from - 200, -30);
+    await ptr(tile, 'pointerup', from - 200, -30);
+    expect(document.querySelector('.ghost')).toBeNull();
+    expect(env.calls.some((c) => c.type === 'dock.reorder' || c.type === 'dock.pin' || c.type === 'dock.unpin')).toBe(false);
   });
 });

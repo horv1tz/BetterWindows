@@ -1,6 +1,7 @@
 // Test-only helpers (jsdom has no layout, ResizeObserver or Web Animations): boot a surface against the in-browser mock host.
 import { MockBridge } from '../../mock/mockBridge';
-import { getMockHost, resetMockHost } from '../../mock/host';
+import { getMockHost, resetMockHost, type MockHost } from '../../mock/host';
+import type { DockWorld } from '../../mock/domains/dock';
 import { initLocale, i18n } from '$lib/i18n.svelte';
 import { setBridgeForTests, setInit } from '$lib/ipc';
 import type { SurfaceKind } from '$lib/protocol/generated';
@@ -31,7 +32,7 @@ export async function boot(surface: SurfaceKind, lang = 'en') {
   initLocale();
   i18n.set(lang);
   await new Promise((r) => setTimeout(r, 0)); // initial state events
-  return { bridge, calls, events, host: getMockHost() };
+  return { bridge, calls, events, host: getMockHost() as MockHost & { dockWorld: DockWorld } };
 }
 
 export const tick = (ms = 0) => new Promise((r) => setTimeout(r, ms));
