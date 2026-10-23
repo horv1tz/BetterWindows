@@ -1215,7 +1215,7 @@ public sealed record SurfaceVisibility
 
 public sealed record TaskbarSettings
 {
-    [JsonPropertyName("mode")] public TaskbarMode Mode { get; init; } = TaskbarMode.Hidden;
+    [JsonPropertyName("mode")] public TaskbarMode Mode { get; init; } = TaskbarMode.Visible;
 }
 
 public sealed record ThemePreferenceParams

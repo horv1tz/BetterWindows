@@ -633,7 +633,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `mode` | `TaskbarMode` | `"hidden"` |  |
+| `mode` | `TaskbarMode` | `"visible"` |  |
 
 **`DesktopShortcut`**
 
