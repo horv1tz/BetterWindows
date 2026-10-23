@@ -35,7 +35,7 @@ export function thumbOf(title: string, seed = 0): string {
 export function fixtureWindows(thumbs = true): WindowRef[] {
   const w = (app: string, title: string, o: Partial<WindowRef> = {}) => {
     const r = win(app, title, o);
-    if (thumbs && !r.minimized) r.thumbUrl = thumbOf(title);
+    if (thumbs) r.thumbUrl = thumbOf(title);
     return r;
   };
   const list = [

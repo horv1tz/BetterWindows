@@ -613,7 +613,7 @@
                 <div class="line"></div>
               {/if}
             </div>
-            {#if e.kind === 'item' && cfg.showIndicators && e.item.running && !e.item.launching}
+            {#if e.kind === 'item' && cfg.showIndicators && e.item.running && !e.item.launching && hiddenKey !== e.key}
               <i class="dot" class:on={e.item.active} aria-hidden="true"></i>
             {/if}
           </div>

@@ -37,8 +37,8 @@ export function metricsFor(size: number): Metrics {
   const s = Math.round(size);
   return {
     size: s,
-    gap: Math.max(2, Math.round(s * 0.09)),
-    pad: Math.max(5, Math.round(s * 0.14)),
+    gap: Math.max(2, Math.round(s * 0.1)),
+    pad: Math.max(6, Math.round(s * 0.18)),
     sepLen: 5,
     sepCross: Math.round(s * 0.72),
     tileW: Math.round(s * 1.12),
