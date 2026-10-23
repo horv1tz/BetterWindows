@@ -16,6 +16,7 @@ internal sealed class IconStore
     private static readonly TimeSpan MaxDiskAge = TimeSpan.FromDays(14);
     private readonly LruCache<string, byte[]> _memory;
     private readonly string _dir;
+    private readonly TimeProvider _time;
     private readonly ILogger _log;
     private int _purged;
 
@@ -23,6 +24,7 @@ internal sealed class IconStore
     {
         _memory = new LruCache<string, byte[]>(MaxEntries, MaxBytes, time, comparer: StringComparer.Ordinal);
         _dir = Path.Combine(paths.CacheDir, "icons");
+        _time = time;
         _log = log;
     }
 
@@ -66,7 +68,7 @@ internal sealed class IconStore
         try
         {
             foreach (var f in Directory.EnumerateFiles(_dir, "*.png"))
-                if (DateTime.UtcNow - File.GetLastWriteTimeUtc(f) > MaxDiskAge) TryDelete(f); // real clock on purpose: compares with file-system timestamps
+                if (_time.GetUtcNow().UtcDateTime - File.GetLastWriteTimeUtc(f) > MaxDiskAge) TryDelete(f); // the injected clock; file-system timestamps are UTC
         }
         catch (Exception ex) { _log.LogDebug(ex, "Icon disk cache purge failed"); }
     }
