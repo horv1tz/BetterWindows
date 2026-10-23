@@ -139,7 +139,7 @@ export function windowSizing(i: SizingInput): WindowSizing {
   let cross = bar + m.margin;
   if (i.mode !== 'idle') {
     const side = i.mag.enabled ? Math.ceil(maxSideShift(i.mag.fisheye)) + 2 : 0;
-    const headroom = Math.max(i.mag.enabled ? i.mag.maxIcon - m.size : 0, i.hop);
+    const headroom = (i.mag.enabled ? i.mag.maxIcon - m.size : 0) + i.hop;
     main += 2 * side;
     cross += headroom + m.tipRoom;
     if (i.mode === 'drag') {

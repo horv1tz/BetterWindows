@@ -82,9 +82,10 @@ describe('windowSizing', () => {
     const wide = layoutStrip(specs(80), m, 'bottom');
     expect(windowSizing({ ...base, strip: wide, mode: 'hover', monitorMain: 1440 }).width).toBeLessThanOrEqual(1440);
   });
-  it('reserves hop room while an icon bounces even when idle', () => {
+  it('reserves hop room while an icon bounces even when idle, and adds it to the magnification headroom while hovering', () => {
     const calm = windowSizing({ ...base, mode: 'idle' });
     expect(windowSizing({ ...base, mode: 'idle', hop: 20 }).height).toBe(calm.height + 20);
+    expect(windowSizing({ ...base, mode: 'hover', hop: 20 }).height).toBe(windowSizing({ ...base, mode: 'hover' }).height + 20);
   });
 });
 

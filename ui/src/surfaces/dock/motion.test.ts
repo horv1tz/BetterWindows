@@ -120,11 +120,16 @@ describe('DockMotion', () => {
     expect(f.pillEnd).toBeCloseTo(strip.length - 62 + m.pad, 0);
   });
 
-  it('bounce room grows the pill even without a pointer and resetShifts drops stale offsets', () => {
+  it('bounce room grows the pill even without a pointer, adds to the magnification growth, and resetShifts drops stale offsets', () => {
     const { motion, strip } = setup();
     motion.setBounce(20);
     run(motion, 1);
     expect(motion.frame().grow).toBeCloseTo(20, 0);
+    motion.setPointer(strip.slots[5].start + 28);
+    run(motion, 1);
+    expect(motion.frame().grow).toBeCloseTo(32 + 20, 0);
+    motion.setPointer(null);
+    run(motion, 1.5);
     motion.setDrag(strip.slots.map(() => 30));
     run(motion, 1);
     motion.resetShifts();

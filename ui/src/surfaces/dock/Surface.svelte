@@ -679,7 +679,7 @@
   /* the host clips the window to the glass rects, so an outer shadow can only live inside the small safety margin: keep it tight and lean on the rim light */
   .pill {
     position: absolute; left: 0; top: 0; width: 100%; height: 100%;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 0 0 0.5px var(--glass-edge), 0 2px 7px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset, 0 0 0 0.5px color-mix(in srgb, var(--glass-edge) 55%, transparent), 0 2px 7px rgba(0, 0, 0, 0.2);
   }
   .strip { position: absolute; inset: 0; outline: none; }
   .slot { position: absolute; }

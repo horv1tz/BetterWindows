@@ -109,10 +109,15 @@ export class DockMotion {
   step(dt: number): boolean {
     if (this.reduce) { this.snapAll(); return false; }
     if (this.pointer !== null) stepSpring(this.anchor, this.pointer, dt, ANCHOR);
-    stepSpring(this.amount, this.magTarget(), dt, AMOUNT);
+    const amountTarget = this.magTarget();
+    stepSpring(this.amount, amountTarget, dt, AMOUNT);
     stepSpring(this.lenDelta, this.lenDeltaTarget, dt, LENGTH);
     stepSpring(this.bounce, this.bounceTarget, dt, BOUNCE);
-    let busy = !isSettled(this.amount, this.magTarget()) || !isSettled(this.lenDelta, this.lenDeltaTarget) || !isSettled(this.bounce, this.bounceTarget);
+    // springs that came to rest are snapped onto their target: no residual 1.002x scale / sub-pixel offsets stay behind in the DOM
+    let busy = false;
+    for (const [s, target] of [[this.amount, amountTarget], [this.lenDelta, this.lenDeltaTarget], [this.bounce, this.bounceTarget]] as const) {
+      if (isSettled(s, target)) snap(s, target); else busy = true;
+    }
     if (this.pointer !== null && this.mag.enabled) busy = true;
     for (const s of this.slots) {
       const target = this.shiftTargets.get(s.key) ?? 0;
@@ -121,6 +126,7 @@ export class DockMotion {
       stepSpring(st, target, dt, SHIFT);
       if (!isSettled(st, target)) busy = true;
       else if (target === 0) this.shifts.delete(s.key);
+      else snap(st, target);
     }
     return busy;
   }
@@ -141,7 +147,8 @@ export class DockMotion {
     });
     const pillStart = mapPoint(0, a, f, amt) - this.m.pad;
     const pillEnd = mapPoint(Math.max(this.length, this.m.size * 0.5) + this.lenDelta.x, a, f, amt) + this.m.pad;
-    const grow = Math.max((peak - 1) * this.m.size, this.bounce.x);
+    // a hopping icon can be the magnified one: both amounts add up
+    const grow = (peak - 1) * this.m.size + this.bounce.x;
     return { slots, pillStart, pillEnd, grow, peak, hover: this.hoverIndex(a, amt, pillStart, pillEnd) };
   }
 
