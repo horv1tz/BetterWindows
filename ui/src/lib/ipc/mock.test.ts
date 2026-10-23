@@ -55,3 +55,17 @@ describe('state replay', () => {
     expect(n).toBe(0);
   });
 });
+
+describe('overlay mock', () => {
+  it('overlay.open reaches overlay surfaces as overlay.show with translated anchor', async () => {
+    const bar = new MockBridge({ surface: 'menubar', monitorId: '1' });
+    const ov = new MockBridge({ surface: 'overlay' });
+    const seen: any[] = [];
+    ov.on('overlay.show', (s) => seen.push(s));
+    await bar.call('overlay.open', { mode: 'popover', popover: { kind: 'calendar', anchor: { x: 10, y: 0, width: 50, height: 28 } } });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(seen).toHaveLength(1);
+    expect(seen[0].popover.kind).toBe('calendar');
+    expect(seen[0].token).toBeGreaterThan(0);
+  });
+});

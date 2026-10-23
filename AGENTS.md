@@ -75,7 +75,7 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 | ui-settings | `ui/src/surfaces/settings/**`, `ui/src/mock/domains/settings.ts` |
 | ui-desktop | `ui/src/surfaces/{desktop,playground}/**`, `ui/src/mock/domains/{desktop,widgets,weather,reminders}.ts` |
 
-Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`, `mock/domains/{common,apps,status}.ts`, `styles/tokens.css`, `overlay/popovers/{Popover,PopoverFrame}.svelte`) are frozen; put stream-specific helpers in your surface folder.
+Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`, `mock/domains/{common,apps,status,activeapp,overlay}.ts`, `lib/i18n.ts`, `styles/tokens.css`, `overlay/popovers/{Popover,PopoverFrame}.svelte`) are frozen; put stream-specific helpers in your surface folder.
 
 ## Quality bar
 
