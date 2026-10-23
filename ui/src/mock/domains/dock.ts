@@ -370,7 +370,13 @@ export default function register(host: MockHost) {
 
   host.onUiEvent('surface.resize', (p, ctx) => { if (ctx.surface === 'dock') (host as any).lastDockResize = p; });
 
+  // Another mock domain (loaded after this one) may have reset the settings: seed once more on the first dock/overlay ready if the pins are still empty.
+  let reseeded = false;
   host.onSurfaceReady((ctx) => {
+    if (!reseeded && (ctx.surface === 'dock' || ctx.surface === 'overlay')) {
+      reseeded = true;
+      if (host.settings.dock.pins.length === 0) { host.settings = { ...host.settings, dock: { ...host.settings.dock, pins: defaultPins() } }; host.emit('settings.changed', host.settings); }
+    }
     if (ctx.surface === 'dock' || ctx.surface === 'overlay') host.emitTo(ctx, 'dock.state', world.state());
     if (ctx.surface === 'dock') {
       const flashing = q.get('attention');

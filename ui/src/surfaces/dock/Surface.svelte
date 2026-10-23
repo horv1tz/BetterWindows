@@ -15,7 +15,7 @@
   import { fitIconSize, layoutStrip, magnifySpec, metricsFor, pillThickness, windowSizing, type DockMode, type DockPos, type SlotSpec } from './layout';
   import { appIdOf, buildEntries, dragKind, emptyDockState, opensWindowList, pinnedAppIndices, pinnedIds, reorderGroup, type Entry } from './model';
   import { DockMotion, type Frame } from './motion';
-  import { exceedsDragThreshold, planDrag, reorderedPinned, sameOrder, unpinDistance, type DragKind, type DragPlan, type DragVerdict } from './reorder';
+  import { exceedsDragThreshold, planDrag, reorderedPinned, sameOrder, unpinDistance, type DragKind, type DragPlan } from './reorder';
   import { hopAmplitude } from './hop';
 
   const bridge = getBridge();
@@ -88,7 +88,7 @@
     lastTick = now;
     const busy = motion.step(dt);
     render();
-    if (busy || pointerInside || dragging) { raf = requestAnimationFrame(tick); lastTick = now; }
+    if (busy || pointerInside || dragging) raf = requestAnimationFrame(tick);
   }
   function render() {
     const f = motion.frame();
@@ -384,6 +384,8 @@
 
   function dragMove(e: PointerEvent) {
     if (!press) return;
+    // the button was released somewhere we did not see (capture lost, released over another window): do not keep a phantom press/drag alive
+    if (!(e.buttons & 1)) { onCancel(); return; }
     if (!drag) {
       if (!exceedsDragThreshold(e.clientX - press.x, e.clientY - press.y)) return;
       startDrag(e);

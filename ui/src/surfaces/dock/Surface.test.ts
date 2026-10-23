@@ -152,7 +152,7 @@ describe('dock drag and drop', () => {
     return parseFloat(slot.style.left) + parseFloat(slot.style.width) / 2;
   };
   const ptr = (el: Element, type: string, x: number, y: number) =>
-    fireEvent(el, new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+    fireEvent(el, new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
   async function dragTo(key: string, x: number, y: number, release = true) {
     const from = slotCentre(key);
     await ptr(btn(key), 'pointerdown', from, -30);
@@ -222,6 +222,17 @@ describe('dock drag and drop', () => {
     const env = await mountDock();
     await dragTo(appByName('Notepad').id, slotCentre(appByName('Notepad').id) + 90, -30);
     expect(env.calls.some((c) => c.type === 'dock.pin' || c.type === 'dock.reorder' || c.type === 'dock.unpin')).toBe(false);
+  });
+
+  it('a drag whose button release was never seen is dropped on the next move instead of hanging', async () => {
+    const env = await mountDock();
+    await ptr(btn(terminal), 'pointerdown', slotCentre(terminal), -30);
+    await ptr(btn(terminal), 'pointermove', slotCentre(terminal) + 40, -30);
+    expect(document.querySelector('.ghost')).not.toBeNull();
+    await fireEvent(btn(terminal), new MouseEvent('pointermove', { bubbles: true, buttons: 0, clientX: slotCentre(terminal) + 80, clientY: -30 }));
+    await tick(260);
+    expect(document.querySelector('.ghost')).toBeNull();
+    expect(env.calls.some((c) => c.type === 'dock.reorder')).toBe(false);
   });
 
   it('folders can be dragged but only among folders; minimised tiles and separators are not draggable', async () => {
@@ -312,7 +323,7 @@ describe('dock hover and window sizing', () => {
 
   it('long press (touch) opens the dock menu and swallows the click that follows', async () => {
     const env = await mountDock();
-    const down = new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: slotCentre(terminal), clientY: -30 });
+    const down = new MouseEvent('pointerdown', { bubbles: true, button: 0, buttons: 1, clientX: slotCentre(terminal), clientY: -30 });
     Object.defineProperty(down, 'pointerType', { value: 'touch' });
     await fireEvent(btn(terminal), down);
     await tick(650);

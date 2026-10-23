@@ -72,7 +72,9 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
   }
-  .icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* the ring hugs the icon (the plate is exactly the slot box), not the gap-extended hit area */
+  .icon:focus-visible { outline: none; }
+  .icon:focus-visible .plate { opacity: 1; background: transparent; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 4px var(--accent); }
   .art { display: block; transition: transform 90ms var(--ease-out), filter 90ms var(--ease-out); filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.28)); }
   .icon:active .art { transform: scale(0.92); filter: brightness(0.82) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2)); }
   .icon.launching .art { opacity: 0.58; filter: saturate(0.55) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.2)); }

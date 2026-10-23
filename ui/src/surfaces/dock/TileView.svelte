@@ -33,7 +33,8 @@
     background: linear-gradient(160deg, color-mix(in srgb, var(--text) 16%, transparent), color-mix(in srgb, var(--text) 6%, transparent));
     border: 0.5px solid var(--glass-border); box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
-  .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .tile:focus-visible { outline: none; }
+  .tile:focus-visible .frame { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 0 4px var(--accent); }
   .thumb { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0.95; }
   .center { position: absolute; inset: var(--ext-in, 0 3px); display: grid; place-items: center; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.3)); }
   .badge { position: absolute; right: 4px; bottom: 3px; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.4)); }
