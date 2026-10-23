@@ -642,7 +642,7 @@
     position: absolute; inset: 0;
     --lp-shade: rgba(0, 0, 0, 0.14);
     background: linear-gradient(var(--lp-shade), var(--lp-shade)), var(--backdrop-dim);
-    backdrop-filter: blur(46px) saturate(150%); -webkit-backdrop-filter: blur(46px) saturate(150%);
+    backdrop-filter: blur(34px) saturate(150%); -webkit-backdrop-filter: blur(34px) saturate(150%);
     animation: fade-in 220ms var(--ease-out) both;
   }
   :global(:root[data-theme='light']) .backdrop { --lp-shade: rgba(0, 0, 0, 0.26); }
