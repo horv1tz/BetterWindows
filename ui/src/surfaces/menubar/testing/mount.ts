@@ -6,6 +6,7 @@
  * themselves use `svelte/internal/client` and are fine, so this helper loads the client entry (mount/unmount/flushSync/tick) by path.
  * (Components in this stream therefore avoid `onMount` - the server build makes it a no-op - and use `$effect` instead.)
  */
+// @ts-expect-error - a plain .js file addressed by path: it has no declaration file (the typed API is re-declared below)
 const client: any = await import('../../../../node_modules/svelte/src/index-client.js');
 
 export const flushSync: () => void = client.flushSync;
