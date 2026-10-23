@@ -46,7 +46,7 @@ public class WindowSystemIntegrationTests
         w.Should().NotBeNull();
         w!.Handle.Should().Be(tw.Handle);
         w.Title.Should().Be(title);
-        w.ClassName.Should().Be("STATIC");
+        string.Equals(w.ClassName, "STATIC", StringComparison.OrdinalIgnoreCase).Should().BeTrue($"the system static class is registered as \"Static\" and read back in any case, got \"{w.ClassName}\"");
         w.ProcessId.Should().Be(Environment.ProcessId);
         w.IsOwnProcess.Should().BeTrue();
         w.ExePath.Should().NotBeNullOrEmpty();
@@ -78,7 +78,7 @@ public class WindowSystemIntegrationTests
 
         w.Should().NotBeNull();
         w!.IsVisible.Should().BeFalse();
-        w.ClassName.Should().Be("STATIC");
+        string.Equals(w.ClassName, "STATIC", StringComparison.OrdinalIgnoreCase).Should().BeTrue($"the system static class is registered as \"Static\" and read back in any case, got \"{w.ClassName}\"");
     }
 
     [SkippableFact]

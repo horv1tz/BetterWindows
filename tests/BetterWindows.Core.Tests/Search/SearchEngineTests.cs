@@ -133,16 +133,31 @@ public class SearchEngineTests
         var first = ScriptedProvider.Immediate(SearchProviderId.Apps, Hit(SearchProviderId.Apps, "One", 0.9));
         var (second, gate) = ScriptedProvider.Gated(SearchProviderId.Settings, TimeSpan.FromSeconds(5));
         var stamps = new List<DateTimeOffset>();
-        var task = _engine.RunAsync("r1", Q(), new ISearchProvider[] { first, second }, 9, r => { stamps.Add(_time.GetUtcNow()); _emitted.Add(r); }, default);
+        var firstEmitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondEmitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var task = _engine.RunAsync("r1", Q(), new ISearchProvider[] { first, second }, 9, r =>
+        {
+            stamps.Add(_time.GetUtcNow());
+            _emitted.Add(r);
+            if (stamps.Count == 1) firstEmitted.SetResult(); else secondEmitted.SetResult();
+        }, default);
 
-        await PumpUntilAsync(_time, () => _emitted.Count >= 1);
+        // The clock stays still until the first emission has been stamped: a background pump could otherwise move it between the engine's
+        // record of that emission and this stamp. After that only this thread advances the clock, and the engine never emits sooner than
+        // 30 ms after its previous record, so the stamps must be at least 30 ms apart.
+        await firstEmitted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         gate.SetResult(new[] { Hit(SearchProviderId.Settings, "Two", 0.4) });
-        await PumpAsync(_time, task);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (!secondEmitted.Task.IsCompleted)
+        {
+            if (sw.ElapsedMilliseconds > 10_000) throw new Xunit.Sdk.XunitException("second emission never happened");
+            _time.Advance(TimeSpan.FromMilliseconds(5));
+            await Task.Delay(2);
+        }
+        await task;
 
         Assert.Equal(2, stamps.Count);
-        // The engine spaces emissions by the time it records BEFORE calling emit; the pump thread may advance the clock by one step (5 ms)
-        // between that record and this stamp, so allow exactly one pump step of slack on the stamps.
-        Assert.True(stamps[1] - stamps[0] >= SearchEngine.MinEmitInterval - TimeSpan.FromMilliseconds(5), $"gap was {stamps[1] - stamps[0]}");
+        Assert.True(stamps[1] - stamps[0] >= SearchEngine.MinEmitInterval, $"gap was {stamps[1] - stamps[0]}");
         Assert.True(_emitted[^1].Complete);
     }
 
