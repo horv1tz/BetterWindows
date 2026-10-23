@@ -1,58 +1,216 @@
 {
   "domain": "desktop",
   "types": {
-    "DesktopIcon": { "id": "string", "name": "string", "iconUrl": "string", "x": { "type": "int", "doc": "Grid column." }, "y": { "type": "int", "doc": "Grid row." }, "target": "string" },
+    "DesktopIcon": {
+      "id": "string",
+      "name": "string",
+      "iconUrl": "string",
+      "x": {
+        "type": "int",
+        "doc": "Grid column."
+      },
+      "y": {
+        "type": "int",
+        "doc": "Grid row."
+      },
+      "target": "string"
+    },
     "DesktopState": {
-      "enabled": "bool", "wallpaperUrl": "string?", "wallpaperFit": "WallpaperFit", "iconSize": "int",
-      "icons": "DesktopIcon[]", "widgets": "WidgetInstance[]"
+      "enabled": "bool",
+      "wallpaperUrl": "string?",
+      "wallpaperFit": "WallpaperFit",
+      "iconSize": "int",
+      "icons": "DesktopIcon[]",
+      "widgets": "WidgetInstance[]"
     },
-    "IdParams": { "id": "string" },
-    "DesktopMoveParams": { "id": "string", "x": "int", "y": "int" },
-    "AddShortcutParams": { "path": "string", "x": "int?", "y": "int?" },
-    "SetWallpaperParams": { "path": "string" },
-    "MoveWidgetParams": { "id": "string", "x": "double", "y": "double" },
-    "AddWidgetParams": { "type": "WidgetType", "size": "WidgetSize?", "x": "double?", "y": "double?" },
-    "UpdateWidgetParams": { "id": "string", "size": "WidgetSize?", "config": "any" },
-
-    "WeatherHour": { "time": "string", "tempC": "double", "code": "int" },
-    "WeatherDay": { "date": "string", "highC": "double", "lowC": "double", "code": "int" },
+    "IdParams": {
+      "id": "string"
+    },
+    "DesktopMoveParams": {
+      "id": "string",
+      "x": "int",
+      "y": "int"
+    },
+    "AddShortcutParams": {
+      "path": "string",
+      "x": "int?",
+      "y": "int?"
+    },
+    "SetWallpaperParams": {
+      "path": "string"
+    },
+    "MoveWidgetParams": {
+      "id": "string",
+      "x": "double",
+      "y": "double"
+    },
+    "AddWidgetParams": {
+      "type": "WidgetType",
+      "size": "WidgetSize?",
+      "x": "double?",
+      "y": "double?"
+    },
+    "UpdateWidgetParams": {
+      "id": "string",
+      "size": "WidgetSize?",
+      "config": "any"
+    },
+    "WeatherHour": {
+      "time": "string",
+      "tempC": "double",
+      "code": "int"
+    },
+    "WeatherDay": {
+      "date": "string",
+      "highC": "double",
+      "lowC": "double",
+      "code": "int"
+    },
     "WeatherSnapshot": {
-      "available": "bool", "error": "string?", "location": "string",
-      "tempC": "double", "apparentC": "double", "code": { "type": "int", "doc": "WMO weather code." },
-      "isDay": { "type": "bool", "default": true }, "humidity": "int?", "windKph": "double?",
-      "hourly": "WeatherHour[]", "daily": "WeatherDay[]", "updatedAt": "string?"
+      "available": "bool",
+      "error": "string?",
+      "location": "string",
+      "tempC": "double",
+      "apparentC": "double",
+      "code": {
+        "type": "int",
+        "doc": "WMO weather code."
+      },
+      "isDay": {
+        "type": "bool",
+        "default": true
+      },
+      "humidity": "int?",
+      "windKph": "double?",
+      "hourly": "WeatherHour[]",
+      "daily": "WeatherDay[]",
+      "updatedAt": "string?"
     },
-    "WeatherGetParams": { "force": "bool" },
-    "WeatherLocation": { "name": "string", "country": "string?", "admin": "string?", "latitude": "double", "longitude": "double" },
-    "WeatherSearchParams": { "query": "string" },
-    "WeatherLocations": { "locations": "WeatherLocation[]" },
-
-    "Reminder": { "id": "string", "title": "string", "notes": "string?", "due": { "type": "string?", "doc": "ISO-8601 local date-time." }, "done": "bool", "list": "string?" },
-    "ReminderList": { "items": "Reminder[]" },
-    "ReminderAddParams": { "title": "string", "due": "string?", "notes": "string?", "list": "string?" },
-    "ReminderUpdateParams": { "id": "string", "title": "string?", "due": "string?", "notes": "string?", "done": "bool?" }
+    "WeatherGetParams": {
+      "force": "bool"
+    },
+    "WeatherLocation": {
+      "name": "string",
+      "country": "string?",
+      "admin": "string?",
+      "latitude": "double",
+      "longitude": "double"
+    },
+    "WeatherSearchParams": {
+      "query": "string"
+    },
+    "WeatherLocations": {
+      "locations": "WeatherLocation[]"
+    },
+    "Reminder": {
+      "id": "string",
+      "title": "string",
+      "notes": "string?",
+      "due": {
+        "type": "string?",
+        "doc": "ISO-8601 local date-time."
+      },
+      "done": "bool",
+      "list": "string?"
+    },
+    "ReminderList": {
+      "items": "Reminder[]"
+    },
+    "ReminderAddParams": {
+      "title": "string",
+      "due": "string?",
+      "notes": "string?",
+      "list": "string?"
+    },
+    "ReminderUpdateParams": {
+      "id": "string",
+      "title": "string?",
+      "due": "string?",
+      "notes": "string?",
+      "done": "bool?"
+    }
   },
   "events": {
-    "desktop.state": { "dir": "host", "payload": "DesktopState" },
-    "reminders.changed": { "dir": "host", "payload": "ReminderList" },
-    "reminders.due": { "dir": "host", "payload": "Reminder", "doc": "A reminder's due time passed (fires once)." }
+    "desktop.state": {
+      "dir": "host",
+      "payload": "DesktopState",
+      "state": true
+    },
+    "reminders.changed": {
+      "dir": "host",
+      "payload": "ReminderList",
+      "state": true
+    },
+    "reminders.due": {
+      "dir": "host",
+      "payload": "Reminder",
+      "doc": "A reminder's due time passed (fires once)."
+    }
   },
   "calls": {
-    "desktop.moveIcon": { "params": "DesktopMoveParams", "result": null },
-    "desktop.open": { "params": "IdParams", "result": null },
-    "desktop.addShortcut": { "params": "AddShortcutParams", "result": "DesktopIcon" },
-    "desktop.removeShortcut": { "params": "IdParams", "result": null },
-    "desktop.setWallpaper": { "params": "SetWallpaperParams", "result": null },
-    "desktop.moveWidget": { "params": "MoveWidgetParams", "result": null },
-    "desktop.addWidget": { "params": "AddWidgetParams", "result": "WidgetInstance" },
-    "desktop.removeWidget": { "params": "IdParams", "result": null },
-    "desktop.updateWidget": { "params": "UpdateWidgetParams", "result": "WidgetInstance" },
-    "weather.get": { "params": "WeatherGetParams", "result": "WeatherSnapshot" },
-    "weather.search": { "params": "WeatherSearchParams", "result": "WeatherLocations" },
-    "weather.setLocation": { "params": "WeatherLocation", "result": null },
-    "reminders.list": { "params": null, "result": "ReminderList" },
-    "reminders.add": { "params": "ReminderAddParams", "result": "Reminder" },
-    "reminders.update": { "params": "ReminderUpdateParams", "result": "Reminder" },
-    "reminders.remove": { "params": "IdParams", "result": null }
+    "desktop.moveIcon": {
+      "params": "DesktopMoveParams",
+      "result": null
+    },
+    "desktop.open": {
+      "params": "IdParams",
+      "result": null
+    },
+    "desktop.addShortcut": {
+      "params": "AddShortcutParams",
+      "result": "DesktopIcon"
+    },
+    "desktop.removeShortcut": {
+      "params": "IdParams",
+      "result": null
+    },
+    "desktop.setWallpaper": {
+      "params": "SetWallpaperParams",
+      "result": null
+    },
+    "desktop.moveWidget": {
+      "params": "MoveWidgetParams",
+      "result": null
+    },
+    "desktop.addWidget": {
+      "params": "AddWidgetParams",
+      "result": "WidgetInstance"
+    },
+    "desktop.removeWidget": {
+      "params": "IdParams",
+      "result": null
+    },
+    "desktop.updateWidget": {
+      "params": "UpdateWidgetParams",
+      "result": "WidgetInstance"
+    },
+    "weather.get": {
+      "params": "WeatherGetParams",
+      "result": "WeatherSnapshot"
+    },
+    "weather.search": {
+      "params": "WeatherSearchParams",
+      "result": "WeatherLocations"
+    },
+    "weather.setLocation": {
+      "params": "WeatherLocation",
+      "result": null
+    },
+    "reminders.list": {
+      "params": null,
+      "result": "ReminderList"
+    },
+    "reminders.add": {
+      "params": "ReminderAddParams",
+      "result": "Reminder"
+    },
+    "reminders.update": {
+      "params": "ReminderUpdateParams",
+      "result": "Reminder"
+    },
+    "reminders.remove": {
+      "params": "IdParams",
+      "result": null
+    }
   }
 }

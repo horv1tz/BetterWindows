@@ -32,8 +32,8 @@ rules that the catalog cannot express. **Source of truth for shapes: `protocol/*
 1. The page loads, creates its bridge, calls `surface.ready { surface, monitorId? }`.
 2. The host replies with `SurfaceInit` (theme, settings, monitor, feature flags, locale).
 3. **After the reply** the host pushes the *current state* of every event the surface kind consumes (list below) with
-   `PublishTo(surface, …)`. The UI must therefore subscribe **before** calling `surface.ready` (or at least in the same tick).
-4. Afterwards state events are pushed on change. **All state events carry the full state** (idempotent snapshots, never
+   `PublishTo(surface, …)`.
+4. Events marked *state event* in PROTOCOL.md (`STATE_EVENT_TYPES`) are cached by the UI bridge and **replayed to late subscribers**, so ordering between the initial push and a component's `on()` does not matter (lazily mounted popovers included). Transient events (`dock.bounce`, `overlay.*`, `search.results`, …) are never replayed. Afterwards state events are pushed on change. **All state events carry the full state** (idempotent snapshots, never
    deltas): the UI replaces its mirror. The host coalesces bursts (≥ 50 ms apart for window-derived state).
 5. Pushed on ready, per surface kind:
    * `dock`: `dock.state`

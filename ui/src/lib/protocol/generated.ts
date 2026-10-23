@@ -1833,6 +1833,23 @@ export const HOST_EVENT_TYPES: readonly HostEventType[] = [
   'dock.bounce',
   'mc.thumbnail',
 ];
+/** Host events that are idempotent full-state snapshots: the bridge caches the latest and replays it to late subscribers. */
+export const STATE_EVENT_TYPES: readonly HostEventType[] = [
+  'apps.changed',
+  'theme.changed',
+  'settings.changed',
+  'desktop.state',
+  'reminders.changed',
+  'status.battery',
+  'status.network',
+  'status.audio',
+  'status.brightness',
+  'status.bluetooth',
+  'media.state',
+  'tray.state',
+  'activeApp.changed',
+  'dock.state',
+];
 export const CALL_TYPES: readonly CallType[] = [
   'apps.list',
   'apps.launch',

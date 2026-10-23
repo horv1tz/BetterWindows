@@ -158,12 +158,14 @@
     },
     "theme.changed": {
       "dir": "host",
-      "payload": "ThemeState"
+      "payload": "ThemeState",
+      "state": true
     },
     "settings.changed": {
       "dir": "host",
       "payload": "Settings",
-      "doc": "Full settings after any change (from any surface, file edit, or reset)."
+      "doc": "Full settings after any change (from any surface, file edit, or reset).",
+      "state": true
     },
     "surface.shape": {
       "dir": "ui",

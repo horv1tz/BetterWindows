@@ -31,3 +31,27 @@ describe('MockBridge', () => {
     await expect(b.call('dock.pin', { appId: 'x' })).rejects.toMatchObject({ code: 'notFound' });
   });
 });
+
+describe('state replay', () => {
+  it('replays the latest state event to a LATE subscriber', async () => {
+    const dock = new MockBridge({ surface: 'dock' });
+    const bar = new MockBridge({ surface: 'menubar', monitorId: '1' });
+    await bar.call('surface.ready', { surface: 'menubar', monitorId: '1' });
+    await new Promise((r) => setTimeout(r, 0)); // status events were pushed while nobody listened
+    const got: number[] = [];
+    bar.on('status.battery', (b) => got.push(b.percent)); // subscribes late
+    await new Promise((r) => setTimeout(r, 0));
+    expect(got).toEqual([76]);
+    void dock;
+  });
+
+  it('does not replay transient events', async () => {
+    const o = new MockBridge({ surface: 'overlay' });
+    (o as any).deliver('overlay.hide', undefined);
+    await new Promise((r) => setTimeout(r, 0));
+    let n = 0;
+    o.on('overlay.hide', () => n++);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(n).toBe(0);
+  });
+});

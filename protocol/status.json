@@ -1,57 +1,208 @@
 {
   "domain": "status",
   "enums": {
-    "NetworkKind": ["none", "wifi", "ethernet", "cellular", "other"],
-    "MediaAction": ["play", "pause", "toggle", "next", "previous", "seek"],
-    "TrayButton": ["left", "right", "double"],
-    "PowerAction": ["lock", "sleep", "hibernate", "restart", "shutdown", "logout"]
+    "NetworkKind": [
+      "none",
+      "wifi",
+      "ethernet",
+      "cellular",
+      "other"
+    ],
+    "MediaAction": [
+      "play",
+      "pause",
+      "toggle",
+      "next",
+      "previous",
+      "seek"
+    ],
+    "TrayButton": [
+      "left",
+      "right",
+      "double"
+    ],
+    "PowerAction": [
+      "lock",
+      "sleep",
+      "hibernate",
+      "restart",
+      "shutdown",
+      "logout"
+    ]
   },
   "types": {
-    "BatteryState": { "present": "bool", "percent": "int", "charging": "bool", "acOnline": "bool", "minutesRemaining": "int?" },
+    "BatteryState": {
+      "present": "bool",
+      "percent": "int",
+      "charging": "bool",
+      "acOnline": "bool",
+      "minutesRemaining": "int?"
+    },
     "NetworkState": {
-      "kind": "NetworkKind", "connected": "bool", "name": { "type": "string?", "doc": "SSID or adapter name." },
-      "signalBars": { "type": "int", "doc": "0..4, wifi only." }
+      "kind": "NetworkKind",
+      "connected": "bool",
+      "name": {
+        "type": "string?",
+        "doc": "SSID or adapter name."
+      },
+      "signalBars": {
+        "type": "int",
+        "doc": "0..4, wifi only."
+      }
     },
-    "AudioDevice": { "id": "string", "name": "string", "isDefault": "bool" },
+    "AudioDevice": {
+      "id": "string",
+      "name": "string",
+      "isDefault": "bool"
+    },
     "AudioState": {
-      "volume": { "type": "double", "doc": "0..1 master volume of the default output." }, "muted": "bool",
-      "deviceId": "string?", "deviceName": "string?", "devices": "AudioDevice[]"
+      "volume": {
+        "type": "double",
+        "doc": "0..1 master volume of the default output."
+      },
+      "muted": "bool",
+      "deviceId": "string?",
+      "deviceName": "string?",
+      "devices": "AudioDevice[]"
     },
-    "BrightnessState": { "supported": "bool", "level": { "type": "double", "doc": "0..1" } },
-    "BluetoothDevice": { "id": "string", "name": "string", "connected": "bool", "batteryPercent": "int?" },
-    "BluetoothState": { "supported": "bool", "enabled": "bool", "devices": "BluetoothDevice[]" },
+    "BrightnessState": {
+      "supported": "bool",
+      "level": {
+        "type": "double",
+        "doc": "0..1"
+      }
+    },
+    "BluetoothDevice": {
+      "id": "string",
+      "name": "string",
+      "connected": "bool",
+      "batteryPercent": "int?"
+    },
+    "BluetoothState": {
+      "supported": "bool",
+      "enabled": "bool",
+      "devices": "BluetoothDevice[]"
+    },
     "MediaState": {
-      "available": "bool", "title": "string?", "artist": "string?", "album": "string?", "appName": "string?",
-      "playing": "bool", "positionSec": "double", "durationSec": "double",
-      "thumbUrl": { "type": "string?", "doc": "https://app.local/dyn/art/<rev>" },
-      "canPlay": "bool", "canPause": "bool", "canNext": "bool", "canPrevious": "bool", "canSeek": "bool"
+      "available": "bool",
+      "title": "string?",
+      "artist": "string?",
+      "album": "string?",
+      "appName": "string?",
+      "playing": "bool",
+      "positionSec": "double",
+      "durationSec": "double",
+      "thumbUrl": {
+        "type": "string?",
+        "doc": "https://app.local/dyn/art/<rev>"
+      },
+      "canPlay": "bool",
+      "canPause": "bool",
+      "canNext": "bool",
+      "canPrevious": "bool",
+      "canSeek": "bool"
     },
-    "TrayIcon": { "id": "string", "tooltip": "string", "iconUrl": "string", "hidden": "bool" },
-    "TrayState": { "supported": "bool", "icons": "TrayIcon[]" },
-    "MediaControlParams": { "action": "MediaAction", "positionSec": "double?" },
-    "VolumeParams": { "volume": "double" },
-    "MuteParams": { "muted": "bool" },
-    "AudioDeviceParams": { "deviceId": "string" },
-    "BrightnessParams": { "level": "double" },
-    "ThemePreferenceParams": { "preference": "ThemePreference" },
-    "TrayClickParams": { "id": "string", "button": "TrayButton", "anchor": "Point?" }
+    "TrayIcon": {
+      "id": "string",
+      "tooltip": "string",
+      "iconUrl": "string",
+      "hidden": "bool"
+    },
+    "TrayState": {
+      "supported": "bool",
+      "icons": "TrayIcon[]"
+    },
+    "MediaControlParams": {
+      "action": "MediaAction",
+      "positionSec": "double?"
+    },
+    "VolumeParams": {
+      "volume": "double"
+    },
+    "MuteParams": {
+      "muted": "bool"
+    },
+    "AudioDeviceParams": {
+      "deviceId": "string"
+    },
+    "BrightnessParams": {
+      "level": "double"
+    },
+    "ThemePreferenceParams": {
+      "preference": "ThemePreference"
+    },
+    "TrayClickParams": {
+      "id": "string",
+      "button": "TrayButton",
+      "anchor": "Point?"
+    }
   },
   "events": {
-    "status.battery": { "dir": "host", "payload": "BatteryState" },
-    "status.network": { "dir": "host", "payload": "NetworkState" },
-    "status.audio": { "dir": "host", "payload": "AudioState" },
-    "status.brightness": { "dir": "host", "payload": "BrightnessState" },
-    "status.bluetooth": { "dir": "host", "payload": "BluetoothState" },
-    "media.state": { "dir": "host", "payload": "MediaState" },
-    "tray.state": { "dir": "host", "payload": "TrayState", "doc": "Third-party notification-area icons (needs features.trayHosting; otherwise supported=false)." }
+    "status.battery": {
+      "dir": "host",
+      "payload": "BatteryState",
+      "state": true
+    },
+    "status.network": {
+      "dir": "host",
+      "payload": "NetworkState",
+      "state": true
+    },
+    "status.audio": {
+      "dir": "host",
+      "payload": "AudioState",
+      "state": true
+    },
+    "status.brightness": {
+      "dir": "host",
+      "payload": "BrightnessState",
+      "state": true
+    },
+    "status.bluetooth": {
+      "dir": "host",
+      "payload": "BluetoothState",
+      "state": true
+    },
+    "media.state": {
+      "dir": "host",
+      "payload": "MediaState",
+      "state": true
+    },
+    "tray.state": {
+      "dir": "host",
+      "payload": "TrayState",
+      "doc": "Third-party notification-area icons (needs features.trayHosting; otherwise supported=false).",
+      "state": true
+    }
   },
   "calls": {
-    "audio.setVolume": { "params": "VolumeParams", "result": null },
-    "audio.setMuted": { "params": "MuteParams", "result": null },
-    "audio.setDevice": { "params": "AudioDeviceParams", "result": null },
-    "brightness.set": { "params": "BrightnessParams", "result": null },
-    "theme.setPreference": { "params": "ThemePreferenceParams", "result": null },
-    "media.control": { "params": "MediaControlParams", "result": null },
-    "tray.click": { "params": "TrayClickParams", "result": null }
+    "audio.setVolume": {
+      "params": "VolumeParams",
+      "result": null
+    },
+    "audio.setMuted": {
+      "params": "MuteParams",
+      "result": null
+    },
+    "audio.setDevice": {
+      "params": "AudioDeviceParams",
+      "result": null
+    },
+    "brightness.set": {
+      "params": "BrightnessParams",
+      "result": null
+    },
+    "theme.setPreference": {
+      "params": "ThemePreferenceParams",
+      "result": null
+    },
+    "media.control": {
+      "params": "MediaControlParams",
+      "result": null
+    },
+    "tray.click": {
+      "params": "TrayClickParams",
+      "result": null
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { PROTOCOL_VERSION } from '../protocol/generated';
 import type { CallType, HostEventType, UiEventType } from '../protocol/generated';
 import { BridgeError, type Bridge, type Envelope } from './bridge';
+import { Listeners } from './bridgeBase';
 
 interface WebView2Api {
   postMessage(message: string): void;
@@ -20,7 +21,7 @@ export class HostBridge implements Bridge {
   readonly kind = 'host' as const;
   private nextId = 1;
   private pending = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
-  private listeners = new Map<string, Set<(payload: any) => void>>();
+  private listeners = new Listeners();
   private wv: WebView2Api;
 
   constructor(private callTimeoutMs = 30_000) {
@@ -44,10 +45,7 @@ export class HostBridge implements Bridge {
       if (env.ok) p.resolve(env.payload);
       else p.reject(new BridgeError(env.error?.code ?? 'unknown', env.error?.message ?? 'call failed'));
     } else if (env.kind === 'event' && env.type) {
-      const set = this.listeners.get(env.type);
-      if (set) for (const h of [...set]) {
-        try { h(env.payload); } catch (err) { console.error('[bridge] handler for', env.type, 'threw', err); }
-      }
+      this.listeners.deliver(env.type, env.payload);
     }
   }
 
@@ -68,10 +66,7 @@ export class HostBridge implements Bridge {
   }
 
   on<K extends HostEventType>(type: K, handler: (payload: any) => void): () => void {
-    let set = this.listeners.get(type);
-    if (!set) this.listeners.set(type, (set = new Set()));
-    set.add(handler);
-    return () => set!.delete(handler);
+    return this.listeners.on(type, handler);
   }
 
   emit<K extends UiEventType>(type: K, ...args: any[]): void {

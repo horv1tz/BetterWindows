@@ -1,71 +1,236 @@
 {
   "domain": "windows",
   "enums": {
-    "DockItemKind": ["app", "folder", "separator"],
-    "DockBounceKind": ["launch", "attention"]
+    "DockItemKind": [
+      "app",
+      "folder",
+      "separator"
+    ],
+    "DockBounceKind": [
+      "launch",
+      "attention"
+    ]
   },
   "types": {
     "WindowRef": {
       "$doc": "A top-level window. handle is the HWND as a decimal string (JS numbers cannot hold 64-bit values).",
-      "handle": "string", "title": "string", "appId": "string", "iconUrl": "string", "thumbUrl": "string?",
-      "minimized": "bool", "maximized": "bool", "active": "bool", "desktopId": "string?"
+      "handle": "string",
+      "title": "string",
+      "appId": "string",
+      "iconUrl": "string",
+      "thumbUrl": "string?",
+      "minimized": "bool",
+      "maximized": "bool",
+      "active": "bool",
+      "desktopId": "string?"
     },
-    "ActiveApp": { "appId": "string", "name": "string", "iconUrl": "string", "handle": "string?", "title": "string?" },
-    "ActiveAppState": { "app": "ActiveApp?" },
+    "ActiveApp": {
+      "appId": "string",
+      "name": "string",
+      "iconUrl": "string",
+      "handle": "string?",
+      "title": "string?"
+    },
+    "ActiveAppState": {
+      "app": "ActiveApp?"
+    },
     "DockItem": {
-      "id": { "type": "string", "doc": "Pinned id or running app id (see PinnedItem.id); separators use 'separator:N'." },
-      "kind": "DockItemKind", "appId": "string?", "name": "string", "iconUrl": "string",
-      "target": { "type": "string?", "doc": "Folder path for kind=folder." },
-      "pinned": "bool", "running": "bool", "active": "bool", "attention": "bool", "badge": "string?",
-      "windows": { "type": "WindowRef[]", "doc": "Windows of this app, most recently active first." }
+      "id": {
+        "type": "string",
+        "doc": "Pinned id or running app id (see PinnedItem.id); separators use 'separator:N'."
+      },
+      "kind": "DockItemKind",
+      "appId": "string?",
+      "name": "string",
+      "iconUrl": "string",
+      "target": {
+        "type": "string?",
+        "doc": "Folder path for kind=folder."
+      },
+      "pinned": "bool",
+      "running": "bool",
+      "active": "bool",
+      "attention": "bool",
+      "badge": "string?",
+      "windows": {
+        "type": "WindowRef[]",
+        "doc": "Windows of this app, most recently active first."
+      }
     },
     "DockState": {
-      "items": { "type": "DockItem[]", "doc": "Pinned items in user order, then running-but-unpinned apps; folders and the trash-like tail after a separator." },
-      "minimized": { "type": "WindowRef[]", "doc": "Minimised windows (right-hand section)." },
+      "items": {
+        "type": "DockItem[]",
+        "doc": "Pinned items in user order, then running-but-unpinned apps; folders and the trash-like tail after a separator."
+      },
+      "minimized": {
+        "type": "WindowRef[]",
+        "doc": "Minimised windows (right-hand section)."
+      },
       "activeItemId": "string?"
     },
-    "DockItemParams": { "itemId": "string" },
-    "WindowHandleParams": { "handle": "string" },
-    "DockPinParams": { "appId": "string", "index": "int?" },
-    "DockReorderParams": { "itemIds": { "type": "string[]", "doc": "Full ordered list of PINNED item ids." } },
-    "DockRevealState": { "revealed": "bool" },
-    "DockBounce": { "itemId": "string", "kind": "DockBounceKind" },
-    "DesktopInfo": { "id": "string", "name": "string", "index": "int", "current": "bool" },
-    "McWindow": {
-      "handle": "string", "title": "string", "appId": "string", "appName": "string", "iconUrl": "string",
-      "thumbUrl": { "type": "string?", "doc": "https://app.local/dyn/thumb/<handle>?w=<px>&rev=<n>; may be absent until captured (then mc.thumbnail fires)." },
-      "desktopId": "string?", "bounds": "Rect", "minimized": "bool", "active": "bool"
+    "DockItemParams": {
+      "itemId": "string"
     },
-    "McSnapshot": { "desktops": "DesktopInfo[]", "desktopsSupported": "bool", "windows": "McWindow[]" },
-    "McSnapshotParams": { "monitorId": "string?" },
-    "McThumbnail": { "handle": "string", "thumbUrl": "string" },
-    "McMoveParams": { "handle": "string", "desktopId": "string" },
-    "DesktopIdParams": { "desktopId": "string" }
+    "WindowHandleParams": {
+      "handle": "string"
+    },
+    "DockPinParams": {
+      "appId": "string",
+      "index": "int?"
+    },
+    "DockReorderParams": {
+      "itemIds": {
+        "type": "string[]",
+        "doc": "Full ordered list of PINNED item ids."
+      }
+    },
+    "DockRevealState": {
+      "revealed": "bool"
+    },
+    "DockBounce": {
+      "itemId": "string",
+      "kind": "DockBounceKind"
+    },
+    "DesktopInfo": {
+      "id": "string",
+      "name": "string",
+      "index": "int",
+      "current": "bool"
+    },
+    "McWindow": {
+      "handle": "string",
+      "title": "string",
+      "appId": "string",
+      "appName": "string",
+      "iconUrl": "string",
+      "thumbUrl": {
+        "type": "string?",
+        "doc": "https://app.local/dyn/thumb/<handle>?w=<px>&rev=<n>; may be absent until captured (then mc.thumbnail fires)."
+      },
+      "desktopId": "string?",
+      "bounds": "Rect",
+      "minimized": "bool",
+      "active": "bool"
+    },
+    "McSnapshot": {
+      "desktops": "DesktopInfo[]",
+      "desktopsSupported": "bool",
+      "windows": "McWindow[]"
+    },
+    "McSnapshotParams": {
+      "monitorId": "string?"
+    },
+    "McThumbnail": {
+      "handle": "string",
+      "thumbUrl": "string"
+    },
+    "McMoveParams": {
+      "handle": "string",
+      "desktopId": "string"
+    },
+    "DesktopIdParams": {
+      "desktopId": "string"
+    }
   },
   "events": {
-    "activeApp.changed": { "dir": "host", "payload": "ActiveAppState", "doc": "Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name." },
-    "dock.state": { "dir": "host", "payload": "DockState", "doc": "Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms)." },
-    "dock.reveal": { "dir": "host", "payload": "DockRevealState", "doc": "Auto-hide: host detected the pointer at the dock edge (true) or leaving (false)." },
-    "dock.bounce": { "dir": "host", "payload": "DockBounce" },
-    "mc.thumbnail": { "dir": "host", "payload": "McThumbnail", "doc": "A thumbnail became available after mc.snapshot." }
+    "activeApp.changed": {
+      "dir": "host",
+      "payload": "ActiveAppState",
+      "doc": "Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name.",
+      "state": true
+    },
+    "dock.state": {
+      "dir": "host",
+      "payload": "DockState",
+      "doc": "Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms).",
+      "state": true
+    },
+    "dock.reveal": {
+      "dir": "host",
+      "payload": "DockRevealState",
+      "doc": "Auto-hide: host detected the pointer at the dock edge (true) or leaving (false)."
+    },
+    "dock.bounce": {
+      "dir": "host",
+      "payload": "DockBounce"
+    },
+    "mc.thumbnail": {
+      "dir": "host",
+      "payload": "McThumbnail",
+      "doc": "A thumbnail became available after mc.snapshot."
+    }
   },
   "calls": {
-    "dock.activate": { "params": "DockItemParams", "result": null, "doc": "Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer." },
-    "dock.activateWindow": { "params": "WindowHandleParams", "result": null },
-    "dock.closeWindow": { "params": "WindowHandleParams", "result": null },
-    "dock.pin": { "params": "DockPinParams", "result": null },
-    "dock.unpin": { "params": "DockItemParams", "result": null },
-    "dock.reorder": { "params": "DockReorderParams", "result": null },
-    "dock.newWindow": { "params": "DockItemParams", "result": null },
-    "dock.quit": { "params": "DockItemParams", "result": null, "doc": "Close all windows of the app (WM_CLOSE)." },
-    "dock.hide": { "params": "DockItemParams", "result": null, "doc": "Minimise all windows of the app." },
-    "dock.revealInExplorer": { "params": "DockItemParams", "result": null },
-    "mc.snapshot": { "params": "McSnapshotParams", "result": "McSnapshot" },
-    "mc.activateWindow": { "params": "WindowHandleParams", "result": null },
-    "mc.closeWindow": { "params": "WindowHandleParams", "result": null },
-    "mc.switchDesktop": { "params": "DesktopIdParams", "result": null },
-    "mc.moveWindow": { "params": "McMoveParams", "result": null },
-    "mc.createDesktop": { "params": null, "result": "DesktopInfo" },
-    "mc.removeDesktop": { "params": "DesktopIdParams", "result": null }
+    "dock.activate": {
+      "params": "DockItemParams",
+      "result": null,
+      "doc": "Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer."
+    },
+    "dock.activateWindow": {
+      "params": "WindowHandleParams",
+      "result": null
+    },
+    "dock.closeWindow": {
+      "params": "WindowHandleParams",
+      "result": null
+    },
+    "dock.pin": {
+      "params": "DockPinParams",
+      "result": null
+    },
+    "dock.unpin": {
+      "params": "DockItemParams",
+      "result": null
+    },
+    "dock.reorder": {
+      "params": "DockReorderParams",
+      "result": null
+    },
+    "dock.newWindow": {
+      "params": "DockItemParams",
+      "result": null
+    },
+    "dock.quit": {
+      "params": "DockItemParams",
+      "result": null,
+      "doc": "Close all windows of the app (WM_CLOSE)."
+    },
+    "dock.hide": {
+      "params": "DockItemParams",
+      "result": null,
+      "doc": "Minimise all windows of the app."
+    },
+    "dock.revealInExplorer": {
+      "params": "DockItemParams",
+      "result": null
+    },
+    "mc.snapshot": {
+      "params": "McSnapshotParams",
+      "result": "McSnapshot"
+    },
+    "mc.activateWindow": {
+      "params": "WindowHandleParams",
+      "result": null
+    },
+    "mc.closeWindow": {
+      "params": "WindowHandleParams",
+      "result": null
+    },
+    "mc.switchDesktop": {
+      "params": "DesktopIdParams",
+      "result": null
+    },
+    "mc.moveWindow": {
+      "params": "McMoveParams",
+      "result": null
+    },
+    "mc.createDesktop": {
+      "params": null,
+      "result": "DesktopInfo"
+    },
+    "mc.removeDesktop": {
+      "params": "DesktopIdParams",
+      "result": null
+    }
   }
 }

@@ -41,7 +41,7 @@ for (const d of domains) {
     types.set(n, { fields, doc: $doc, domain: d.domain });
   }
   for (const [t, v] of Object.entries(d.events ?? {})) {
-    messages.push({ type: t, kind: 'event', dir: v.dir, payload: v.payload ?? null, doc: v.doc, domain: d.domain });
+    messages.push({ type: t, kind: 'event', dir: v.dir, payload: v.payload ?? null, doc: v.doc, domain: d.domain, state: !!v.state });
   }
   for (const [t, v] of Object.entries(d.calls ?? {})) {
     messages.push({ type: t, kind: 'call', dir: 'ui', params: v.params ?? null, result: v.result ?? null, doc: v.doc, domain: d.domain });
@@ -198,6 +198,7 @@ ts += '}\n\n/** Request/response calls (UI -> host): type -> { params, result }.
 for (const m of messages.filter((m) => m.kind === 'call')) ts += docTs(m.doc, '  ') + `  '${m.type}': { params: ${tsOr(m.params)}; result: ${tsOr(m.result)} };\n`;
 ts += '}\n\nexport type HostEventType = keyof HostEvents;\nexport type UiEventType = keyof UiEvents;\nexport type CallType = keyof Calls;\n\n';
 ts += 'export const HOST_EVENT_TYPES: readonly HostEventType[] = [\n' + messages.filter((m) => m.kind === 'event' && m.dir === 'host').map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
+ts += '/** Host events that are idempotent full-state snapshots: the bridge caches the latest and replays it to late subscribers. */\nexport const STATE_EVENT_TYPES: readonly HostEventType[] = [\n' + messages.filter((m) => m.kind === 'event' && m.dir === 'host' && m.state).map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
 ts += 'export const CALL_TYPES: readonly CallType[] = [\n' + messages.filter((m) => m.kind === 'call').map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
 
 // ---------- Markdown reference ----------
@@ -211,7 +212,7 @@ for (const d of domains) {
   if (ms.length) {
     md += '| message | kind | payload / params | result | notes |\n|---|---|---|---|---|\n';
     for (const m of ms) {
-      const kind = m.kind === 'call' ? 'call (ui→host)' : m.dir === 'host' ? 'event (host→ui)' : 'event (ui→host)';
+      const kind = m.kind === 'call' ? 'call (ui→host)' : m.dir === 'host' ? (m.state ? 'state event (host→ui)' : 'event (host→ui)') : 'event (ui→host)';
       const p = m.kind === 'call' ? m.params : m.payload;
       md += `| \`${m.type}\` | ${kind} | ${p ? typeStr(p) : '–'} | ${m.kind === 'call' ? (m.result ? typeStr(m.result) : '–') : ''} | ${(m.doc ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} |\n`;
     }

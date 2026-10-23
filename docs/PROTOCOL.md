@@ -7,7 +7,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | message | kind | payload / params | result | notes |
 |---|---|---|---|---|
-| `apps.changed` | event (host→ui) | `AppList` |  | The installed-app catalog changed (install/uninstall). |
+| `apps.changed` | state event (host→ui) | `AppList` |  | The installed-app catalog changed (install/uninstall). |
 | `apps.list` | call (ui→host) | – | `AppList` |  |
 | `apps.launch` | call (ui→host) | `AppLaunchParams` | – |  |
 | `apps.reveal` | call (ui→host) | `AppIdParams` | – | Show the app's exe/shortcut in Explorer. |
@@ -50,8 +50,8 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `surface.resize` | event (ui→host) | `SurfaceResizeParams` |  | Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes. |
 | `surface.log` | event (ui→host) | `LogParams` |  | UI log line, forwarded to the host log. |
 | `surface.visibility` | event (host→ui) | `SurfaceVisibility` |  | The host shows/hides the surface window (fullscreen app, overlay open, ...). |
-| `theme.changed` | event (host→ui) | `ThemeState` |  |  |
-| `settings.changed` | event (host→ui) | `Settings` |  | Full settings after any change (from any surface, file edit, or reset). |
+| `theme.changed` | state event (host→ui) | `ThemeState` |  |  |
+| `settings.changed` | state event (host→ui) | `Settings` |  | Full settings after any change (from any surface, file edit, or reset). |
 | `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces. |
 | `settings.navigate` | event (host→ui) | `SettingsOpenParams` |  | Settings window is already open: switch to this page. |
 | `surface.ready` | call (ui→host) | `SurfaceReadyParams` | `SurfaceInit` | First message every surface sends. After replying the host pushes all current state events to this surface. |
@@ -190,8 +190,8 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | message | kind | payload / params | result | notes |
 |---|---|---|---|---|
-| `desktop.state` | event (host→ui) | `DesktopState` |  |  |
-| `reminders.changed` | event (host→ui) | `ReminderList` |  |  |
+| `desktop.state` | state event (host→ui) | `DesktopState` |  |  |
+| `reminders.changed` | state event (host→ui) | `ReminderList` |  |  |
 | `reminders.due` | event (host→ui) | `Reminder` |  | A reminder's due time passed (fires once). |
 | `desktop.moveIcon` | call (ui→host) | `DesktopMoveParams` | – |  |
 | `desktop.open` | call (ui→host) | `IdParams` | – |  |
@@ -692,13 +692,13 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | message | kind | payload / params | result | notes |
 |---|---|---|---|---|
-| `status.battery` | event (host→ui) | `BatteryState` |  |  |
-| `status.network` | event (host→ui) | `NetworkState` |  |  |
-| `status.audio` | event (host→ui) | `AudioState` |  |  |
-| `status.brightness` | event (host→ui) | `BrightnessState` |  |  |
-| `status.bluetooth` | event (host→ui) | `BluetoothState` |  |  |
-| `media.state` | event (host→ui) | `MediaState` |  |  |
-| `tray.state` | event (host→ui) | `TrayState` |  | Third-party notification-area icons (needs features.trayHosting; otherwise supported=false). |
+| `status.battery` | state event (host→ui) | `BatteryState` |  |  |
+| `status.network` | state event (host→ui) | `NetworkState` |  |  |
+| `status.audio` | state event (host→ui) | `AudioState` |  |  |
+| `status.brightness` | state event (host→ui) | `BrightnessState` |  |  |
+| `status.bluetooth` | state event (host→ui) | `BluetoothState` |  |  |
+| `media.state` | state event (host→ui) | `MediaState` |  |  |
+| `tray.state` | state event (host→ui) | `TrayState` |  | Third-party notification-area icons (needs features.trayHosting; otherwise supported=false). |
 | `audio.setVolume` | call (ui→host) | `VolumeParams` | – |  |
 | `audio.setMuted` | call (ui→host) | `MuteParams` | – |  |
 | `audio.setDevice` | call (ui→host) | `AudioDeviceParams` | – |  |
@@ -920,8 +920,8 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | message | kind | payload / params | result | notes |
 |---|---|---|---|---|
-| `activeApp.changed` | event (host→ui) | `ActiveAppState` |  | Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name. |
-| `dock.state` | event (host→ui) | `DockState` |  | Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms). |
+| `activeApp.changed` | state event (host→ui) | `ActiveAppState` |  | Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name. |
+| `dock.state` | state event (host→ui) | `DockState` |  | Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms). |
 | `dock.reveal` | event (host→ui) | `DockRevealState` |  | Auto-hide: host detected the pointer at the dock edge (true) or leaving (false). |
 | `dock.bounce` | event (host→ui) | `DockBounce` |  |  |
 | `mc.thumbnail` | event (host→ui) | `McThumbnail` |  | A thumbnail became available after mc.snapshot. |
