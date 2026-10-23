@@ -131,7 +131,8 @@ public class WindowsIntegrationTests
         using var icons = new ShellIconSource();
         var png = await icons.GetIconPngAsync(new IconKey { WindowHandle = window.Handle }, 64);
         var (w, h) = await AssertValidPngAsync(png, 64);
-        (w, h).Should().Be((32, 32), "IDI_APPLICATION is a 32x32 system icon; icons smaller than the request are not enlarged");
+        w.Should().Be(h);
+        w.Should().BeInRange(16, 64, "IDI_APPLICATION is the system icon size (32 px at 100% scaling); icons smaller than the request are not enlarged");
     }
 
     [SkippableFact]

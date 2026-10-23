@@ -2,8 +2,16 @@ using System.Text;
 
 namespace BetterWindows.Native;
 
-/// <summary>The statements to run for one file search, in order, plus how many hits the caller may receive in total.</summary>
-internal sealed record FileSearchPlan(int Limit, IReadOnlyList<string> Statements);
+/// <summary>
+/// What to run for one file search: how many hits the caller may receive in total, and the statements as a list of VARIANTS (most capable first). Every variant holds the
+/// same phases in the same order (phase 1 = name starts with the phrase, phase 2 = name contains every word). The executor uses the first variant the provider accepts:
+/// the index provider is only reachable on a real Windows machine, so the more exotic clauses (relevance ordering, file scope) have plain fallbacks instead of a dead feature.
+/// </summary>
+internal sealed record FileSearchPlan(int Limit, IReadOnlyList<IReadOnlyList<string>> Variants)
+{
+    /// <summary>The full-featured variant (variant 0).</summary>
+    public IReadOnlyList<string> Statements => Variants[0];
+}
 
 /// <summary>
 /// Builds Windows Search (SYSTEMINDEX) SQL from user input. User text only ever appears inside single-quoted LIKE literals and passes through <see cref="EscapeLiteral"/>:
@@ -76,18 +84,32 @@ internal static class FileSearchQuery
         int top = Math.Min(MaxLimit * 3, limit * 3 + 20);
         var phrase = string.Join(' ', tokens);
 
-        var phase1 = Select(top, $"System.FileName LIKE '{phrase}%'");
-        var phase2 = Select(top * 2, string.Join(" AND ", tokens.Select(t => $"System.FileName LIKE '%{t}%'")));
-        return new FileSearchPlan(limit, [phase1, phase2]);
+        var like1 = $"System.FileName LIKE '{phrase}%'";
+        var like2 = string.Join(" AND ", tokens.Select(t => $"System.FileName LIKE '%{t}%'"));
+        var variants = new List<IReadOnlyList<string>>(3)
+        {
+            // 0: file scope + relevance order
+            new[] { Select(top, like1, scoped: true, ranked: true), Select(top * 2, like2, scoped: true, ranked: true) },
+            // 1: without System.Search.Rank (a provider that rejects ranking for plain LIKE predicates)
+            new[] { Select(top, like1, scoped: true, ranked: false), Select(top * 2, like2, scoped: true, ranked: false) },
+            // 2: minimal - no scope clause either; non-file items are dropped from the results by their (non-rooted) path
+            new[] { Select(top, like1, scoped: false, ranked: false), Select(top * 2, like2, scoped: false, ranked: false) },
+        };
+        return new FileSearchPlan(limit, variants);
     }
 
     /// <summary>The cheap availability probe statement.</summary>
     public const string ProbeStatement = "SELECT TOP 1 System.ItemPathDisplay FROM SYSTEMINDEX";
 
-    private static string Select(int top, string where)
-        => $"SELECT TOP {top} System.ItemPathDisplay, System.ItemNameDisplay, System.DateModified, System.FileAttributes, System.Search.Rank "
-         + $"FROM SYSTEMINDEX WHERE SCOPE='file:' AND {where} "
-         + "ORDER BY System.Search.Rank DESC, System.DateModified DESC";
+    private static string Select(int top, string where, bool scoped, bool ranked)
+    {
+        var columns = ranked
+            ? "System.ItemPathDisplay, System.ItemNameDisplay, System.DateModified, System.FileAttributes, System.Search.Rank"
+            : "System.ItemPathDisplay, System.ItemNameDisplay, System.DateModified, System.FileAttributes";
+        var scope = scoped ? "SCOPE='file:' AND " : "";
+        var order = ranked ? "ORDER BY System.Search.Rank DESC, System.DateModified DESC" : "ORDER BY System.DateModified DESC";
+        return $"SELECT TOP {top} {columns} FROM SYSTEMINDEX WHERE {scope}{where} {order}";
+    }
 
     /// <summary>True for paths inside system / tooling folders that must not be offered as search results.</summary>
     public static bool IsExcludedPath(string path)

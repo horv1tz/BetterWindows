@@ -91,6 +91,32 @@ public class FileSearchQueryTests
     }
 
     [Fact]
+    public void There_are_simpler_fallback_variants_with_the_same_phases()
+    {
+        var plan = FileSearchQuery.Plan("report", 10)!;
+        plan.Variants.Should().HaveCount(3);
+        plan.Variants.Should().OnlyContain(v => v.Count == 2);
+        plan.Variants[0].Should().OnlyContain(s => s.Contains("System.Search.Rank") && s.Contains("SCOPE='file:'"));
+        plan.Variants[1].Should().OnlyContain(s => !s.Contains("System.Search.Rank") && s.Contains("SCOPE='file:'") && s.Contains("ORDER BY System.DateModified DESC"));
+        plan.Variants[2].Should().OnlyContain(s => !s.Contains("System.Search.Rank") && !s.Contains("SCOPE"));
+        // the match conditions are identical in every variant
+        foreach (var phase in new[] { 0, 1 })
+        {
+            var conditions = plan.Variants.Select(v => System.Text.RegularExpressions.Regex.Match(v[phase], @"(System\.FileName LIKE .*?)( ORDER BY)").Groups[1].Value).Distinct().ToList();
+            conditions.Should().HaveCount(1);
+        }
+    }
+
+    [Theory]
+    [InlineData("x'; DROP TABLE SYSTEMINDEX; --")]
+    [InlineData("a' UNION SELECT System.ItemPathDisplay FROM SYSTEMINDEX WHERE '1'='1")]
+    public void Every_fallback_variant_is_as_injection_proof_as_the_first(string hostile)
+    {
+        var plan = FileSearchQuery.Plan(hostile, 10)!;
+        foreach (var statement in plan.Variants.SelectMany(v => v)) Skeleton(statement); // asserts balanced literals
+    }
+
+    [Fact]
     public void Limits_are_clamped_and_over_fetch_is_bounded()
     {
         FileSearchQuery.Plan("a", 0)!.Limit.Should().Be(1);

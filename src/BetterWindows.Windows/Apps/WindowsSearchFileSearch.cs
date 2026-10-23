@@ -107,6 +107,11 @@ public sealed class WindowsSearchFileSearch : IFileSearch
         }
     }
 
+    /// <summary>
+    /// Index of the statement variant the provider accepted last time, so a provider that rejects the exotic clauses is only probed once per process.
+    /// </summary>
+    private static int s_workingVariant;
+
     /// <summary>Worker: runs the plan's statements in order and writes de-duplicated hits. Never throws; always completes the channel.</summary>
     private void Produce(FileSearchPlan plan, ChannelWriter<FileHit> writer, CancellationToken ct)
     {
@@ -117,27 +122,19 @@ public sealed class WindowsSearchFileSearch : IFileSearch
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int emitted = 0;
 
-            foreach (var sql in plan.Statements)
+            for (int variant = Math.Min(Volatile.Read(ref s_workingVariant), plan.Variants.Count - 1); variant < plan.Variants.Count; variant++)
             {
-                if (emitted >= plan.Limit) break;
-                ct.ThrowIfCancellationRequested();
-
-                using var cmd = new OleDbCommand(sql, conn) { CommandTimeout = CommandTimeoutSeconds };
-                // Cancelling the token aborts the running command so the worker does not sit in the provider after the UI moved on.
-                using var registration = ct.Register(static state =>
+                try
                 {
-                    try { ((OleDbCommand)state!).Cancel(); }
-                    catch (Exception) { /* provider may not support cancel; the per-row token check still ends the loop */ }
-                }, cmd);
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
+                    RunStatements(conn, plan.Variants[variant], plan.Limit, writer, seen, ref emitted, ct);
+                    Volatile.Write(ref s_workingVariant, variant);
+                    return;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) when (!ct.IsCancellationRequested && variant + 1 < plan.Variants.Count)
                 {
-                    ct.ThrowIfCancellationRequested();
-                    var hit = ReadRow(reader);
-                    if (hit == null || !seen.Add(hit.Value.Path)) continue;
-                    writer.TryWrite(hit.Value);
-                    if (++emitted >= plan.Limit) break;
+                    // Most likely a clause this provider version does not accept: retry with the next, simpler variant (results already sent are not repeated: `seen`).
+                    _log.LogInformation(ex, "Windows Search rejected query variant {Variant}; trying a simpler one", variant);
                 }
             }
         }
@@ -152,10 +149,39 @@ public sealed class WindowsSearchFileSearch : IFileSearch
         }
     }
 
+    private static void RunStatements(OleDbConnection conn, IReadOnlyList<string> statements, int limit, ChannelWriter<FileHit> writer,
+        HashSet<string> seen, ref int emitted, CancellationToken ct)
+    {
+        foreach (var sql in statements)
+        {
+            if (emitted >= limit) break;
+            ct.ThrowIfCancellationRequested();
+
+            using var cmd = new OleDbCommand(sql, conn) { CommandTimeout = CommandTimeoutSeconds };
+            // Cancelling the token aborts the running command so the worker does not sit in the provider after the UI moved on.
+            using var registration = ct.Register(static state =>
+            {
+                try { ((OleDbCommand)state!).Cancel(); }
+                catch (Exception) { /* provider may not support cancel; the per-row token check still ends the loop */ }
+            }, cmd);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                ct.ThrowIfCancellationRequested();
+                var hit = ReadRow(reader);
+                if (hit == null || !seen.Add(hit.Value.Path)) continue;
+                writer.TryWrite(hit.Value);
+                if (++emitted >= limit) break;
+            }
+        }
+    }
+
     private static FileHit? ReadRow(OleDbDataReader reader)
     {
         var path = reader.IsDBNull(0) ? null : reader.GetValue(0) as string;
-        if (string.IsNullOrWhiteSpace(path) || FileSearchQuery.IsExcludedPath(path)) return null;
+        // Rooted local paths only: this also drops non-file items (mail, contacts) that unscoped query variants can return.
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path) || path.StartsWith(@"\\", StringComparison.Ordinal) || FileSearchQuery.IsExcludedPath(path)) return null;
 
         uint attrs = 0;
         if (!reader.IsDBNull(3))
