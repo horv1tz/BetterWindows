@@ -32,7 +32,9 @@ export async function boot(surface: SurfaceKind, lang = 'en') {
   initLocale();
   i18n.set(lang);
   await new Promise((r) => setTimeout(r, 0)); // initial state events
-  return { bridge, calls, events, host: getMockHost() as MockHost & { dockWorld: DockWorld } };
+  // settings.patch is only allowed from the settings surface (protocol 'surfaces'): tests that change settings use this bridge
+  const settings = new MockBridge({ surface: 'settings' });
+  return { bridge, settings, calls, events, host: getMockHost() as MockHost & { dockWorld: DockWorld } };
 }
 
 export const tick = (ms = 0) => new Promise((r) => setTimeout(r, ms));

@@ -135,7 +135,7 @@ describe('dock surface (ru)', () => {
 describe('dock surface with a left dock', () => {
   it('is a vertical toolbar and sends width as the cross axis', async () => {
     const env = await boot('dock');
-    await env.bridge.call('settings.patch', { patch: { dock: { position: 'left' } } });
+    await env.settings.call('settings.patch', { patch: { dock: { position: 'left' } } });
     render(Surface);
     await tick(60);
     expect(screen.getByRole('toolbar').getAttribute('aria-orientation')).toBe('vertical');
@@ -345,7 +345,7 @@ describe('dock hover and window sizing', () => {
 describe('dock auto-hide', () => {
   it('starts slid out, collapses the window after the slide, and slides in on dock.reveal', async () => {
     const env = await boot('dock');
-    await env.bridge.call('settings.patch', { patch: { dock: { autoHide: true } } });
+    await env.settings.call('settings.patch', { patch: { dock: { autoHide: true } } });
     render(Surface);
     await tick(20);
     const stage = document.querySelector('.stage')!;
@@ -369,10 +369,10 @@ describe('dock auto-hide', () => {
 
   it('turning auto-hide off reveals the dock for good', async () => {
     const env = await boot('dock');
-    await env.bridge.call('settings.patch', { patch: { dock: { autoHide: true } } });
+    await env.settings.call('settings.patch', { patch: { dock: { autoHide: true } } });
     render(Surface);
     await tick(500);
-    await env.bridge.call('settings.patch', { patch: { dock: { autoHide: false } } });
+    await env.settings.call('settings.patch', { patch: { dock: { autoHide: false } } });
     await tick(150);
     const stage = document.querySelector('.stage')!;
     expect(stage.classList.contains('slid')).toBe(false);
@@ -404,7 +404,7 @@ describe('dock bounce and launching', () => {
 
   it('bounceOnLaunch=false keeps the dock still', async () => {
     const env = await mountDock();
-    await env.bridge.call('settings.patch', { patch: { dock: { bounceOnLaunch: false } } });
+    await env.settings.call('settings.patch', { patch: { dock: { bounceOnLaunch: false } } });
     await tick(10);
     const before = env.events.filter((e) => e.type === 'surface.resize').length;
     await fireEvent.click(btn(mail));
@@ -427,7 +427,7 @@ describe('dock edge cases', () => {
   it('renders an empty dock without crashing and still reports a sane size', async () => {
     const env = await boot('dock');
     for (const w of [...env.host.dockWorld.windows]) env.host.dockWorld.closeWindow(w.handle);
-    await env.bridge.call('settings.patch', { patch: { dock: { pins: [] } } });
+    await env.settings.call('settings.patch', { patch: { dock: { pins: [] } } });
     render(Surface);
     await tick(60);
     expect(document.querySelectorAll('button[data-key]')).toHaveLength(0);
@@ -449,7 +449,7 @@ describe('dock edge cases', () => {
 
   it('survives garbage settings values (icon size, magnified size, position)', async () => {
     const env = await boot('dock');
-    await env.bridge.call('settings.patch', { patch: { dock: { iconSize: 9999, magnifiedSize: -5, position: 'sideways' } } });
+    await env.settings.call('settings.patch', { patch: { dock: { iconSize: 9999, magnifiedSize: -5, position: 'sideways' } } });
     render(Surface);
     await tick(40);
     const slot = document.querySelector<HTMLElement>('.slot.item')!;
@@ -459,7 +459,7 @@ describe('dock edge cases', () => {
 
   it('honours showIndicators=false and the icon size setting', async () => {
     const env = await boot('dock');
-    await env.bridge.call('settings.patch', { patch: { dock: { showIndicators: false, iconSize: 40 } } });
+    await env.settings.call('settings.patch', { patch: { dock: { showIndicators: false, iconSize: 40 } } });
     render(Surface);
     await tick(40);
     expect(document.querySelectorAll('.dot')).toHaveLength(0);
@@ -470,7 +470,7 @@ describe('dock edge cases', () => {
     const env = await boot('dock');
     render(Surface);
     await tick(40);
-    await env.bridge.call('settings.patch', { patch: { dock: { iconSize: 72, position: 'right' } } });
+    await env.settings.call('settings.patch', { patch: { dock: { iconSize: 72, position: 'right' } } });
     await tick(60);
     expect(screen.getByRole('toolbar').getAttribute('aria-orientation')).toBe('vertical');
     expect(parseFloat(document.querySelector<HTMLElement>('.slot.item')!.style.width)).toBeLessThanOrEqual(72);
