@@ -56,6 +56,7 @@
     aria-haspopup={item.windows.length > 1 ? 'dialog' : 'menu'}
     draggable="false"
   >
+    <span class="halo" aria-hidden="true"></span>
     <span class="plate" aria-hidden="true"></span>
     <span class="art"><AppIcon src={item.iconUrl} name={item.name} {size} /></span>
   </button>
@@ -82,7 +83,12 @@
     position: absolute; inset: var(--ext-in, 0 3px); border-radius: 25%;
     background: var(--hover); opacity: 0; transition: opacity var(--dur) var(--ease-out);
   }
-  .icon.active .plate { opacity: 0.55; }
+  /* the active app rests on a soft plate that peeks out around its icon (on top of the brighter running dot) */
+  .halo {
+    position: absolute; inset: var(--halo, -4px -1px); border-radius: 28%; opacity: 0; transition: opacity var(--dur) var(--ease-out);
+    background: color-mix(in srgb, var(--text) 13%, transparent); box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--text) 16%, transparent);
+  }
+  .icon.active .halo { opacity: 1; }
   /* reduced motion: no hopping, so a flashing app gets a steady accent ring instead */
   :global(:root[data-reduce-motion='true']) .icon.attn .plate { opacity: 1; background: color-mix(in srgb, var(--accent) 38%, transparent); box-shadow: 0 0 0 1.5px var(--accent) inset; }
   .hit { position: absolute; inset: var(--ext, 0 -3px); pointer-events: none; }

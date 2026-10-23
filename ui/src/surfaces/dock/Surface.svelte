@@ -1,4 +1,14 @@
 <script lang="ts">
+  /*
+   * The dock surface (#/dock). How it fits together:
+   *  - model.ts      DockState -> entries (items, separators, minimised tiles); layout.ts: rest geometry + the window size we ask the host for.
+   *  - magnify.ts    fisheye mapping of the strip around the pointer; motion.ts: springs for magnification, drag gaps, pill growth.
+   *  - dom.ts        writes one frame to the DOM (a translate + a scale per slot, the pill box), pointer/tooltip/popover geometry.
+   *  - drag.svelte.ts  drag & drop (reorder / pin / unpin) on top of reorder.ts.
+   *  - ItemView / TileView  the focusable buttons; hop.ts the launch / attention bounce (Web Animations).
+   * The UI owns the window size (surface.resize with barThickness), reports glass with use:glassShape and, when the host can leave
+   * overflow un-blurred (SurfaceInit.glassOverflow), magnified icons / tooltips with use:hitShape; otherwise the pill grows with the icons.
+   */
   import { onMount } from 'svelte';
   import { BridgeError, getBridge, getInit } from '$lib/ipc';
   import { hostState } from '$lib/ipc/state.svelte';
@@ -8,14 +18,11 @@
   import ItemView from './ItemView.svelte';
   import TileView from './TileView.svelte';
   import { t, windowsCount } from './strings';
-  import {
-    applyFrame, crossOf, isTouch, mainOf, originOf, outsideOf, popoverAnchor, slotCenterClient, slotStyle, tooltipPlacement,
-    type RectLike, type SlotRefs,
-  } from './dom';
+  import { applyFrame, crossOf, isTouch, mainOf, originOf, popoverAnchor, slotStyle, tooltipPlacement, type RectLike, type SlotRefs } from './dom';
   import { fitIconSize, layoutStrip, magnifySpec, metricsFor, pillThickness, windowSizing, type DockMode, type DockPos, type SlotSpec } from './layout';
-  import { appIdOf, buildEntries, dragKind, emptyDockState, opensWindowList, pinnedAppIndices, pinnedIds, reorderGroup, type Entry } from './model';
+  import { buildEntries, emptyDockState, opensWindowList, type Entry } from './model';
   import { DockMotion, type Frame } from './motion';
-  import { exceedsDragThreshold, planDrag, reorderedPinned, sameOrder, unpinDistance, type DragKind, type DragPlan } from './reorder';
+  import { DragController } from './drag.svelte';
   import { hopAmplitude } from './hop';
 
   const bridge = getBridge();
@@ -52,6 +59,8 @@
   const byKey = $derived(new Map(entries.map((e, i) => [e.key, i] as const)));
   const ext = $derived(pos === 'bottom' ? `0 ${-m.gap / 2}px` : `${-m.gap / 2}px 0`);
   const extIn = $derived(pos === 'bottom' ? `0 ${m.gap / 2}px` : `${m.gap / 2}px 0`);
+  /** The active app's plate peeks out 4px around the icon (the button box already extends gap/2 over the gaps on the main axis). */
+  const halo = $derived(pos === 'bottom' ? `-4px ${m.gap / 2 - 4}px` : `${m.gap / 2 - 4}px -4px`);
 
   // ------------------------------------------------------------------ DOM refs and the animation engine
   let rootEl = $state<HTMLElement>();
@@ -88,13 +97,13 @@
     lastTick = now;
     const busy = motion.step(dt);
     render();
-    if (busy || pointerInside || dragging) raf = requestAnimationFrame(tick);
+    if (busy || pointerInside || ctl.dragging) raf = requestAnimationFrame(tick);
   }
   function render() {
     const f = motion.frame();
     lastFrame = f;
     applyFrame(f, strip.slots, refs, pillEl ?? null, pos, m, !glassOverflow);
-    if (!dragging) setHover(f.hover >= 0 ? strip.slots[f.hover]?.key ?? null : null);
+    if (!ctl.dragging) setHover(f.hover >= 0 ? strip.slots[f.hover]?.key ?? null : null);
     placeTip(f);
   }
 
@@ -104,15 +113,35 @@
     wake();
   });
 
-  // drag state (declared early: the sizing and tooltip logic read it)
-  interface Press { key: string; index: number; kind: DragKind | null; x: number; y: number; grabX: number; grabY: number; pointerId: number; type: string; timer?: ReturnType<typeof setTimeout> }
-  interface Drag { key: string; index: number; kind: DragKind; plan: DragPlan; x: number; y: number; settle: null | 'land' | 'return' | 'poof' }
-  let press: Press | null = null;
-  let drag = $state<Drag | null>(null);
-  let hiddenKey = $state<string | null>(null);
-  let holdTimer: ReturnType<typeof setTimeout> | undefined;
-  let settleTimer: ReturnType<typeof setTimeout> | undefined;
-  const dragging = $derived(drag !== null);
+  // ------------------------------------------------------------------ drag & drop: reorder, pin by dragging, unpin by dragging out
+  const ctl = new DragController({
+    get pos() { return pos; },
+    get m() { return m; },
+    get entries() { return entries; },
+    get strip() { return strip; },
+    get stageRect() { return stageRect; },
+    get frame() { return lastFrame; },
+    get items() { return dock.value.items; },
+    get pointerInside() { return pointerInside; },
+    motion,
+    refreshRect,
+    wake,
+    render,
+    wantMode,
+    stopHover() { pointerInside = false; motion.setPointer(null); setHover(null); },
+    reorder: (itemIds) => run(bridge.call('dock.reorder', { itemIds }), 'reorder'),
+    pin: (appId, index) => run(bridge.call('dock.pin', { appId, index }), 'pin'),
+    unpin: (itemId) => run(bridge.call('dock.unpin', { itemId }), 'unpin'),
+    setOptimisticOrder: (order) => { optimisticOrder = order; },
+    openMenu: (key) => openPopover('dockMenu', key),
+  });
+  const drag = $derived(ctl.drag);
+  const dragging = $derived(ctl.dragging);
+
+  // the layout keys changed (window closed, state pushed): a running drag preview is stale, a finished drop is now authoritative
+  $effect(() => { void entries; ctl.layoutChanged(); });
+  // the optimistic pinned order (right after a reorder drop) is dropped once the host confirms it
+  $effect(() => { void dock.value; ctl.stateChanged(optimisticOrder); });
 
   // ------------------------------------------------------------------ window sizing (the UI owns the window size, docs/IPC.md section 5)
   let mode = $state<DockMode>('idle');
@@ -134,9 +163,8 @@
   let collapsed = $state(false);
   const autoHide = $derived(cfg.autoHide);
 
-  let dragMode = $state<DragKind | null>(null);
-  const sizing = $derived(windowSizing({
-    pos, strip, m, mag, mode, hop, dragExtra: dragMode === 'pin' ? m.size + m.gap : 0, monitorMain, collapsed: autoHide && collapsed,
+    const sizing = $derived(windowSizing({
+    pos, strip, m, mag, mode, hop, dragExtra: ctl.dragMode === 'pin' ? m.size + m.gap : 0, monitorMain, collapsed: autoHide && collapsed,
   }));
 
   // The first size is sent synchronously (a host that keeps the window hidden until it knows its size must not wait for a frame: rAF is
@@ -201,7 +229,7 @@
       return;
     }
     if (tipOpen || performance.now() < tipWarmUntil) { tipOpen = true; return; }
-    tipTimer = setTimeout(() => { if (hoverKey && !press && !dragging) tipOpen = true; }, 120);
+    tipTimer = setTimeout(() => { if (hoverKey && !ctl.busy) tipOpen = true; }, 120);
   }
 
   const tipText = $derived.by(() => {
@@ -231,7 +259,7 @@
   function onMove(e: PointerEvent) {
     if (isTouch(e)) { if (!touchMode) touchMode = true; } else if (touchMode) touchMode = false;
     refreshRect();
-    if (press || drag) { dragMove(e); return; }
+    if (ctl.busy) { ctl.move(e); return; }
     if (isTouch(e)) return;
     const main = mainOf(pos, stageRect, m, e.clientX, e.clientY);
     const cross = crossOf(pos, stageRect, e.clientX, e.clientY);
@@ -249,7 +277,7 @@
     pointerInside = false;
     motion.setPointer(null);
     setHover(null);
-    if (!dragging) wantMode('idle');
+    if (!ctl.dragging) wantMode('idle');
     wake();
   }
 
@@ -279,9 +307,8 @@
   }
   function itemIdOf(e: Entry): string { return e.kind === 'item' ? e.item.id : e.kind === 'tile' ? e.win.appId : e.key; }
 
-  let suppressClick = false;
   function onClick(e: MouseEvent) {
-    if (suppressClick) { suppressClick = false; e.preventDefault(); return; }
+    if (ctl.consumeClick()) { e.preventDefault(); return; }
     const key = (e.target as Element).closest<HTMLElement>('[data-key]')?.dataset.key;
     const entry = key ? itemOf(key) : undefined;
     if (!entry) return;
@@ -331,187 +358,6 @@
   }
   function onFocusOut() { kbKey = null; }
 
-  // ------------------------------------------------------------------ drag & drop: reorder, pin by dragging, unpin by dragging out
-
-  function onDown(e: PointerEvent) {
-    if (e.button !== 0) return;
-    suppressClick = false;
-    const el = (e.target as Element).closest<HTMLElement>('[data-key]');
-    const key = el?.dataset.key;
-    if (!el || !key || drag) return;
-    refreshRect();
-    const index = byKey.get(key);
-    if (index === undefined) return;
-    const entry = entries[index];
-    const c = slotCenterClient(pos, stageRect, m, strip.slots[index], lastFrame?.slots[index]?.offset ?? 0);
-    const sc = lastFrame?.slots[index]?.scale ?? 1;
-    press = {
-      key, index, kind: dragKind(entry), x: e.clientX, y: e.clientY, pointerId: e.pointerId, type: e.pointerType,
-      grabX: (e.clientX - c.x) / sc, grabY: (e.clientY - c.y) / sc,
-    };
-    tipOpen = false;
-    clearTimeout(tipTimer);
-    try { el.setPointerCapture(e.pointerId); } catch { /* not capturable (synthetic event): pointer events still bubble */ }
-    if (isTouch(e) && entry.kind === 'item') {
-      const p = press;
-      p.timer = setTimeout(() => { if (press === p && !drag) { suppressClick = true; press = null; openPopover('dockMenu', key); } }, 550);
-    }
-  }
-
-  function startDrag(e: PointerEvent) {
-    const p = press!;
-    clearTimeout(p.timer);
-    if (!p.kind) return;
-    dragMode = p.kind;
-    drag = { key: p.key, index: p.index, kind: p.kind, plan: { verdict: 'cancel', insertIndex: -1, shifts: [], lengthDelta: 0 }, x: e.clientX, y: e.clientY, settle: null };
-    hiddenKey = p.key;
-    if (pointerInside) { pointerInside = false; motion.setPointer(null); setHover(null); }
-    wantMode('drag');
-    suppressClick = true;
-    wake();
-  }
-
-  function planFor(e: PointerEvent): DragPlan {
-    const d = drag!, p = press!;
-    const main = mainOf(pos, stageRect, m, e.clientX - p.grabX, e.clientY - p.grabY);
-    const group = d.kind === 'reorder' ? reorderGroup(entries, d.index) : pinnedAppIndices(entries);
-    return planDrag(
-      { kind: d.kind, dragged: d.index, group, centers: strip.slots.map((s) => s.start + s.len / 2), slot: m.size + m.gap },
-      { main, outside: outsideOf(pos, stageRect, m, e.clientX, e.clientY) },
-      unpinDistance(m.size),
-    );
-  }
-
-  function dragMove(e: PointerEvent) {
-    if (!press) return;
-    // the button was released somewhere we did not see (capture lost, released over another window): do not keep a phantom press/drag alive
-    if (!(e.buttons & 1)) { onCancel(); return; }
-    if (!drag) {
-      if (!exceedsDragThreshold(e.clientX - press.x, e.clientY - press.y)) return;
-      startDrag(e);
-      if (!drag) { press = null; return; }
-    }
-    if (!drag || drag.settle) return;
-    const plan = planFor(e);
-    drag = { ...drag, x: e.clientX - press.grabX, y: e.clientY - press.grabY, plan };
-    motion.setDrag(plan.shifts, plan.lengthDelta);
-    wake();
-  }
-
-  function onUp(e: PointerEvent) {
-    if (press && !drag) { clearTimeout(press.timer); press = null; return; }
-    if (!press || !drag || drag.settle) return;
-    refreshRect();
-    finishDrag(planFor(e));
-  }
-  function onCancel() {
-    if (press && !drag) { clearTimeout(press.timer); press = null; }
-    else if (drag && !drag.settle) abortDrag();
-  }
-
-  function settleIn(ms: number, how: Drag['settle']) {
-    if (!drag) return;
-    drag = { ...drag, settle: how };
-    clearTimeout(settleTimer);
-    settleTimer = setTimeout(endDrag, ms);
-  }
-
-  function finishDrag(plan: DragPlan) {
-    const d = drag!;
-    const entry = entries[d.index];
-    if (entry.kind !== 'item') { abortDrag(); return; }
-    const item = entry.item;
-    if (plan.verdict === 'reorder') {
-      const all = pinnedIds(dock.value.items);
-      const order = reorderedPinned(all, reorderGroup(entries, d.index).map((i) => (entries[i] as { key: string }).key), item.id, plan.insertIndex);
-      const to = slotCenterClient(pos, stageRect, m, strip.slots[d.index], plan.shifts[d.index]);
-      drag = { ...d, plan, x: to.x, y: to.y };
-      settleIn(210, 'land');
-      if (!sameOrder(all, order)) {
-        optimisticOrder = order;
-        holdShifts();
-        const sent = order;
-        void run(bridge.call('dock.reorder', { itemIds: sent }), 'reorder').then((ok) => { if (!ok) { optimisticOrder = null; } optimisticDone = true; clearOptimisticIfSettled(); });
-      }
-      return;
-    }
-    if (plan.verdict === 'pin') {
-      const to = slotCenterClient(pos, stageRect, m, strip.slots[d.index], plan.shifts[d.index]);
-      drag = { ...d, plan, x: to.x, y: to.y };
-      settleIn(210, 'land');
-      holdShifts();
-      void run(bridge.call('dock.pin', { appId: appIdOf(item), index: plan.insertIndex }), 'pin');
-      return;
-    }
-    if (plan.verdict === 'unpin') {
-      drag = { ...d, plan };
-      settleIn(420, 'poof');
-      holdShifts();
-      void run(bridge.call('dock.unpin', { itemId: item.id }), 'unpin');
-      return;
-    }
-    const home = slotCenterClient(pos, stageRect, m, strip.slots[d.index], 0);
-    drag = { ...d, plan, x: home.x, y: home.y };
-    motion.setDrag(strip.slots.map(() => 0), 0);
-    settleIn(190, 'return');
-  }
-
-  /** After the drop the layout is authoritative once dock.state arrives; until then keep the preview shifts so nothing jumps back. */
-  function holdShifts() {
-    clearTimeout(holdTimer);
-    holdTimer = setTimeout(() => { holdTimer = undefined; motion.setDrag(null); hiddenKey = null; wake(); }, 1000);
-  }
-  function releaseHold() {
-    if (holdTimer === undefined) return;
-    clearTimeout(holdTimer);
-    holdTimer = undefined;
-    motion.resetShifts();
-    if (!drag) hiddenKey = null; // otherwise the landing ghost still covers the slot
-    render();
-  }
-
-  function endDrag() {
-    clearTimeout(settleTimer);
-    drag = null;
-    press = null;
-    dragMode = null;
-    // a pending hold (waiting for dock.state) keeps the preview shifts and the hidden source icon until it is released
-    if (holdTimer === undefined) { motion.setDrag(null); hiddenKey = null; }
-    wantMode(pointerInside ? 'hover' : 'idle');
-    wake();
-  }
-  function abortDrag() {
-    if (!drag) return;
-    const home = slotCenterClient(pos, stageRect, m, strip.slots[drag.index], 0);
-    motion.setDrag(strip.slots.map(() => 0), 0);
-    drag = { ...drag, x: home.x, y: home.y };
-    settleIn(190, 'return');
-  }
-
-  // layout keys changed under a running drag (window closed, state pushed): the preview is stale
-  let lastKeys = '';
-  $effect(() => {
-    const keys = entries.map((e) => e.key).join('|');
-    if (keys === lastKeys) return;
-    lastKeys = keys;
-    if (drag && !drag.settle) { abortDrag(); return; }
-    releaseHold();
-  });
-
-  // optimistic pinned order (right after a reorder drop) is dropped once the host confirms it
-  let optimisticDone = false;
-  let optimisticTimer: ReturnType<typeof setTimeout> | undefined;
-  function clearOptimisticIfSettled() {
-    if (optimisticOrder && optimisticDone) { optimisticOrder = null; optimisticDone = false; clearTimeout(optimisticTimer); }
-  }
-  $effect(() => {
-    const s = dock.value;
-    if (!optimisticOrder) return;
-    if (sameOrder(pinnedIds(s.items), optimisticOrder) || optimisticDone) { optimisticOrder = null; optimisticDone = false; return; }
-    clearTimeout(optimisticTimer);
-    optimisticTimer = setTimeout(() => { optimisticOrder = null; optimisticDone = false; }, 1500);
-  });
-
   // ------------------------------------------------------------------ host events
   onMount(() => {
     const offBounce = bridge.on('dock.bounce', (b) => {
@@ -537,13 +383,14 @@
       window.removeEventListener('blur', leave);
       window.removeEventListener('resize', refreshRect);
       cancelAnimationFrame(raf);
-      for (const x of [modeTimer, tipTimer, holdTimer, settleTimer, optimisticTimer]) clearTimeout(x);
+      for (const x of [modeTimer, tipTimer]) clearTimeout(x);
+      ctl.dispose();
       dock.dispose(); settings.dispose(); theme.dispose();
     };
   });
 
   function onWindowKey(e: KeyboardEvent) {
-    if (e.key === 'Escape' && drag && !drag.settle) { e.preventDefault(); abortDrag(); }
+    if (e.key === 'Escape' && ctl.escape()) e.preventDefault();
   }
 
   // ------------------------------------------------------------------ view helpers
@@ -573,13 +420,14 @@
   class:overflow={glassOverflow}
   bind:this={rootEl}
   onpointermove={onMove}
-  onpointerdown={onDown}
-  onpointerup={onUp}
-  onpointercancel={onCancel}
+  onpointerdown={(e) => ctl.down(e)}
+  onpointerup={(e) => ctl.up(e)}
+  onpointercancel={() => ctl.cancel()}
   oncontextmenu={(e) => e.preventDefault()}
   style:--gap="{m.gap}px"
   style:--ext={ext}
   style:--ext-in={extIn}
+  style:--halo={halo}
   style:--edge="{m.edgeGap}px"
   style:--pad="{m.pad}px"
 >
@@ -612,7 +460,7 @@
               {#if e.kind === 'item'}
                 <ItemView
                   item={e.item} size={m.size} {pos} label={labelOf(e)} tabbable={tabKey === e.key}
-                  hidden={hiddenKey === e.key} loop={loopOf(e)} burst={bounces[e.item.id]?.n ?? 0}
+                  hidden={ctl.hiddenKey === e.key} loop={loopOf(e)} burst={bounces[e.item.id]?.n ?? 0}
                   motionOk={!reduceMotion} hit={hitMode}
                 />
               {:else if e.kind === 'tile'}
@@ -621,7 +469,7 @@
                 <div class="line"></div>
               {/if}
             </div>
-            {#if e.kind === 'item' && cfg.showIndicators && e.item.running && !e.item.launching && hiddenKey !== e.key}
+            {#if e.kind === 'item' && cfg.showIndicators && e.item.running && !e.item.launching && ctl.hiddenKey !== e.key}
               <i class="dot" class:on={e.item.active} aria-hidden="true"></i>
             {/if}
           </div>
