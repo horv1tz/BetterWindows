@@ -141,17 +141,26 @@ internal sealed unsafe class HiddenWindow : IDisposable
             nint ptr = PInvoke.GetWindowLongPtr(hwnd, WINDOW_LONG_PTR_INDEX.GWLP_USERDATA);
             if (ptr != 0)
             {
-                if (GCHandle.FromIntPtr(ptr).Target is HiddenWindow self)
+                var self = GCHandle.FromIntPtr(ptr).Target as HiddenWindow;
+                if (self != null && self._handler(msg, wParam.Value, lParam.Value, out nint result))
                 {
-                    if (self._handler(msg, wParam.Value, lParam.Value, out nint result))
+                    if (msg == Win32Consts.WM_NCDESTROY)
                     {
-                        return new LRESULT(result);
+                        self._hwnd = default;
                     }
+
+                    return new LRESULT(result);
                 }
 
                 if (msg == Win32Consts.WM_NCDESTROY)
                 {
-                    // Last message of the window: detach so late messages cannot reach a freed handle.
+                    // Last message of the window: the HWND is dead from here on (also tells Dispose not to destroy it again) and late
+                    // messages must not reach the instance any more.
+                    if (self != null)
+                    {
+                        self._hwnd = default;
+                    }
+
                     PInvoke.SetWindowLongPtr(hwnd, WINDOW_LONG_PTR_INDEX.GWLP_USERDATA, 0);
                 }
             }

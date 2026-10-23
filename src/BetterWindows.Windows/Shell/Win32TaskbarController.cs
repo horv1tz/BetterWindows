@@ -35,6 +35,7 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
     private MessageLoopThread? _watcher;
     private volatile TaskbarMode _current = TaskbarMode.Visible;
     private volatile TaskbarMode _desired = TaskbarMode.Visible;
+    private long _stamp = TaskbarRestorer.Stamp; // TaskbarRestorer.Stamp at our last Apply/Restore (see there)
     private bool _disposed;
 
     // Watcher-thread state.
@@ -73,6 +74,7 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
             bool applied;
             lock (TaskbarRestorer.Gate)
             {
+                SyncWithExternalRestore();
                 applied = _engine.Apply(mode);
             }
 
@@ -107,11 +109,7 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
         try
         {
             _desired = TaskbarMode.Visible;
-            lock (TaskbarRestorer.Gate)
-            {
-                _engine.Apply(TaskbarMode.Visible);
-            }
-
+            RestoreUnderGate();
             _current = TaskbarMode.Visible;
             StopWatcher();
         }
@@ -133,13 +131,41 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
 
             _disposed = true;
             _desired = TaskbarMode.Visible;
-            lock (TaskbarRestorer.Gate)
-            {
-                _engine.Apply(TaskbarMode.Visible);
-            }
-
+            RestoreUnderGate();
             _current = TaskbarMode.Visible;
             StopWatcher();
+        }
+    }
+
+    /// <summary>Restores through the engine; the shared gate is awaited for a bounded time only (a hung Explorer must not hang a crash path).</summary>
+    private void RestoreUnderGate()
+    {
+        bool locked = Monitor.TryEnter(TaskbarRestorer.Gate, TimeSpan.FromSeconds(3));
+        try
+        {
+            SyncWithExternalRestore();
+            _engine.Apply(TaskbarMode.Visible);
+        }
+        finally
+        {
+            if (locked)
+            {
+                Monitor.Exit(TaskbarRestorer.Gate);
+            }
+        }
+    }
+
+    /// <summary>
+    /// If <see cref="TaskbarRestorer.RestoreNow()"/> ran since our last operation, the marker is gone and the taskbar was put back: drop the stale
+    /// in-memory snapshot so the next mutation takes a fresh one. Call under <see cref="TaskbarRestorer.Gate"/>.
+    /// </summary>
+    private void SyncWithExternalRestore()
+    {
+        long stamp = TaskbarRestorer.Stamp;
+        if (stamp != _stamp)
+        {
+            _stamp = stamp;
+            _engine.ForgetSnapshot();
         }
     }
 
@@ -343,6 +369,14 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
         {
             lock (TaskbarRestorer.Gate)
             {
+                if (TaskbarRestorer.Stamp != _stamp)
+                {
+                    // Somebody (crash handler / rescue command) restored the taskbar behind our back: stop fighting it. The next Apply starts over.
+                    _desired = TaskbarMode.Visible;
+                    _current = TaskbarMode.Visible;
+                    return;
+                }
+
                 if (_desired == TaskbarMode.Hidden)
                 {
                     _engine.Enforce();

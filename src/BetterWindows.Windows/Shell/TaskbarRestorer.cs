@@ -16,6 +16,14 @@ public static class TaskbarRestorer
     /// <summary>Serializes the controller and the restorer inside this process (a different process is harmless: every step is idempotent).</summary>
     internal static readonly object Gate = new();
 
+    private static long s_stamp;
+
+    /// <summary>
+    /// Incremented by every <see cref="RestoreNow()"/>. A live <see cref="Win32TaskbarController"/> compares it with the value it saw at its last
+    /// Apply: a change means somebody restored the taskbar behind its back (crash handler, rescue command), so it must stop re-hiding it.
+    /// </summary>
+    internal static long Stamp => Interlocked.Read(ref s_stamp);
+
     /// <summary>Restores the taskbar from the persisted snapshot. Safe to call repeatedly, from any thread, at any time.</summary>
     public static void RestoreNow() => RestoreNow(new Win32TaskbarSurface(), FileTaskbarSnapshotStore.Default, NullLogger.Instance);
 
@@ -26,6 +34,7 @@ public static class TaskbarRestorer
         bool locked = false;
         try
         {
+            Interlocked.Increment(ref s_stamp); // before restoring: a watcher must not undo what we are about to do
             locked = Monitor.TryEnter(Gate, TimeSpan.FromSeconds(3));
             TaskbarEngine.Restore(surface, store, log);
         }

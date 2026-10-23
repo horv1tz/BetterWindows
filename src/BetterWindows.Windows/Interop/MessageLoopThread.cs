@@ -324,7 +324,8 @@ internal sealed unsafe class MessageLoopThread : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        // _ready is deliberately not disposed: the loop thread may still signal it after a timed-out Stop, and a ManualResetEventSlim that was
+        // only used with Wait/Set holds no kernel resources.
         Stop();
-        _ready.Dispose();
     }
 }

@@ -554,6 +554,31 @@ public class TaskbarRestorerAndControllerTests
     }
 
     [Fact]
+    public void After_an_external_RestoreNow_the_next_Apply_writes_a_fresh_marker_instead_of_trusting_the_stale_snapshot()
+    {
+        var surface = new FakeTaskbarSurface(_log);
+        var store = new FakeSnapshotStore(_log);
+        using var controller = new Win32TaskbarController(NullLogger.Instance, surface, store);
+        controller.Apply(TaskbarMode.AutoHide);
+        store.Exists.Should().BeTrue();
+        long stampBefore = TaskbarRestorer.Stamp;
+
+        // A crash handler / rescue command restores behind the controller's back.
+        TaskbarRestorer.RestoreNow(surface, store, NullLogger.Instance);
+        TaskbarRestorer.Stamp.Should().BeGreaterThan(stampBefore);
+        store.Exists.Should().BeFalse();
+        surface.State.Should().Be(2);
+
+        controller.Apply(TaskbarMode.AutoHide);
+
+        surface.State.Should().Be(3);
+        store.Exists.Should().BeTrue("a mutation must always be covered by a marker on disk");
+        controller.Restore();
+        store.Exists.Should().BeFalse();
+        surface.State.Should().Be(2);
+    }
+
+    [Fact]
     public void Visible_without_any_change_does_not_touch_a_healthy_taskbar()
     {
         var surface = new FakeTaskbarSurface(_log);

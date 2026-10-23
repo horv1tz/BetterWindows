@@ -380,7 +380,10 @@ public sealed unsafe partial class Win32WindowSystem
             _throttleTimerArmed = true;
         }
 
-        PInvoke.SetTimer(loop.WindowHandle.ToHwnd(), (nuint)id, ms, null);
+        if (PInvoke.SetTimer(loop.WindowHandle.ToHwnd(), (nuint)id, ms, null) == 0 && id == TimerThrottleFlush)
+        {
+            _throttleTimerArmed = false; // could not arm: allow the next deferral to try again instead of waiting for a timer that never fires
+        }
     }
 
     private void FlushThrottle()
@@ -413,8 +416,7 @@ public sealed unsafe partial class Win32WindowSystem
             return;
         }
 
-        _fullscreenTimerArmed = true;
-        PInvoke.SetTimer(loop.WindowHandle.ToHwnd(), TimerFullscreen, 50, null);
+        _fullscreenTimerArmed = PInvoke.SetTimer(loop.WindowHandle.ToHwnd(), TimerFullscreen, 50, null) != 0;
     }
 
     private void RaiseFullscreenChanged()

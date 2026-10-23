@@ -28,6 +28,12 @@ internal sealed class TaskbarEngine
     /// <summary>We changed the taskbar and the marker file records the original state.</summary>
     public bool HasSnapshot => _snapshot != null;
 
+    /// <summary>
+    /// Forgets the in-memory snapshot after somebody else (<see cref="TaskbarRestorer.RestoreNow()"/>) restored the taskbar and deleted the marker:
+    /// the next mutation must capture a fresh snapshot instead of assuming a marker exists.
+    /// </summary>
+    public void ForgetSnapshot() => _snapshot = null;
+
     /// <summary>Applies a mode. Returns false when nothing could be applied (no Explorer taskbar yet, or the marker could not be written).</summary>
     public bool Apply(TaskbarMode mode)
     {
