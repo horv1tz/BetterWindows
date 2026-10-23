@@ -1,0 +1,83 @@
+/* Settings window: surface-local design tokens and resets. Everything is scoped under .bw so nothing leaks into other surfaces. */
+
+.bw {
+  --s-window: var(--glass-bg-strong);
+  --s-sidebar: rgba(120, 124, 140, 0.075);
+  --s-card: rgba(255, 255, 255, 0.78);
+  --s-card-border: rgba(0, 0, 0, 0.075);
+  --s-card-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.06);
+  --s-field: rgba(255, 255, 255, 0.95);
+  --s-field-border: rgba(0, 0, 0, 0.16);
+  --s-btn: rgba(255, 255, 255, 0.96);
+  --s-btn-hover: rgba(255, 255, 255, 1);
+  --s-btn-border: rgba(0, 0, 0, 0.14);
+  --s-btn-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.14);
+  --s-seg: rgba(0, 0, 0, 0.065);
+  --s-seg-thumb: #ffffff;
+  --s-seg-thumb-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.28), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  --s-track: rgba(0, 0, 0, 0.14);
+  --s-scroll: rgba(0, 0, 0, 0.22);
+  --s-danger: #e5281d;
+  --s-ok: #1c9a47;
+  --s-warn: #b86e00;
+  --s-info: #1f6feb;
+  --s-key: rgba(255, 255, 255, 0.95);
+  --s-key-edge: rgba(0, 0, 0, 0.2);
+  --s-row-hover: rgba(0, 0, 0, 0.025);
+  --accent-fg: #fff;
+  --focus: color-mix(in srgb, var(--accent) 75%, transparent);
+}
+:root[data-theme='dark'] .bw {
+  --s-sidebar: rgba(255, 255, 255, 0.035);
+  --s-card: rgba(255, 255, 255, 0.06);
+  --s-card-border: rgba(255, 255, 255, 0.08);
+  --s-card-shadow: none;
+  --s-field: rgba(255, 255, 255, 0.09);
+  --s-field-border: rgba(255, 255, 255, 0.15);
+  --s-btn: rgba(255, 255, 255, 0.12);
+  --s-btn-hover: rgba(255, 255, 255, 0.18);
+  --s-btn-border: rgba(255, 255, 255, 0.14);
+  --s-btn-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.4);
+  --s-seg: rgba(255, 255, 255, 0.09);
+  --s-seg-thumb: rgba(255, 255, 255, 0.24);
+  --s-seg-thumb-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.5), 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  --s-track: rgba(255, 255, 255, 0.2);
+  --s-scroll: rgba(255, 255, 255, 0.24);
+  --s-danger: #ff6259;
+  --s-ok: #3ddc6c;
+  --s-warn: #ffb340;
+  --s-info: #6aa8ff;
+  --s-key: rgba(255, 255, 255, 0.13);
+  --s-key-edge: rgba(0, 0, 0, 0.5);
+  --s-row-hover: rgba(255, 255, 255, 0.03);
+}
+/* reduce transparency: solid window */
+:root[data-reduce-transparency='true'] .bw { --s-window: #f3f3f6; }
+:root[data-reduce-transparency='true'][data-theme='dark'] .bw { --s-window: #1e1f24; }
+:root[data-reduce-transparency='true'] .bw { --s-card: #ffffff; --s-sidebar: #e9e9ee; }
+:root[data-reduce-transparency='true'][data-theme='dark'] .bw { --s-card: #2a2b31; --s-sidebar: #26272c; }
+
+.bw {
+  position: fixed;
+  inset: 0;
+  background: var(--s-window);
+  color: var(--text);
+  font: 13px/1.4 var(--font-ui);
+  letter-spacing: -0.003em;
+  overflow: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--s-scroll) transparent;
+}
+.bw *, .bw *::before, .bw *::after { scrollbar-width: thin; scrollbar-color: var(--s-scroll) transparent; }
+.bw button, .bw input, .bw select, .bw textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+.bw input[type='text'], .bw input[type='search'], .bw input:not([type]), .bw textarea { user-select: text; cursor: text; }
+.bw :focus { outline: none; }
+.bw :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.bw button { cursor: default; }
+.bw ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.bw kbd { font-family: inherit; }
+.bw h1, .bw h2, .bw h3, .bw p { margin: 0; }
+
+/* separators between the rows of an inset group (rows are siblings in different components, so this lives here) */
+.bw .card > .row + .row::before { content: ''; position: absolute; top: 0; left: 14px; right: 0; border-top: 0.5px solid var(--separator); }
+.bw .card > .row + .row { position: relative; }
