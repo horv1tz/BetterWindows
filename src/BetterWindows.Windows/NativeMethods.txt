@@ -3,3 +3,21 @@
 // ---- apps/icons/files stream ----
 // ---- status stream ----
 // ---- desktops/capture/tray stream ----
+IsWindow
+IsIconic
+IsWindowVisible
+GetWindowRect
+GetForegroundWindow
+PrintWindow
+CreateCompatibleDC
+CreateDIBSection
+SelectObject
+DeleteObject
+DeleteDC
+DwmGetWindowAttribute
+FindWindow
+FindWindowEx
+SendInput
+RegOpenKeyEx
+RegNotifyChangeKeyValue
+RegCloseKey
