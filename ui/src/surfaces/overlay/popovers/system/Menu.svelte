@@ -68,7 +68,7 @@
   {onkeydown}
 >
   {#if header}
-    {@render header()}
+    <div role="presentation">{@render header()}</div>
     <div class="sep" role="separator"></div>
   {/if}
   {#each entries as entry (entry.id)}

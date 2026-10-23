@@ -56,15 +56,27 @@
   const bat = $derived(batteryVisual(battery));
 
   // ---- pressed state: "the panel opened from this item is showing" ----
+  // Exact when the host delivers overlay.show / overlay.hide to the bar. Until the first such event arrives (hosts that only send them to the
+  // overlay page) the bar falls back to heuristics: the pointer leaving and coming back, and a generous timeout. See popoverTracker.ts.
   let pressed = $state.raw<Pressed>(NOT_PRESSED);
+  let hostReportsOverlay = false;
+  let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+  const FALLBACK_RELEASE_MS = 20_000;
   function press(ev: PressedEvent) {
     const next = reducePressed(pressed, ev);
     if (next !== pressed) pressed = next;
   }
   const isPressed = (k: ItemKey) => pressed.key === k;
+  function onOverlayEvent(ev: PressedEvent) {
+    hostReportsOverlay = true;
+    clearTimeout(fallbackTimer);
+    press(ev);
+  }
 
   function open(key: ItemKey, anchor: Rect, data?: unknown) {
     press({ type: 'click', key });
+    clearTimeout(fallbackTimer);
+    if (!hostReportsOverlay) fallbackTimer = setTimeout(() => press({ type: 'hide' }), FALLBACK_RELEASE_MS);
     bridge.call('overlay.open', openRequest(key, anchor, monitorId, data)).catch((e) => {
       press({ type: 'openFailed' });
       bridge.emit('surface.log', { level: 'warn', message: `overlay.open(${key}) failed`, data: String(e) });
@@ -111,18 +123,19 @@
       bridge.on('status.bluetooth', (s) => (bluetooth = s)),
       bridge.on('media.state', (s) => (media = s)),
       bridge.on('tray.state', (s) => (tray = s)),
-      bridge.on('overlay.show', (show) => press({ type: 'show', show, monitorId })),
-      bridge.on('overlay.hide', () => press({ type: 'hide' })),
+      bridge.on('overlay.show', (show) => onOverlayEvent({ type: 'show', show, monitorId })),
+      bridge.on('overlay.hide', () => onOverlayEvent({ type: 'hide' })),
       bridge.on('surface.visibility', (v) => ticker?.setPaused('surface', !v.visible)),
     ];
-    // Fallback for hosts that do not forward overlay.hide to the bar (see popoverTracker.ts).
+    // Fallback for hosts that do not forward overlay.show / overlay.hide to the bar (see popoverTracker.ts).
     const root = document.documentElement;
-    const onLeave = () => press({ type: 'pointerLeave' });
-    const onMove = () => press({ type: 'pointerMove' });
+    const onLeave = () => { if (!hostReportsOverlay) press({ type: 'pointerLeave' }); };
+    const onMove = () => { if (!hostReportsOverlay) press({ type: 'pointerMove' }); };
     root.addEventListener('pointerleave', onLeave);
     window.addEventListener('pointermove', onMove, { passive: true });
     return () => {
       offs.forEach((off) => off());
+      clearTimeout(fallbackTimer);
       root.removeEventListener('pointerleave', onLeave);
       window.removeEventListener('pointermove', onMove);
     };

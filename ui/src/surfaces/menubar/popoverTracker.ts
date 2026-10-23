@@ -5,18 +5,13 @@ import type { ItemKey } from './status';
  * "Pressed while its panel is open" state machine for the bar items.
  *
  * Sources of truth, in order of preference:
- *  1. overlay.show / overlay.hide events when the host delivers them to the menu bar (docs/IPC.md: the overlay sends them to itself;
- *     the integrator may fan them out to the bar);
+ *  1. overlay.show / overlay.hide events when the host delivers them to the menu bar (docs/IPC.md sends them to the overlay page; the
+ *     integrator may fan them out to the bar, see the report's contractRequests). Exact, and it also covers panels opened by hotkeys;
  *  2. the optimistic state set the moment the user clicks an item;
- *  3. a fallback for hosts that do not deliver (1): once the overlay (a full-monitor window) covers the bar the pointer
- *     leaves the bar, and when the overlay closes the pointer is back over it. leave -> move therefore means "closed".
+ *  3. only while no overlay event has ever reached the bar: a fallback. Once the overlay (a full-monitor window) covers the bar the
+ *     pointer leaves it, and when the overlay closes the pointer is back over the bar: leave -> move therefore means "closed"
+ *     (the Surface adds a long timeout for the case that the pointer never returns).
  */
-export interface Pressed {
-  key: ItemKey | null;
-  /** The pointer has left the bar since the panel opened (only then does a pointer move mean the panel closed). */
-  armed: boolean;
-}
-
 /** The parts of an OverlayShow the tracker needs. */
 type ShowLike = Pick<OverlayShow, 'mode' | 'popover'> & { monitorId?: string };
 

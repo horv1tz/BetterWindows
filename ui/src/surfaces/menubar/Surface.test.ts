@@ -28,7 +28,8 @@ async function boot(prepare?: () => void, route: { monitorId?: string } = { moni
 }
 /** Lets queued state events (microtasks) reach the component and flushes its effects. */
 async function settle() {
-  await new Promise((r) => setTimeout(r, 0));
+  if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(1);
+  else await new Promise((r) => setTimeout(r, 0));
   flushSync();
   await tick();
 }
@@ -267,13 +268,47 @@ describe('menu bar: pressed state', () => {
     await vi.waitFor(() => expect(pressed('Sound')).toBe(false));
   });
 
-  it('fallback: when the pointer leaves the bar and comes back, the panel is considered closed', async () => {
-    await boot();
-    await click(item('Sound'));
-    document.documentElement.dispatchEvent(new Event('pointerleave'));
-    window.dispatchEvent(new Event('pointermove'));
-    flushSync(); await tick();
-    expect(pressed('Sound')).toBe(false);
+  describe('without overlay events from the host (fallback heuristics)', () => {
+    it('the pointer leaving the bar and coming back means the panel closed', async () => {
+      await boot();
+      await click(item('Sound'));
+      window.dispatchEvent(new Event('pointermove'));
+      flushSync(); await tick();
+      expect(pressed('Sound')).toBe(true); // moving inside the bar right after the click is not a release
+      document.documentElement.dispatchEvent(new Event('pointerleave'));
+      window.dispatchEvent(new Event('pointermove'));
+      flushSync(); await tick();
+      expect(pressed('Sound')).toBe(false);
+    });
+
+    it('a generous timeout releases an item whose panel was closed while the pointer stayed away', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      await boot();
+      await click(item('Sound'));
+      vi.advanceTimersByTime(19_000);
+      flushSync();
+      expect(pressed('Sound')).toBe(true);
+      vi.advanceTimersByTime(2_000);
+      flushSync();
+      expect(pressed('Sound')).toBe(false);
+    });
+  });
+
+  describe('once the host reports overlay events, the heuristics step aside', () => {
+    it('pointer movement and the timeout no longer release the item', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      await boot();
+      await show({ mode: 'popover', popover: { kind: 'sound', anchor: { x: 0, y: 0, width: 1, height: 1 } } });
+      expect(pressed('Sound')).toBe(true);
+      document.documentElement.dispatchEvent(new Event('pointerleave'));
+      window.dispatchEvent(new Event('pointermove'));
+      vi.advanceTimersByTime(60_000);
+      flushSync(); await tick();
+      expect(pressed('Sound')).toBe(true);
+      host().emitTo(bridge.ctx, 'overlay.hide', undefined as never);
+      await settle();
+      expect(pressed('Sound')).toBe(false);
+    });
   });
 });
 
