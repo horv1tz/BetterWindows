@@ -16,9 +16,9 @@ public class WindowsIntegrationTests
     private static void RequireWindows() => Skip.IfNot(OperatingSystem.IsWindows(), "Windows only");
 
     /// <summary>The bytes are a real PNG: our own strict decoder accepts it AND the operating system's decoder agrees about the size.</summary>
-    private static async Task<(int W, int H)> AssertValidPngAsync(byte[]? png, int maxEdge)
+    private static async Task<(int W, int H)> AssertValidPngAsync(byte[]? png, int maxEdge, CaptureLogger<ShellIconSource>? log = null)
     {
-        png.Should().NotBeNull();
+        png.Should().NotBeNull($"the icon source logged:{Environment.NewLine}{log?.Dump() ?? "(no capture)"}");
         png!.AsSpan(0, 8).ToArray().Should().Equal(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
         AppsPngEncoder.TryReadSize(png, out var w, out var h).Should().BeTrue();
         w.Should().BeInRange(8, maxEdge);
@@ -49,7 +49,8 @@ public class WindowsIntegrationTests
         apps.Where(a => a.Aumid != null).Should().OnlyContain(a => a.Id == "aumid:" + a.Aumid);
         apps.Where(a => a.Aumid == null).Should().OnlyContain(a => a.Id == "exe:" + a.Path!.ToLowerInvariant());
         apps.Where(a => a.Path != null).Should().OnlyContain(a => Path.IsPathFullyQualified(a.Path!));
-        apps.Where(a => a.Packaged).Should().OnlyContain(a => a.Aumid != null);
+        apps.Where(a => a.Packaged && a.Aumid == null).Select(a => a.Id + " | " + a.Name + " | " + a.Path)
+            .Should().BeEmpty("a packaged app must carry the AUMID it launches with");
         apps.Should().OnlyContain(a => a.IconUrl == "", "Core sets the icon url");
         apps.Should().NotContain(a => a.Name.StartsWith("Uninstall", StringComparison.OrdinalIgnoreCase));
     }
@@ -101,10 +102,11 @@ public class WindowsIntegrationTests
         RequireWindows();
         var notepad = Path.Combine(Environment.SystemDirectory, "notepad.exe");
         Skip.IfNot(File.Exists(notepad), "notepad.exe not present");
-        using var icons = new ShellIconSource();
+        var log = new CaptureLogger<ShellIconSource>();
+        using var icons = new ShellIconSource(log);
         var key = new IconKey { Path = notepad };
-        await AssertValidPngAsync(await icons.GetIconPngAsync(key, 64), 64);
-        await AssertValidPngAsync(await icons.GetIconPngAsync(key, 256), 256);
+        await AssertValidPngAsync(await icons.GetIconPngAsync(key, 64), 64, log);
+        await AssertValidPngAsync(await icons.GetIconPngAsync(key, 256), 256, log);
         // repeated request is served from the cache with identical bytes
         (await icons.GetIconPngAsync(key, 64)).Should().Equal(await icons.GetIconPngAsync(key, 64));
     }
@@ -113,9 +115,10 @@ public class WindowsIntegrationTests
     public async Task Desktop_special_items_have_icons()
     {
         RequireWindows();
-        using var icons = new ShellIconSource();
+        var log = new CaptureLogger<ShellIconSource>();
+        using var icons = new ShellIconSource(log);
         foreach (var target in new[] { "shell:MyComputerFolder", "shell:RecycleBinFolder" })
-            await AssertValidPngAsync(await icons.GetIconPngAsync(new IconKey { Path = target }, 64), 64);
+            await AssertValidPngAsync(await icons.GetIconPngAsync(new IconKey { Path = target }, 64), 64, log);
         (await icons.GetIconPngAsync(new IconKey { Path = "shell:Desktop" }, 64)).Should().BeNull("only the two allow-listed literals");
     }
 
@@ -207,7 +210,8 @@ public class WindowsIntegrationTests
         RequireWindows();
         using var launcher = new ShellAppLauncher();
         launcher.Launch(LaunchTarget.FromPath(@"C:\definitely\missing\app.exe")).Should().Be(LaunchResult.NotFound);
-        launcher.Launch(LaunchTarget.FromAumid("No.Such.App_xyz!App")).Should().Be(LaunchResult.NotFound);
+        // An AUMID that is not installed must never start anything; the shell reports it as not found or as a plain failure depending on the build.
+        launcher.Launch(LaunchTarget.FromAumid("No.Such.App_xyz!App")).Should().NotBe(LaunchResult.Started);
         launcher.Launch(new LaunchTarget(null, null)).Should().Be(LaunchResult.NotFound);
         launcher.Launch(LaunchTarget.FromPath("notepad.exe")).Should().Be(LaunchResult.Failed, "relative paths are refused");
         launcher.Launch(LaunchTarget.FromPath(@"\\server\share\x.exe")).Should().Be(LaunchResult.Failed);

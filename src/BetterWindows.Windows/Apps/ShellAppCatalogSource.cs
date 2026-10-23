@@ -338,10 +338,12 @@ public sealed class ShellAppCatalogSource : IAppCatalogSource, IDisposable
 
     private void OnFileEvent(object sender, FileSystemEventArgs e)
     {
-        // Only shortcut-ish changes matter; directory events (renamed folders) have no extension.
+        // Shortcut changes always matter. Directory events have no extension: a created, deleted or renamed folder changes the menu structure, but a
+        // Changed event on a folder only means its LastWrite moved because a file inside it was written (the watched folder reports that for every
+        // document saved there), which is noise and must not reschedule a rescan.
         var ext = Path.GetExtension(e.Name ?? "");
-        if (ext.Length == 0 || ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) || ext.Equals(".url", StringComparison.OrdinalIgnoreCase))
-            ScheduleChanged();
+        if (ext.Equals(".lnk", StringComparison.OrdinalIgnoreCase) || ext.Equals(".url", StringComparison.OrdinalIgnoreCase)) ScheduleChanged();
+        else if (ext.Length == 0 && e.ChangeType != WatcherChangeTypes.Changed) ScheduleChanged();
     }
 
     private void ScheduleChanged()

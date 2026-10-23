@@ -129,7 +129,7 @@ public class WindowsStatusSourcesTests
             {
                 Skip.If(true, "Writing the personalisation key is not permitted here: " + ex.GetType().Name);
             }
-            ReadAppsUseLightTheme().Should().Be(flipped ? 0 : 1);
+            ReadAppsUseLightTheme().Should().Be(flipped ? 1 : 0, "SetAppsUseLightTheme(true) writes 1");
         }
         finally
         {

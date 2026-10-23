@@ -66,7 +66,8 @@ public class DesktopIconsIntegrationTests
             controller.SetNativeIconsVisible(false);
             Poll.Until(() => !IconsVisible()).Should().BeTrue();
             DesktopIconsRestorer.RestoreNow();
-            IconsVisible().Should().BeTrue();
+            // The restore uses ShowWindowAsync (a hung Explorer must not block the crash path), so Explorer applies it on its own thread.
+            Poll.Until(IconsVisible).Should().BeTrue("the icons come back once Explorer handles the asynchronous show request");
             ShellStateStore.Exists(DesktopIconsMarker.FileName).Should().BeFalse();
         }
         finally
