@@ -22,8 +22,10 @@ public sealed record RawWindow
     /// <summary>Explicit AppUserModelID of the window (property store) or of the packaged process; null if none.</summary>
     public string? Aumid { get; init; }
     public bool IsVisible { get; init; }
-    /// <summary>DWMWA_CLOAKED != 0 (UWP suspended windows, windows on other virtual desktops).</summary>
+    /// <summary>DWMWA_CLOAKED != 0 (UWP suspended windows, windows on other virtual desktops). Equals CloakedFlags != 0.</summary>
     public bool IsCloaked { get; init; }
+    /// <summary>Raw DWMWA_CLOAKED mask: DWM_CLOAKED_APP=1, DWM_CLOAKED_SHELL=2, DWM_CLOAKED_INHERITED=4; 0 when not cloaked.</summary>
+    public uint CloakedFlags { get; init; }
     /// <summary>
     /// Cloaked because it lives on ANOTHER virtual desktop (DWM_CLOAKED_SHELL). Such windows are real, running windows:
     /// they must still appear in the dock's running state and in Mission Control (with their desktop id), unlike windows
@@ -40,6 +42,12 @@ public sealed record RawWindow
     public bool IsNoActivate { get; init; }
     /// <summary>GetWindow(GW_OWNER) != 0.</summary>
     public long OwnerHandle { get; init; }
+    /// <summary>
+    /// The owning process runs elevated (or is otherwise not queryable/controllable from this non-elevated process): activate/minimise/close
+    /// are subject to UIPI and may silently fail. Best effort: set when the process token reports elevation, or when opening the process with
+    /// PROCESS_QUERY_LIMITED_INFORMATION succeeds but the token query is denied.
+    /// </summary>
+    public bool IsElevated { get; init; }
     /// <summary>The process is BetterWindows itself.</summary>
     public bool IsOwnProcess { get; init; }
     /// <summary>Taskbar-button flash requested (FlashWindowEx / HSHELL_FLASH).</summary>

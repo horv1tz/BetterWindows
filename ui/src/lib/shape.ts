@@ -4,9 +4,10 @@ import type { ShapeRect } from './protocol/generated';
 /**
  * Glass-panel reporting. Mark every translucent panel with `use:glassShape` (optionally { radius });
  * the union of all marked elements is sent to the host as `surface.shape` so it can apply DWM blur-behind to exactly
- * those rounded rects and make everything else click-through. Coordinates are DIPs relative to the viewport.
+ * those rounded rects and make everything else click-through (non-glass interactive overflow goes through `use:hitShape`). Coordinates are DIPs relative to the viewport.
  */
 const elements = new Map<HTMLElement, { radius?: number }>();
+const hitElements = new Map<HTMLElement, { radius?: number }>();
 let scheduled = false;
 let lastJson = '';
 
@@ -16,9 +17,9 @@ function radiusOf(el: HTMLElement, o: { radius?: number }): number {
   return Number.isFinite(r) ? r : 0;
 }
 
-export function collectShapes(): ShapeRect[] {
+export function collectShapes(source: Map<HTMLElement, { radius?: number }> = elements): ShapeRect[] {
   const out: ShapeRect[] = [];
-  for (const [el, o] of elements) {
+  for (const [el, o] of source) {
     const b = el.getBoundingClientRect();
     if (b.width < 1 || b.height < 1) continue;
     out.push({ x: Math.round(b.x * 10) / 10, y: Math.round(b.y * 10) / 10, width: Math.round(b.width * 10) / 10, height: Math.round(b.height * 10) / 10, radius: radiusOf(el, o) });
@@ -31,11 +32,12 @@ export function scheduleShapeReport() {
   scheduled = true;
   requestAnimationFrame(() => {
     scheduled = false;
-    const rects = collectShapes();
-    const json = JSON.stringify(rects);
+    const rects = collectShapes(elements);
+    const hitRects = collectShapes(hitElements);
+    const json = JSON.stringify([rects, hitRects]);
     if (json === lastJson) return;
     lastJson = json;
-    getBridge().emit('surface.shape', { rects, blur: true });
+    getBridge().emit('surface.shape', { rects, hitRects, blur: true });
   });
 }
 
@@ -50,5 +52,22 @@ export function glassShape(node: HTMLElement, opts: { radius?: number } = {}) {
   return {
     update(o: { radius?: number }) { elements.set(node, o ?? {}); scheduleShapeReport(); },
     destroy() { elements.delete(node); ro.disconnect(); clearInterval(timer); scheduleShapeReport(); },
+  };
+}
+
+/**
+ * Svelte action for content that is VISIBLE AND INTERACTIVE but not glass (magnified dock icons overflowing the panel, tooltips).
+ * The host includes these rects in the click region but not in the blurred backdrop (when SurfaceInit.glassOverflow is true).
+ * If glassOverflow is false the UI must keep such content inside a glass panel instead.
+ */
+export function hitShape(node: HTMLElement, opts: { radius?: number } = {}) {
+  hitElements.set(node, opts);
+  const ro = new ResizeObserver(scheduleShapeReport);
+  ro.observe(node);
+  const timer = setInterval(scheduleShapeReport, 250);
+  scheduleShapeReport();
+  return {
+    update(o: { radius?: number }) { hitElements.set(node, o ?? {}); scheduleShapeReport(); },
+    destroy() { hitElements.delete(node); ro.disconnect(); clearInterval(timer); scheduleShapeReport(); },
   };
 }

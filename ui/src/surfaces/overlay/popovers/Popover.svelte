@@ -13,12 +13,13 @@
   import Sound from './Sound.svelte';
   import Bluetooth from './Bluetooth.svelte';
   import MediaPopover from './MediaPopover.svelte';
+  import AppMenu from './AppMenu.svelte';
 
   let { show, onclose }: { show: OverlayShow; onclose: () => void } = $props();
 
   const registry: Record<PopoverKind, Component<{ request: PopoverRequest; onclose: () => void }>> = {
     apple: AppleMenu, dockMenu: DockMenu, windowList: WindowList, desktopMenu: DesktopMenu,
-    controlCenter: ControlCenter, calendar: Calendar, battery: Battery, network: Network, sound: Sound, bluetooth: Bluetooth, media: MediaPopover,
+    controlCenter: ControlCenter, calendar: Calendar, appMenu: AppMenu, battery: Battery, network: Network, sound: Sound, bluetooth: Bluetooth, media: MediaPopover,
   };
   const Body = $derived(show.popover ? registry[show.popover.kind] : null);
 </script>

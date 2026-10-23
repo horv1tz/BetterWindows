@@ -49,6 +49,10 @@
       "scale": {
         "type": "double",
         "default": 1.0
+      },
+      "devicePath": {
+        "type": "string?",
+        "doc": "Monitor device interface path (IDesktopWallpaper.GetMonitorDevicePathAt form). id = MonitorIdentity.IdFromDevicePath(devicePath)."
       }
     },
     "ThemeState": {
@@ -93,11 +97,19 @@
         "type": "string",
         "default": "windows",
         "doc": "'windows' or 'mock'."
+      },
+      "glassOverflow": {
+        "type": "bool",
+        "doc": "True if the host can restrict the backdrop to 'rects' while 'hitRects' stay un-blurred. If false the UI must keep ALL dock content (magnified icons, tooltips) inside the glass rects (grow the panel instead of overflowing it)."
       }
     },
     "SurfaceResizeParams": {
       "width": "double",
-      "height": "double"
+      "height": "double",
+      "barThickness": {
+        "type": "double?",
+        "doc": "Dock only. DIP extent of the always-visible bar measured from the docked screen edge (EXCLUDES magnification headroom and tooltips). The host reserves ceil(barThickness x monitor scale) physical px through the AppBar when settings.dock.reserveSpace && !autoHide; null keeps the previous value."
+      }
     },
     "SurfaceVisibility": {
       "visible": "bool",
@@ -125,12 +137,19 @@
       }
     },
     "SurfaceShapeParams": {
-      "$doc": "The glass panels of a surface, in DIPs relative to the window client area.",
-      "rects": "ShapeRect[]",
+      "$doc": "The UI's glass panels (and interactive-but-not-glass areas), in DIPs relative to the window client area.",
+      "rects": {
+        "type": "ShapeRect[]",
+        "doc": "Glass panels (rounded rects): visible, interactive and backed by the blur/acrylic backdrop."
+      },
+      "hitRects": {
+        "type": "ShapeRect[]",
+        "doc": "Visible and interactive but NOT glass (magnified dock icons, tooltips that overflow the panel). Included in the window region and hit-testing, excluded from the backdrop where the host can restrict it (see SurfaceInit.glassOverflow). May be empty."
+      },
       "blur": {
         "type": "bool",
         "default": true,
-        "doc": "Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window)."
+        "doc": "Master switch: false = no backdrop (reduceTransparency, or the UI wants flat panels)."
       }
     },
     "SettingsOpenParams": {
@@ -138,13 +157,20 @@
         "type": "string?",
         "doc": "'general'|'appearance'|'dock'|'menubar'|'spotlight'|'hotCorners'|'desktop'|'widgets'|'shortcuts'|'about'|'onboarding'."
       }
+    },
+    "LocaleState": {
+      "locale": {
+        "type": "string",
+        "default": "en",
+        "doc": "Effective UI locale ('en' | 'ru' | ...), already resolved from settings.general.language."
+      }
     }
   },
   "events": {
     "surface.resize": {
       "dir": "ui",
       "payload": "SurfaceResizeParams",
-      "doc": "Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes."
+      "doc": "Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes."
     },
     "surface.log": {
       "dir": "ui",
@@ -170,12 +196,18 @@
     "surface.shape": {
       "dir": "ui",
       "payload": "SurfaceShapeParams",
-      "doc": "The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces."
+      "doc": "The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces."
     },
     "settings.navigate": {
       "dir": "host",
       "payload": "SettingsOpenParams",
       "doc": "Settings window is already open: switch to this page."
+    },
+    "locale.changed": {
+      "dir": "host",
+      "payload": "LocaleState",
+      "state": true,
+      "doc": "The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value."
     }
   },
   "calls": {

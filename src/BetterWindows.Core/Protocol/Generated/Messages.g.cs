@@ -32,7 +32,7 @@ public static class Msg
     /// </summary>
     public const string AppsReveal = "apps.reveal";
     /// <summary>
-    /// Event (ui -&gt; host). Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes.
+    /// Event (ui -&gt; host). Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes.
     /// </summary>
     public const string SurfaceResize = "surface.resize";
     /// <summary>
@@ -52,13 +52,17 @@ public static class Msg
     /// </summary>
     public const string SettingsChanged = "settings.changed";
     /// <summary>
-    /// Event (ui -&gt; host). The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces.
+    /// Event (ui -&gt; host). The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces.
     /// </summary>
     public const string SurfaceShape = "surface.shape";
     /// <summary>
     /// Event (host -&gt; ui). Settings window is already open: switch to this page.
     /// </summary>
     public const string SettingsNavigate = "settings.navigate";
+    /// <summary>
+    /// Event (host -&gt; ui). The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value.
+    /// </summary>
+    public const string LocaleChanged = "locale.changed";
     /// <summary>
     /// Call (ui -&gt; host). First message every surface sends. After replying the host pushes all current state events to this surface.
     /// </summary>
@@ -188,6 +192,10 @@ public static class Msg
     /// </summary>
     public const string SearchRecent = "search.recent";
     /// <summary>
+    /// Call (ui -&gt; host). Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable.
+    /// </summary>
+    public const string SearchPreview = "search.preview";
+    /// <summary>
     /// Event (host -&gt; ui)
     /// </summary>
     public const string StatusBattery = "status.battery";
@@ -232,7 +240,7 @@ public static class Msg
     /// </summary>
     public const string BrightnessSet = "brightness.set";
     /// <summary>
-    /// Call (ui -&gt; host)
+    /// Call (ui -&gt; host). Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme.
     /// </summary>
     public const string ThemeSetPreference = "theme.setPreference";
     /// <summary>
@@ -268,6 +276,10 @@ public static class Msg
     /// </summary>
     public const string DiagReport = "diag.report";
     /// <summary>
+    /// Call (ui -&gt; host). Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: &lt;input type=file&gt; and drag&amp;drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest).
+    /// </summary>
+    public const string SystemPickPath = "system.pickPath";
+    /// <summary>
     /// Event (host -&gt; ui). Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name.
     /// </summary>
     public const string ActiveAppChanged = "activeApp.changed";
@@ -288,6 +300,10 @@ public static class Msg
     /// </summary>
     public const string McThumbnail = "mc.thumbnail";
     /// <summary>
+    /// Event (host -&gt; ui). Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced &gt;= 100 ms). mc.thumbnail still fills in thumbnails.
+    /// </summary>
+    public const string McChanged = "mc.changed";
+    /// <summary>
     /// Call (ui -&gt; host). Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer.
     /// </summary>
     public const string DockActivate = "dock.activate";
@@ -300,7 +316,7 @@ public static class Msg
     /// </summary>
     public const string DockCloseWindow = "dock.closeWindow";
     /// <summary>
-    /// Call (ui -&gt; host)
+    /// Call (ui -&gt; host). Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps.
     /// </summary>
     public const string DockPin = "dock.pin";
     /// <summary>
@@ -316,11 +332,11 @@ public static class Msg
     /// </summary>
     public const string DockNewWindow = "dock.newWindow";
     /// <summary>
-    /// Call (ui -&gt; host). Close all windows of the app (WM_CLOSE).
+    /// Call (ui -&gt; host). Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu).
     /// </summary>
     public const string DockQuit = "dock.quit";
     /// <summary>
-    /// Call (ui -&gt; host). Minimise all windows of the app.
+    /// Call (ui -&gt; host). Minimise all windows of the app. itemId may be ANY running app id (used by the app menu).
     /// </summary>
     public const string DockHide = "dock.hide";
     /// <summary>
@@ -355,6 +371,10 @@ public static class Msg
     /// Call (ui -&gt; host)
     /// </summary>
     public const string McRemoveDesktop = "mc.removeDesktop";
+    /// <summary>
+    /// Call (ui -&gt; host). Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:&lt;path&gt;).
+    /// </summary>
+    public const string DockPinPath = "dock.pinPath";
 }
 
 /// <summary>Reflection-free catalog of all messages; used by tests to verify every call has a handler.</summary>
@@ -373,6 +393,7 @@ public static class MessageCatalog
         new("settings.changed", MessageKind.HostEvent, "common", typeof(Settings), null),
         new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null),
         new("settings.navigate", MessageKind.HostEvent, "common", typeof(SettingsOpenParams), null),
+        new("locale.changed", MessageKind.HostEvent, "common", typeof(LocaleState), null),
         new("surface.ready", MessageKind.Call, "common", typeof(SurfaceReadyParams), typeof(SurfaceInit)),
         new("settings.get", MessageKind.Call, "common", null, typeof(Settings)),
         new("settings.patch", MessageKind.Call, "common", typeof(SettingsPatchParams), typeof(Settings)),
@@ -405,6 +426,7 @@ public static class MessageCatalog
         new("search.cancel", MessageKind.Call, "search", typeof(SearchCancelParams), null),
         new("search.perform", MessageKind.Call, "search", typeof(SearchPerformParams), null),
         new("search.recent", MessageKind.Call, "search", null, typeof(SearchRecent)),
+        new("search.preview", MessageKind.Call, "search", typeof(SearchPreviewParams), typeof(SearchPreview)),
         new("status.battery", MessageKind.HostEvent, "status", typeof(BatteryState), null),
         new("status.network", MessageKind.HostEvent, "status", typeof(NetworkState), null),
         new("status.audio", MessageKind.HostEvent, "status", typeof(AudioState), null),
@@ -425,11 +447,13 @@ public static class MessageCatalog
         new("system.showTaskbar", MessageKind.Call, "system", typeof(ShowTaskbarParams), null),
         new("system.about", MessageKind.Call, "system", null, typeof(AboutInfo)),
         new("diag.report", MessageKind.Call, "system", null, typeof(DiagReport)),
+        new("system.pickPath", MessageKind.Call, "system", typeof(PickPathParams), typeof(PickPathResult)),
         new("activeApp.changed", MessageKind.HostEvent, "windows", typeof(ActiveAppState), null),
         new("dock.state", MessageKind.HostEvent, "windows", typeof(DockState), null),
         new("dock.reveal", MessageKind.HostEvent, "windows", typeof(DockRevealState), null),
         new("dock.bounce", MessageKind.HostEvent, "windows", typeof(DockBounce), null),
         new("mc.thumbnail", MessageKind.HostEvent, "windows", typeof(McThumbnail), null),
+        new("mc.changed", MessageKind.HostEvent, "windows", typeof(McSnapshot), null),
         new("dock.activate", MessageKind.Call, "windows", typeof(DockItemParams), null),
         new("dock.activateWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
         new("dock.closeWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
@@ -447,5 +471,6 @@ public static class MessageCatalog
         new("mc.moveWindow", MessageKind.Call, "windows", typeof(McMoveParams), null),
         new("mc.createDesktop", MessageKind.Call, "windows", null, typeof(DesktopInfo)),
         new("mc.removeDesktop", MessageKind.Call, "windows", typeof(DesktopIdParams), null),
+        new("dock.pinPath", MessageKind.Call, "windows", typeof(DockPinPathParams), null),
     };
 }

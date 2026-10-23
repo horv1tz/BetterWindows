@@ -68,14 +68,14 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 | host-lifecycle | `Host/App.xaml(.cs)`, `Host/Lifecycle/**`, `Host/Bridge/**`, `Host/Composition/**`, `Host/Logging/**`, `Host/Tray/**`, `Host/Cli/**` |
 | host-surfaces | `Host/Surfaces/**` (dock, menubar, overlay, desktop AND the settings window), `Host/Interop/**` |
 | ui-dock | `ui/src/surfaces/dock/**`, `popovers/{DockMenu,WindowList}.svelte`, `ui/src/mock/domains/dock.ts` (dock.state from pins + fixture windows, dock.* calls, bounce) |
-| ui-menubar | `ui/src/surfaces/menubar/**`, `popovers/AppleMenu.svelte`, `ui/src/mock/domains/menubar.ts` (activeApp.changed + fixtures for the app menu) |
+| ui-menubar | `ui/src/surfaces/menubar/**`, `popovers/{AppleMenu,AppMenu}.svelte`, `ui/src/mock/domains/menubar.ts` (activeApp.changed + fixtures for the app menu) |
 | ui-overlay-search | `ui/src/surfaces/overlay/Surface.svelte`, `overlay/{spotlight,launchpad}/**`, `ui/src/mock/domains/search.ts` (apps.ts is frozen) |
 | ui-overlay-mc | `ui/src/surfaces/overlay/missioncontrol/**`, `popovers/DesktopMenu.svelte`, `ui/src/mock/domains/mc.ts` |
 | ui-status-popovers | `popovers/{ControlCenter,Calendar,Battery,Network,Sound,Bluetooth,MediaPopover}.svelte` (+ helpers in `popovers/status/**`); uses the frozen `mock/domains/status.ts`; no mock file of its own |
 | ui-settings | `ui/src/surfaces/settings/**`, `ui/src/mock/domains/settings.ts` |
 | ui-desktop | `ui/src/surfaces/{desktop,playground}/**`, `ui/src/mock/domains/{desktop,widgets,weather,reminders}.ts` |
 
-Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`, `mock/domains/{common,apps,status,activeapp,overlay}.ts`, `lib/i18n.ts`, `styles/tokens.css`, `overlay/popovers/{Popover,PopoverFrame}.svelte`) are frozen; put stream-specific helpers in your surface folder.
+Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`, `mock/domains/{common,apps,status,activeapp,overlay}.ts`, `lib/i18n.svelte.ts`, `styles/tokens.css`, `overlay/popovers/{Popover,PopoverFrame}.svelte`) are frozen; put stream-specific helpers in your surface folder.
 
 ## Quality bar
 
@@ -92,7 +92,7 @@ Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`,
 * UI: Svelte 5 runes, TypeScript strict, no new dependencies unless allowed, accessible (focus, `aria-*`, keyboard),
   respects `reduceMotion`/`reduceTransparency`, light + dark themes, 60 fps animations (transform/opacity only),
   pixel-polished macOS-inspired look (no Apple assets or the Apple logo; use own glyphs/Lucide). Every user-visible string goes
-  through `lib/i18n` if present, else a local `strings.ts` with `en` + `ru`.
+  through the reactive `lib/i18n.svelte.ts` (`createT`/`plural`) with a local `strings.ts` holding `en` + `ru`.
 * Tests: every pure-logic class has tests incl. edge cases; controllers are tested through `CoreHarness` (see
   `tests/Core.Tests/Support`) driving the same protocol the UI uses.
 * Security: the UI is untrusted input — validate every call payload (paths, URIs, ids), never execute arbitrary strings.
@@ -103,3 +103,24 @@ Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`,
 
 Your final message is a structured report (the orchestrator gives the schema): what you built, tests added/passing counts,
 what is verified vs. unverifiable here, known gaps, and `contractRequests`.
+
+
+## Owner of every protocol call/event (exactly ONE handler per message — a duplicate throws and the second controller is skipped)
+
+| messages | handler / publisher (Core controller) |
+|---|---|
+| `surface.ready`, `surface.resize`, `surface.shape`, `surface.log`, `settings.get/patch/openWindow`, `settings.changed`, `theme.changed`, `locale.changed`, `settings.navigate` | SurfaceController (core-settings) |
+| `system.power/open/quit/showTaskbar/about/pickPath`, `diag.report` (+ applies autostart and taskbar mode from settings) | SystemController (core-settings) |
+| `apps.list/launch/reveal`, `apps.changed` | AppsController (core-settings) |
+| `dock.*` (all calls incl. `dock.pinPath`), `dock.state`, `dock.bounce`; `dock.reveal` is published by the Host's SurfaceManager | DockController (core-windows) |
+| `activeApp.changed` | ActiveAppController (core-windows) |
+| `status.*`, `audio.*`, `brightness.set`, `theme.setPreference` | StatusController (core-status) |
+| `media.state`, `media.control` | MediaController (core-status) |
+| `tray.state`, `tray.click` | TrayController (core-status) |
+| `overlay.open`, `overlay.close`, `overlay.show/hide` | OverlayController (core-status) |
+| `search.*` | SearchController (core-search) |
+| `mc.*` | MissionControlController (core-desktop) |
+| `desktop.*` | DesktopController (core-desktop) |
+| `weather.*` | WeatherController (core-desktop) |
+| `reminders.*` | RemindersController (core-desktop) |
+| hotkeys / hot corners (no protocol messages) | HotkeyController, HotCornerController (core-status) |

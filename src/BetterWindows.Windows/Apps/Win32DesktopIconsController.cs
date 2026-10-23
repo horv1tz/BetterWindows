@@ -7,6 +7,9 @@ namespace BetterWindows.Native;
 public sealed class Win32DesktopIconsController : IDesktopIconsController
 {
     public void SetNativeIconsVisible(bool visible) { }
+    public bool TryAttachDesktopLayer(nint hwnd, NativeRect boundsPx) => false;
+    public void DetachDesktopLayer(nint hwnd) { }
+    public event Action? ShellRestarted { add { } remove { } }
     public void Restore() { }
     public void Dispose() { }
 }

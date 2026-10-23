@@ -4,4 +4,5 @@ namespace BetterWindows.Core.Services;
 public sealed class DynamicResourceRouter : IDynamicResourceProvider
 {
     public Task<DynResource?> GetAsync(string pathAndQuery, CancellationToken ct = default) => Task.FromResult<DynResource?>(null);
+    public Task PrewarmWindowThumbnailAsync(long handle, CancellationToken ct = default) => Task.CompletedTask;
 }

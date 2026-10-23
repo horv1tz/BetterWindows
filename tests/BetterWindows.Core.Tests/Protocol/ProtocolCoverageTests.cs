@@ -18,8 +18,10 @@ public class ProtocolCoverageTests
     {
         using var h = new CoreHarness(addAllControllers: true);
         var runtime = h.Services.GetRequiredService<ShellRuntime>();
+        var expected = h.Services.GetServices<IShellController>().Count();
         runtime.Start();
-        runtime.Started.Should().NotBeEmpty();
+        // A controller that throws in Start (e.g. a duplicate handler registration) is skipped silently by the runtime: this catches it.
+        runtime.Started.Should().HaveCount(expected);
         runtime.Stop();
     }
 

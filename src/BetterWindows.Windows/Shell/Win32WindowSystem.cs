@@ -18,5 +18,6 @@ public sealed class Win32WindowSystem : IWindowSystem
     public bool Maximize(long handle) => false;
     public bool Close(long handle) => false;
     public bool IsFullscreenWindowActive(MonitorInfo monitor) => false;
+    public event Action? FullscreenChanged { add { } remove { } }
     public void Dispose() { }
 }

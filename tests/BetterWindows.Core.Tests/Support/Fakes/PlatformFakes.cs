@@ -32,6 +32,8 @@ public class FakeWindowSystem : IWindowSystem
     public bool Maximize(long handle) { Calls.Add(("maximize", handle)); return true; }
     public bool Close(long handle) { Calls.Add(("close", handle)); return true; }
     public bool IsFullscreenWindowActive(MonitorInfo monitor) => FullscreenActive;
+    public event Action? FullscreenChanged;
+    public void RaiseFullscreenChanged() => FullscreenChanged?.Invoke();
     public void Dispose() { }
 
     /// <summary>A normal visible app window with sensible defaults.</summary>
@@ -63,7 +65,9 @@ public class FakeCursorProvider : ICursorProvider
 {
     public NativePoint Position { get; set; }
     public bool ButtonDown { get; set; }
-    public NativePoint GetCursorPosition() => Position;
+    /// <summary>Simulate the secure desktop / lock screen: TryGetCursorPosition returns false.</summary>
+    public bool Unavailable { get; set; }
+    public bool TryGetCursorPosition(out NativePoint position) { position = Position; return !Unavailable; }
     public bool IsAnyMouseButtonDown() => ButtonDown;
 }
 
@@ -223,7 +227,21 @@ public class FakeDesktopIconsController : IDesktopIconsController
 {
     public bool? NativeIconsVisible { get; private set; }
     public int Restores { get; private set; }
+    public bool AttachResult { get; set; } = true;
+    public List<nint> Attached { get; } = new();
+    public event Action? ShellRestarted;
+    public void RaiseShellRestarted() => ShellRestarted?.Invoke();
+    public bool TryAttachDesktopLayer(nint hwnd, NativeRect boundsPx) { if (AttachResult) Attached.Add(hwnd); return AttachResult; }
+    public void DetachDesktopLayer(nint hwnd) => Attached.Remove(hwnd);
     public void SetNativeIconsVisible(bool visible) => NativeIconsVisible = visible;
     public void Restore() { Restores++; NativeIconsVisible = true; }
     public void Dispose() { }
+}
+
+public class FakeDesktopFolderSource : IDesktopFolderSource
+{
+    public List<DesktopEntry> Entries { get; } = new();
+    public event Action? Changed;
+    public void RaiseChanged() => Changed?.Invoke();
+    public IReadOnlyList<DesktopEntry> Enumerate() => Entries.ToArray();
 }

@@ -76,23 +76,26 @@ public class FakeSystemPower : ISystemPower
 
 public class FakeSurfaceManager : ISurfaceManager
 {
-    public List<(SurfaceId Surface, double W, double H)> Resizes { get; } = new();
-    public List<(OverlayRequest Request, SurfaceId Source)> Shown { get; } = new();
+    public List<(SurfaceId Surface, double W, double H, double? Bar)> Resizes { get; } = new();
+    public List<(OverlayRequest Request, SurfaceId? Source)> Shown { get; } = new();
     public List<(SurfaceId Surface, SurfaceShapeParams Shape)> Shapes { get; } = new();
     public List<string?> SettingsOpened { get; } = new();
-    public List<bool> DockReveals { get; } = new();
-    public List<(bool Visible, string Reason)> Visibility { get; } = new();
+    public List<(SurfaceId Dock, bool Revealed)> DockReveals { get; } = new();
+    public List<(SurfaceKind? Kind, string? MonitorId, bool Visible, string Reason)> Visibility { get; } = new();
     public int HideCount { get; private set; }
     public bool IsOverlayVisible { get; private set; }
     public OverlayMode? CurrentOverlayMode { get; private set; }
+    public event Action? OverlayHidden;
+    /// <summary>Simulate the HOST hiding the overlay by itself (deactivation).</summary>
+    public void SimulateHostHide() { IsOverlayVisible = false; CurrentOverlayMode = null; OverlayHidden?.Invoke(); }
 
-    public void ResizeSurface(SurfaceId surface, double widthDip, double heightDip) => Resizes.Add((surface, widthDip, heightDip));
-    public void ShowOverlay(OverlayRequest request, SurfaceId source) { Shown.Add((request, source)); IsOverlayVisible = true; CurrentOverlayMode = request.Mode; }
+    public void ResizeSurface(SurfaceId surface, double widthDip, double heightDip, double? barThicknessDip) => Resizes.Add((surface, widthDip, heightDip, barThicknessDip));
+    public void ShowOverlay(OverlayRequest request, SurfaceId? source) { Shown.Add((request, source)); IsOverlayVisible = true; CurrentOverlayMode = request.Mode; }
     public void HideOverlay() { HideCount++; IsOverlayVisible = false; CurrentOverlayMode = null; }
-    public void SetDockRevealed(bool revealed) => DockReveals.Add(revealed);
+    public void SetDockRevealed(SurfaceId dock, bool revealed) => DockReveals.Add((dock, revealed));
     public void SetSurfaceShape(SurfaceId surface, SurfaceShapeParams shape) => Shapes.Add((surface, shape));
     public void ShowSettingsWindow(string? page) => SettingsOpened.Add(page);
-    public void SetSurfacesVisible(bool visible, string reason) => Visibility.Add((visible, reason));
+    public void SetSurfacesVisible(SurfaceKind? kind, string? monitorId, bool visible, string reason) => Visibility.Add((kind, monitorId, visible, reason));
 }
 
 public class FakeAppLifecycle : IAppLifecycle
@@ -109,4 +112,15 @@ public class FakeClipboard : IClipboard
 {
     public List<string> Texts { get; } = new();
     public void SetText(string text) => Texts.Add(text);
+}
+
+public class FakeFilePicker : IFilePicker
+{
+    public List<string> Result { get; } = new();
+    public List<(PickPathParams Request, SurfaceId Owner)> Calls { get; } = new();
+    public Task<IReadOnlyList<string>> PickAsync(PickPathParams request, SurfaceId owner, CancellationToken ct = default)
+    {
+        Calls.Add((request, owner));
+        return Task.FromResult<IReadOnlyList<string>>(Result.ToArray());
+    }
 }

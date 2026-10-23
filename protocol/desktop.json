@@ -2,7 +2,10 @@
   "domain": "desktop",
   "types": {
     "DesktopIcon": {
-      "id": "string",
+      "id": {
+        "type": "string",
+        "doc": "'sc:<guid>' (user shortcut), 'fs:<lower-cased path>' (desktop folder item), 'special:thisPc' | 'special:recycleBin'."
+      },
       "name": "string",
       "iconUrl": "string",
       "x": {
@@ -13,7 +16,11 @@
         "type": "int",
         "doc": "Grid row."
       },
-      "target": "string"
+      "target": "string",
+      "kind": {
+        "type": "DesktopIconKind",
+        "default": "shortcut"
+      }
     },
     "DesktopState": {
       "enabled": "bool",
@@ -21,7 +28,11 @@
       "wallpaperFit": "WallpaperFit",
       "iconSize": "int",
       "icons": "DesktopIcon[]",
-      "widgets": "WidgetInstance[]"
+      "widgets": "WidgetInstance[]",
+      "monitorId": {
+        "type": "string",
+        "doc": "The monitor this surface instance renders."
+      }
     },
     "IdParams": {
       "id": "string"
@@ -34,10 +45,15 @@
     "AddShortcutParams": {
       "path": "string",
       "x": "int?",
-      "y": "int?"
+      "y": "int?",
+      "monitorId": "string?"
     },
     "SetWallpaperParams": {
-      "path": "string"
+      "path": "string",
+      "monitorId": {
+        "type": "string?",
+        "doc": "null = all monitors."
+      }
     },
     "MoveWidgetParams": {
       "id": "string",
@@ -47,13 +63,20 @@
     "AddWidgetParams": {
       "type": "WidgetType",
       "size": "WidgetSize?",
-      "x": "double?",
-      "y": "double?"
+      "x": {
+        "type": "double?",
+        "doc": "Absent: the host cascades at (48+24n, 80+24n) DIP on the target monitor."
+      },
+      "y": "double?",
+      "monitorId": "string?"
     },
     "UpdateWidgetParams": {
       "id": "string",
       "size": "WidgetSize?",
-      "config": "any"
+      "config": {
+        "type": "any",
+        "doc": "When present, REPLACES the widget's whole config object (not merged); absent = unchanged."
+      }
     },
     "WeatherHour": {
       "time": "string",
@@ -125,9 +148,19 @@
     "ReminderUpdateParams": {
       "id": "string",
       "title": "string?",
-      "due": "string?",
-      "notes": "string?",
-      "done": "bool?"
+      "due": {
+        "type": "string?",
+        "doc": "absent = unchanged; empty string = clear the field."
+      },
+      "notes": {
+        "type": "string?",
+        "doc": "absent = unchanged; empty string = clear the field."
+      },
+      "done": "bool?",
+      "list": {
+        "type": "string?",
+        "doc": "absent = unchanged; empty string = clear the field."
+      }
     }
   },
   "events": {
@@ -212,5 +245,13 @@
       "params": "IdParams",
       "result": null
     }
+  },
+  "enums": {
+    "DesktopIconKind": [
+      "shortcut",
+      "file",
+      "folder",
+      "special"
+    ]
   }
 }

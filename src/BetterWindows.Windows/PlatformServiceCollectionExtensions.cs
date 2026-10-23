@@ -24,6 +24,7 @@ public static class PlatformServiceCollectionExtensions
         services.AddSingleton<IAutostartService, RegistryAutostartService>();
         services.AddSingleton<IWallpaperService, DesktopWallpaperService>();
         services.AddSingleton<IDesktopIconsController, Win32DesktopIconsController>();
+        services.AddSingleton<IDesktopFolderSource, ShellDesktopFolderSource>();
         // status stream
         services.AddSingleton<IBatterySource, PowerBatterySource>();
         services.AddSingleton<INetworkSource, NetworkInfoSource>();

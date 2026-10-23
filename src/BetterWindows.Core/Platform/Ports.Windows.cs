@@ -34,10 +34,21 @@ public interface IWindowSystem : IDisposable
     bool Maximize(long handle);
     /// <summary>Post WM_CLOSE (graceful close).</summary>
     bool Close(long handle);
-    /// <summary>True if a window of another process fully covers <paramref name="monitor"/> (fullscreen game/video).</summary>
+    /// <summary>
+    /// True iff the FOREGROUND window is a fullscreen app on <paramref name="monitor"/>: not own process, not cloaked, not one of the shell classes
+    /// (Progman, WorkerW, Shell_TrayWnd, Shell_SecondaryTrayWnd, XamlExplorerHostIslandWindow, MultitaskingViewFrame, Windows.UI.Core.CoreWindow for Start/Search),
+    /// its DWMWA_EXTENDED_FRAME_BOUNDS cover monitor.BoundsPx (+-1 px) AND it is not an ordinary maximised captioned window (borderless/popup windows and
+    /// F11-style fullscreen count). SHQueryUserNotificationState (D3D fullscreen / busy / presentation mode) may serve as an additional positive hint.
+    /// </summary>
     bool IsFullscreenWindowActive(MonitorInfo monitor);
+    /// <summary>Raised when the fullscreen state of any monitor may have changed (foreground change, foreground window moved/resized). Consumers re-query <see cref="IsFullscreenWindowActive"/>; nobody polls.</summary>
+    event Action? FullscreenChanged;
 }
 
+/// <summary>
+/// Monitor enumeration. MonitorInfo.id = MonitorIdentity.IdFromDevicePath(devicePath) (stable across reboots/ports), boundsPx/workAreaPx in virtual-screen
+/// physical pixels, scale = effective DPI / 96. MonitorsChanged also fires on work-area changes (SPI_SETWORKAREA) and DPI changes.
+/// </summary>
 public interface IMonitorProvider
 {
     IReadOnlyList<MonitorInfo> GetMonitors();
@@ -49,22 +60,36 @@ public interface IMonitorProvider
 
 public interface ICursorProvider
 {
-    /// <summary>Cursor position in virtual-screen physical pixels.</summary>
-    NativePoint GetCursorPosition();
+    /// <summary>Cursor position in virtual-screen physical pixels. False when unavailable (secure desktop, lock screen, UAC prompt): callers must skip that tick.</summary>
+    bool TryGetCursorPosition(out NativePoint position);
     /// <summary>Any mouse button currently pressed (hot corners are suppressed while dragging).</summary>
     bool IsAnyMouseButtonDown();
 }
 
-/// <summary>Hide/restore the native Windows taskbar (Shell_TrayWnd + secondary taskbars) and manage the work area.</summary>
+/// <summary>
+/// Hide/restore the native Windows taskbar (Shell_TrayWnd + every Shell_SecondaryTrayWnd).
+/// Hidden = ABM_SETSTATE(ABS_AUTOHIDE) on the taskbar (the shell then stops reserving its band, and ABM_QUERYPOS of our appbars ignores it)
+///          AND SW_HIDE on all taskbar windows (an auto-hide taskbar would otherwise pop up at the screen edge and fight the dock). No SPI_SETWORKAREA writes.
+/// AutoHide = ABS_AUTOHIDE only. Visible = the captured ORIGINAL state (autohide / always-on-top flags + per-taskbar visibility).
+/// Before the FIRST mutation the original state is persisted atomically to %LOCALAPPDATA%\BetterWindows\state\taskbar.json; Restore() works in a FRESH process
+/// without a prior Apply (reads the snapshot, applies it, deletes it) and is idempotent, so a crash/kill is recoverable by the next start or by --restore-taskbar.
+/// Re-hide on Explorer restart ("TaskbarCreated") and when the shell re-shows the taskbar, unless the user asked for a temporary Visible.
+/// </summary>
 public interface ITaskbarController : IDisposable
 {
     TaskbarMode Current { get; }
-    /// <summary>Apply a mode. Hidden: SW_HIDE all taskbars + keep hidden if Explorer re-shows/restarts. Idempotent.</summary>
+    /// <summary>Apply a mode. Idempotent.</summary>
     void Apply(TaskbarMode mode);
-    /// <summary>Always restore the native taskbar fully (visible, auto-hide as the user had it). Safe to call repeatedly and from crash paths.</summary>
+    /// <summary>Always restore the native taskbar fully. Safe to call repeatedly, from any thread and from crash paths.</summary>
     void Restore();
 }
 
+/// <summary>
+/// One AppBar registration for one window (thread-affine to the window's UI thread). thicknessPx is PHYSICAL pixels (DIP x monitor scale); Dock takes the
+/// whole-monitor rect, not the work area. The Host must pass EVERY message of the appbar window to ProcessWindowMessage (the implementation issues
+/// ABM_ACTIVATE / ABM_WINDOWPOSCHANGED itself and watches WM_DISPLAYCHANGE / WM_DPICHANGED). Notification.PosChanged means: call Dock again with the same edge,
+/// monitor and thickness and move the window to the returned rect. Notifications are raised synchronously on the UI thread inside ProcessWindowMessage.
+/// </summary>
 public interface IAppBar : IDisposable
 {
     bool IsRegistered { get; }
@@ -122,10 +147,18 @@ public interface IVirtualDesktopService
 /// <summary>Window snapshots for Mission Control.</summary>
 public interface IWindowCapture
 {
-    /// <summary>PNG, scaled to fit maxWidth (aspect kept). Null if not capturable (minimised UWP, protected content).</summary>
+    /// <summary>
+    /// PNG, scaled to fit maxWidth (aspect kept), cropped to DWMWA_EXTENDED_FRAME_BOUNDS. Null for cloaked windows (other virtual desktops: DWM does not compose them),
+    /// minimised windows and protected content. Enforces a ~500 ms per-window timeout on a worker (PrintWindow can block on hung windows) and a global concurrency
+    /// limit of 3. Callers (the Core thumbnail cache) keep the last good image per window.
+    /// </summary>
     Task<byte[]?> CaptureAsync(long handle, int maxWidth, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Notification-area hosting. With Explorer running, apps keep sending Shell_NotifyIcon to Explorer's own Shell_TrayWnd, so a second host cannot receive them:
+/// IsSupported is false unless a build-specific mechanism (e.g. the undocumented ITrayNotify) was bound successfully. Start() never throws.
+/// </summary>
 public interface ITrayHost : IDisposable
 {
     bool IsSupported { get; }

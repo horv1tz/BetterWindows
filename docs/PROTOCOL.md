@@ -47,13 +47,14 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | message | kind | payload / params | result | notes |
 |---|---|---|---|---|
-| `surface.resize` | event (ui→host) | `SurfaceResizeParams` |  | Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes. |
+| `surface.resize` | event (ui→host) | `SurfaceResizeParams` |  | Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes. |
 | `surface.log` | event (ui→host) | `LogParams` |  | UI log line, forwarded to the host log. |
 | `surface.visibility` | event (host→ui) | `SurfaceVisibility` |  | The host shows/hides the surface window (fullscreen app, overlay open, ...). |
 | `theme.changed` | state event (host→ui) | `ThemeState` |  |  |
 | `settings.changed` | state event (host→ui) | `Settings` |  | Full settings after any change (from any surface, file edit, or reset). |
-| `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces. |
+| `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. |
 | `settings.navigate` | event (host→ui) | `SettingsOpenParams` |  | Settings window is already open: switch to this page. |
+| `locale.changed` | state event (host→ui) | `LocaleState` |  | The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value. |
 | `surface.ready` | call (ui→host) | `SurfaceReadyParams` | `SurfaceInit` | First message every surface sends. After replying the host pushes all current state events to this surface. |
 | `settings.get` | call (ui→host) | – | `Settings` |  |
 | `settings.patch` | call (ui→host) | `SettingsPatchParams` | `Settings` | Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result. |
@@ -94,6 +95,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `boundsPx` | `Rect` |  |  |
 | `workAreaPx` | `Rect` |  |  |
 | `scale` | `double` | `1` |  |
+| `devicePath` | `string?` |  | Monitor device interface path (IDesktopWallpaper.GetMonitorDevicePathAt form). id = MonitorIdentity.IdFromDevicePath(devicePath). |
 
 **`ThemeState`**
 
@@ -134,6 +136,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `protocolVersion` | `int` |  |  |
 | `features` | `FeatureFlags` |  |  |
 | `platform` | `string` | `"windows"` | 'windows' or 'mock'. |
+| `glassOverflow` | `bool` |  | True if the host can restrict the backdrop to 'rects' while 'hitRects' stay un-blurred. If false the UI must keep ALL dock content (magnified icons, tooltips) inside the glass rects (grow the panel instead of overflowing it). |
 
 **`SurfaceResizeParams`**
 
@@ -141,6 +144,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `width` | `double` |  |  |
 | `height` | `double` |  |  |
+| `barThickness` | `double?` |  | Dock only. DIP extent of the always-visible bar measured from the docked screen edge (EXCLUDES magnification headroom and tooltips). The host reserves ceil(barThickness x monitor scale) physical px through the AppBar when settings.dock.reserveSpace && !autoHide; null keeps the previous value. |
 
 **`SurfaceVisibility`**
 
@@ -173,18 +177,25 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `height` | `double` |  |  |
 | `radius` | `double` |  | Corner radius in DIPs. |
 
-**`SurfaceShapeParams`** — The glass panels of a surface, in DIPs relative to the window client area.
+**`SurfaceShapeParams`** — The UI's glass panels (and interactive-but-not-glass areas), in DIPs relative to the window client area.
 
 | field | type | default | notes |
 |---|---|---|---|
-| `rects` | `ShapeRect[]` |  |  |
-| `blur` | `bool` | `true` | Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window). |
+| `rects` | `ShapeRect[]` |  | Glass panels (rounded rects): visible, interactive and backed by the blur/acrylic backdrop. |
+| `hitRects` | `ShapeRect[]` |  | Visible and interactive but NOT glass (magnified dock icons, tooltips that overflow the panel). Included in the window region and hit-testing, excluded from the backdrop where the host can restrict it (see SurfaceInit.glassOverflow). May be empty. |
+| `blur` | `bool` | `true` | Master switch: false = no backdrop (reduceTransparency, or the UI wants flat panels). |
 
 **`SettingsOpenParams`**
 
 | field | type | default | notes |
 |---|---|---|---|
 | `page` | `string?` |  | 'general'\|'appearance'\|'dock'\|'menubar'\|'spotlight'\|'hotCorners'\|'desktop'\|'widgets'\|'shortcuts'\|'about'\|'onboarding'. |
+
+**`LocaleState`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `locale` | `string` | `"en"` | Effective UI locale ('en' \| 'ru' \| ...), already resolved from settings.general.language. |
 
 ## desktop
 
@@ -210,16 +221,19 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `reminders.update` | call (ui→host) | `ReminderUpdateParams` | `Reminder` |  |
 | `reminders.remove` | call (ui→host) | `IdParams` | – |  |
 
+**enum `DesktopIconKind`**: `shortcut` · `file` · `folder` · `special`
+
 **`DesktopIcon`**
 
 | field | type | default | notes |
 |---|---|---|---|
-| `id` | `string` |  |  |
+| `id` | `string` |  | 'sc:<guid>' (user shortcut), 'fs:<lower-cased path>' (desktop folder item), 'special:thisPc' \| 'special:recycleBin'. |
 | `name` | `string` |  |  |
 | `iconUrl` | `string` |  |  |
 | `x` | `int` |  | Grid column. |
 | `y` | `int` |  | Grid row. |
 | `target` | `string` |  |  |
+| `kind` | `DesktopIconKind` | `"shortcut"` |  |
 
 **`DesktopState`**
 
@@ -231,6 +245,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `iconSize` | `int` |  |  |
 | `icons` | `DesktopIcon[]` |  |  |
 | `widgets` | `WidgetInstance[]` |  |  |
+| `monitorId` | `string` |  | The monitor this surface instance renders. |
 
 **`IdParams`**
 
@@ -253,12 +268,14 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `path` | `string` |  |  |
 | `x` | `int?` |  |  |
 | `y` | `int?` |  |  |
+| `monitorId` | `string?` |  |  |
 
 **`SetWallpaperParams`**
 
 | field | type | default | notes |
 |---|---|---|---|
 | `path` | `string` |  |  |
+| `monitorId` | `string?` |  | null = all monitors. |
 
 **`MoveWidgetParams`**
 
@@ -274,8 +291,9 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `type` | `WidgetType` |  |  |
 | `size` | `WidgetSize?` |  |  |
-| `x` | `double?` |  |  |
+| `x` | `double?` |  | Absent: the host cascades at (48+24n, 80+24n) DIP on the target monitor. |
 | `y` | `double?` |  |  |
+| `monitorId` | `string?` |  |  |
 
 **`UpdateWidgetParams`**
 
@@ -283,7 +301,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `id` | `string` |  |  |
 | `size` | `WidgetSize?` |  |  |
-| `config` | `any` |  |  |
+| `config` | `any` |  | When present, REPLACES the widget's whole config object (not merged); absent = unchanged. |
 
 **`WeatherHour`**
 
@@ -379,9 +397,10 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `id` | `string` |  |  |
 | `title` | `string?` |  |  |
-| `due` | `string?` |  |  |
-| `notes` | `string?` |  |  |
+| `due` | `string?` |  | absent = unchanged; empty string = clear the field. |
+| `notes` | `string?` |  | absent = unchanged; empty string = clear the field. |
 | `done` | `bool?` |  |  |
+| `list` | `string?` |  | absent = unchanged; empty string = clear the field. |
 
 ## overlay
 
@@ -394,7 +413,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 **enum `OverlayMode`**: `spotlight` · `launchpad` · `missionControl` · `popover` — What the full-screen overlay surface currently shows.
 
-**enum `PopoverKind`**: `apple` · `controlCenter` · `calendar` · `battery` · `network` · `sound` · `bluetooth` · `media` · `dockMenu` · `windowList` · `desktopMenu`
+**enum `PopoverKind`**: `apple` · `controlCenter` · `calendar` · `battery` · `network` · `sound` · `bluetooth` · `media` · `dockMenu` · `windowList` · `desktopMenu` · `appMenu`
 
 **`PopoverRequest`**
 
@@ -403,7 +422,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `kind` | `PopoverKind` |  |  |
 | `anchor` | `Rect` |  | In DIPs, relative to the client area of the surface that sent it (overlay.open) or of the overlay (overlay.show). |
 | `itemId` | `string?` |  | dockMenu/windowList: the dock item. |
-| `data` | `any` |  |  |
+| `data` | `any` |  | appMenu: { appId } of the active app (items call dock.hide / dock.quit with itemId = appId). |
 
 **`OverlayRequest`**
 
@@ -431,6 +450,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `search.cancel` | call (ui→host) | `SearchCancelParams` | – |  |
 | `search.perform` | call (ui→host) | `SearchPerformParams` | – |  |
 | `search.recent` | call (ui→host) | – | `SearchRecent` | Shown when the query is empty. |
+| `search.preview` | call (ui→host) | `SearchPreviewParams` | `SearchPreview` | Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable. |
 
 **enum `SearchProviderId`**: `apps` · `files` · `calc` · `settings` · `commands` · `web` · `windows`
 
@@ -463,7 +483,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `iconUrl` | `string?` |  |  |
 | `score` | `double` |  | 0..1, higher is better; the engine already orders the list. |
 | `actions` | `SearchAction[]` |  | First action marked primary runs on Enter. |
-| `preview` | `SearchPreview?` |  |  |
+| `preview` | `SearchPreview?` |  | Only CHEAP inline previews (calculator, text snippets). Use search.preview for expensive ones (file content, images) for the selected result only. |
 
 **`SearchQueryParams`**
 
@@ -498,7 +518,15 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
+| `requestId` | `string` |  | Pass to search.perform / search.preview for results of this list; resolvable until the next search.query. |
 | `results` | `SearchResult[]` |  |  |
+
+**`SearchPreviewParams`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `requestId` | `string` |  |  |
+| `resultId` | `string` |  |  |
 
 ## settings
 
@@ -611,6 +639,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `target` | `string` |  |  |
 | `x` | `int` |  |  |
 | `y` | `int` |  |  |
+| `monitorId` | `string?` |  | null = primary monitor. |
 
 **`WidgetInstance`**
 
@@ -621,7 +650,8 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `size` | `WidgetSize` | `"medium"` |  |
 | `x` | `double` |  |  |
 | `y` | `double` |  |  |
-| `config` | `any` |  | Widget-specific JSON (e.g. notes: { text }). |
+| `config` | `any` |  | Widget-specific JSON object. desktop.updateWidget REPLACES the whole object. Schemas: clock {style:'digital'\|'analog', seconds:bool, timezone?:string}; calendar {weekNumbers:bool}; weather {} (uses settings.weather); reminders {list?:string}; media {}; battery {}; notes {text:string}. |
+| `monitorId` | `string?` |  | null = primary monitor. |
 
 **`DesktopSettings`**
 
@@ -635,6 +665,9 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `gridSnap` | `bool` | `true` |  |
 | `shortcuts` | `DesktopShortcut[]` |  |  |
 | `widgets` | `WidgetInstance[]` |  |  |
+| `wallpapers` | `map<string>` |  | monitorId -> wallpaper path; overrides wallpaperPath, which is the default for monitors without an entry. |
+| `showDesktopFolder` | `bool` | `true` | Also show the contents of the user's Desktop folder (+ This PC, Recycle Bin) as icons; otherwise only 'shortcuts'. With hideNativeIcons on, turning this off makes those items unreachable from the desktop. |
+| `placements` | `map<DesktopCell>` |  | Icon id -> grid cell for icons that are not in 'shortcuts' (desktop-folder items, specials). |
 
 **`WeatherSettings`**
 
@@ -649,16 +682,16 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `id` | `string` |  |  |
+| `id` | `string` |  | 'folder:<guid>'. |
 | `name` | `string` |  |  |
-| `appIds` | `string[]` |  |  |
+| `appIds` | `string[]` |  | App ids in in-folder order. |
 
 **`LaunchpadSettings`**
 
 | field | type | default | notes |
 |---|---|---|---|
 | `folders` | `LaunchpadFolder[]` |  |  |
-| `order` | `string[]` |  | App ids in user order; unknown apps are appended alphabetically. |
+| `order` | `string[]` |  | Top-level grid order: app ids AND folder ids. Apps that are members of a folder or listed in 'hidden' MUST NOT appear here. Apps missing from 'order' are appended alphabetically. Ids of uninstalled apps are pruned on save, folder ids are kept. |
 | `hidden` | `string[]` |  |  |
 
 **`GeneralSettings`**
@@ -688,6 +721,13 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `launchpad` | `LaunchpadSettings` |  |  |
 | `general` | `GeneralSettings` |  |  |
 
+**`DesktopCell`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `x` | `int` |  |  |
+| `y` | `int` |  |  |
+
 ## status
 
 | message | kind | payload / params | result | notes |
@@ -703,7 +743,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `audio.setMuted` | call (ui→host) | `MuteParams` | – |  |
 | `audio.setDevice` | call (ui→host) | `AudioDeviceParams` | – |  |
 | `brightness.set` | call (ui→host) | `BrightnessParams` | – |  |
-| `theme.setPreference` | call (ui→host) | `ThemePreferenceParams` | – |  |
+| `theme.setPreference` | call (ui→host) | `ThemePreferenceParams` | – | Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme. |
 | `media.control` | call (ui→host) | `MediaControlParams` | – |  |
 | `tray.click` | call (ui→host) | `TrayClickParams` | – |  |
 
@@ -866,6 +906,9 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `system.showTaskbar` | call (ui→host) | `ShowTaskbarParams` | – | Temporarily show/hide the native taskbar without changing settings. |
 | `system.about` | call (ui→host) | – | `AboutInfo` |  |
 | `diag.report` | call (ui→host) | – | `DiagReport` | Runs every platform self-check (also: BetterWindows.exe --diagnose). |
+| `system.pickPath` | call (ui→host) | `PickPathParams` | `PickPathResult` | Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). |
+
+**enum `PickKind`**: `file` · `folder` · `image` · `app` — file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk.
 
 **`PowerParams`**
 
@@ -916,6 +959,20 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `os` | `string` |  |  |
 | `checks` | `DiagCheck[]` |  |  |
 
+**`PickPathParams`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `kind` | `PickKind` |  |  |
+| `title` | `string?` |  |  |
+| `multiple` | `bool` |  |  |
+
+**`PickPathResult`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `paths` | `string[]` |  | Absolute paths; empty = cancelled. |
+
 ## windows
 
 | message | kind | payload / params | result | notes |
@@ -925,15 +982,16 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `dock.reveal` | event (host→ui) | `DockRevealState` |  | Auto-hide: host detected the pointer at the dock edge (true) or leaving (false). |
 | `dock.bounce` | event (host→ui) | `DockBounce` |  |  |
 | `mc.thumbnail` | event (host→ui) | `McThumbnail` |  | A thumbnail became available after mc.snapshot. |
+| `mc.changed` | event (host→ui) | `McSnapshot` |  | Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced >= 100 ms). mc.thumbnail still fills in thumbnails. |
 | `dock.activate` | call (ui→host) | `DockItemParams` | – | Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer. |
 | `dock.activateWindow` | call (ui→host) | `WindowHandleParams` | – |  |
 | `dock.closeWindow` | call (ui→host) | `WindowHandleParams` | – |  |
-| `dock.pin` | call (ui→host) | `DockPinParams` | – |  |
+| `dock.pin` | call (ui→host) | `DockPinParams` | – | Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps. |
 | `dock.unpin` | call (ui→host) | `DockItemParams` | – |  |
 | `dock.reorder` | call (ui→host) | `DockReorderParams` | – |  |
 | `dock.newWindow` | call (ui→host) | `DockItemParams` | – |  |
-| `dock.quit` | call (ui→host) | `DockItemParams` | – | Close all windows of the app (WM_CLOSE). |
-| `dock.hide` | call (ui→host) | `DockItemParams` | – | Minimise all windows of the app. |
+| `dock.quit` | call (ui→host) | `DockItemParams` | – | Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu). |
+| `dock.hide` | call (ui→host) | `DockItemParams` | – | Minimise all windows of the app. itemId may be ANY running app id (used by the app menu). |
 | `dock.revealInExplorer` | call (ui→host) | `DockItemParams` | – |  |
 | `mc.snapshot` | call (ui→host) | `McSnapshotParams` | `McSnapshot` |  |
 | `mc.activateWindow` | call (ui→host) | `WindowHandleParams` | – |  |
@@ -942,6 +1000,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `mc.moveWindow` | call (ui→host) | `McMoveParams` | – |  |
 | `mc.createDesktop` | call (ui→host) | – | `DesktopInfo` |  |
 | `mc.removeDesktop` | call (ui→host) | `DesktopIdParams` | – |  |
+| `dock.pinPath` | call (ui→host) | `DockPinPathParams` | – | Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>). |
 
 **enum `DockItemKind`**: `app` · `folder` · `separator`
 
@@ -960,6 +1019,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `maximized` | `bool` |  |  |
 | `active` | `bool` |  |  |
 | `desktopId` | `string?` |  |  |
+| `elevated` | `bool` |  | The window's process runs elevated: the shell (not elevated) cannot activate/minimise/close it (UIPI). UI shows a hint. |
 
 **`ActiveApp`**
 
@@ -991,8 +1051,9 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `running` | `bool` |  |  |
 | `active` | `bool` |  |  |
 | `attention` | `bool` |  |  |
-| `badge` | `string?` |  |  |
+| `badge` | `string?` |  | Reserved: always null on Windows (no API exposes taskbar overlay badges to other processes). |
 | `windows` | `WindowRef[]` |  | Windows of this app, most recently active first. |
+| `launching` | `bool` |  | Launch requested but no window yet. The host adds a transient item for unpinned apps and removes it on the first window or after 20 s. |
 
 **`DockState`**
 
@@ -1063,6 +1124,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `bounds` | `Rect` |  |  |
 | `minimized` | `bool` |  |  |
 | `active` | `bool` |  |  |
+| `monitorId` | `string?` |  | Monitor whose area contains the window's centre. |
 
 **`McSnapshot`**
 
@@ -1076,7 +1138,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `monitorId` | `string?` |  |  |
+| `monitorId` | `string?` |  | null = the overlay's monitor. Only windows whose centre lies on this monitor are returned; bounds are DIPs relative to this monitor's top-left (converted with its scale). |
 
 **`McThumbnail`**
 
@@ -1097,4 +1159,11 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | field | type | default | notes |
 |---|---|---|---|
 | `desktopId` | `string` |  |  |
+
+**`DockPinPathParams`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `path` | `string` |  | Absolute path of a folder, exe or lnk to pin (the UI obtains it with system.pickPath). |
+| `index` | `int?` |  |  |
 

@@ -67,5 +67,5 @@ let nextHandle = 1000;
 export function win(appName: string, title: string, o: Partial<WindowRef> = {}): WindowRef {
   const a = appByName(appName);
   const handle = String(nextHandle++);
-  return { handle, title, appId: a.id, iconUrl: a.iconUrl, minimized: false, maximized: false, active: false, ...o };
+  return { handle, title, appId: a.id, iconUrl: a.iconUrl, minimized: false, maximized: false, active: false, elevated: false, ...o };
 }

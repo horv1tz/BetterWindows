@@ -22,7 +22,11 @@
       "minimized": "bool",
       "maximized": "bool",
       "active": "bool",
-      "desktopId": "string?"
+      "desktopId": "string?",
+      "elevated": {
+        "type": "bool",
+        "doc": "The window's process runs elevated: the shell (not elevated) cannot activate/minimise/close it (UIPI). UI shows a hint."
+      }
     },
     "ActiveApp": {
       "appId": "string",
@@ -51,10 +55,17 @@
       "running": "bool",
       "active": "bool",
       "attention": "bool",
-      "badge": "string?",
+      "badge": {
+        "type": "string?",
+        "doc": "Reserved: always null on Windows (no API exposes taskbar overlay badges to other processes)."
+      },
       "windows": {
         "type": "WindowRef[]",
         "doc": "Windows of this app, most recently active first."
+      },
+      "launching": {
+        "type": "bool",
+        "doc": "Launch requested but no window yet. The host adds a transient item for unpinned apps and removes it on the first window or after 20 s."
       }
     },
     "DockState": {
@@ -110,7 +121,11 @@
       "desktopId": "string?",
       "bounds": "Rect",
       "minimized": "bool",
-      "active": "bool"
+      "active": "bool",
+      "monitorId": {
+        "type": "string?",
+        "doc": "Monitor whose area contains the window's centre."
+      }
     },
     "McSnapshot": {
       "desktops": "DesktopInfo[]",
@@ -118,7 +133,10 @@
       "windows": "McWindow[]"
     },
     "McSnapshotParams": {
-      "monitorId": "string?"
+      "monitorId": {
+        "type": "string?",
+        "doc": "null = the overlay's monitor. Only windows whose centre lies on this monitor are returned; bounds are DIPs relative to this monitor's top-left (converted with its scale)."
+      }
     },
     "McThumbnail": {
       "handle": "string",
@@ -130,6 +148,13 @@
     },
     "DesktopIdParams": {
       "desktopId": "string"
+    },
+    "DockPinPathParams": {
+      "path": {
+        "type": "string",
+        "doc": "Absolute path of a folder, exe or lnk to pin (the UI obtains it with system.pickPath)."
+      },
+      "index": "int?"
     }
   },
   "events": {
@@ -158,6 +183,11 @@
       "dir": "host",
       "payload": "McThumbnail",
       "doc": "A thumbnail became available after mc.snapshot."
+    },
+    "mc.changed": {
+      "dir": "host",
+      "payload": "McSnapshot",
+      "doc": "Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced >= 100 ms). mc.thumbnail still fills in thumbnails."
     }
   },
   "calls": {
@@ -176,7 +206,8 @@
     },
     "dock.pin": {
       "params": "DockPinParams",
-      "result": null
+      "result": null,
+      "doc": "Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps."
     },
     "dock.unpin": {
       "params": "DockItemParams",
@@ -193,12 +224,12 @@
     "dock.quit": {
       "params": "DockItemParams",
       "result": null,
-      "doc": "Close all windows of the app (WM_CLOSE)."
+      "doc": "Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu)."
     },
     "dock.hide": {
       "params": "DockItemParams",
       "result": null,
-      "doc": "Minimise all windows of the app."
+      "doc": "Minimise all windows of the app. itemId may be ANY running app id (used by the app menu)."
     },
     "dock.revealInExplorer": {
       "params": "DockItemParams",
@@ -231,6 +262,11 @@
     "mc.removeDesktop": {
       "params": "DesktopIdParams",
       "result": null
+    },
+    "dock.pinPath": {
+      "params": "DockPinPathParams",
+      "result": null,
+      "doc": "Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>)."
     }
   }
 }

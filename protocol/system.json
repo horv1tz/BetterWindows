@@ -1,20 +1,95 @@
 {
   "domain": "system",
   "types": {
-    "PowerParams": { "action": "PowerAction" },
-    "OpenParams": { "target": { "type": "string", "doc": "URL, file/folder path or ms-settings: URI; opened via the shell." } },
-    "QuitParams": { "restoreTaskbar": { "type": "bool", "default": true } },
-    "ShowTaskbarParams": { "show": "bool" },
-    "AboutInfo": { "version": "string", "build": "string", "os": "string", "webView2": "string" },
-    "DiagCheck": { "name": "string", "ok": "bool", "detail": "string" },
-    "DiagReport": { "version": "string", "os": "string", "checks": "DiagCheck[]" }
+    "PowerParams": {
+      "action": "PowerAction"
+    },
+    "OpenParams": {
+      "target": {
+        "type": "string",
+        "doc": "URL, file/folder path or ms-settings: URI; opened via the shell."
+      }
+    },
+    "QuitParams": {
+      "restoreTaskbar": {
+        "type": "bool",
+        "default": true
+      }
+    },
+    "ShowTaskbarParams": {
+      "show": "bool"
+    },
+    "AboutInfo": {
+      "version": "string",
+      "build": "string",
+      "os": "string",
+      "webView2": "string"
+    },
+    "DiagCheck": {
+      "name": "string",
+      "ok": "bool",
+      "detail": "string"
+    },
+    "DiagReport": {
+      "version": "string",
+      "os": "string",
+      "checks": "DiagCheck[]"
+    },
+    "PickPathParams": {
+      "kind": "PickKind",
+      "title": "string?",
+      "multiple": "bool"
+    },
+    "PickPathResult": {
+      "paths": {
+        "type": "string[]",
+        "doc": "Absolute paths; empty = cancelled."
+      }
+    }
   },
   "calls": {
-    "system.power": { "params": "PowerParams", "result": null },
-    "system.open": { "params": "OpenParams", "result": null },
-    "system.quit": { "params": "QuitParams", "result": null, "doc": "Restore the Windows taskbar (unless false) and exit." },
-    "system.showTaskbar": { "params": "ShowTaskbarParams", "result": null, "doc": "Temporarily show/hide the native taskbar without changing settings." },
-    "system.about": { "params": null, "result": "AboutInfo" },
-    "diag.report": { "params": null, "result": "DiagReport", "doc": "Runs every platform self-check (also: BetterWindows.exe --diagnose)." }
+    "system.power": {
+      "params": "PowerParams",
+      "result": null
+    },
+    "system.open": {
+      "params": "OpenParams",
+      "result": null
+    },
+    "system.quit": {
+      "params": "QuitParams",
+      "result": null,
+      "doc": "Restore the Windows taskbar (unless false) and exit."
+    },
+    "system.showTaskbar": {
+      "params": "ShowTaskbarParams",
+      "result": null,
+      "doc": "Temporarily show/hide the native taskbar without changing settings."
+    },
+    "system.about": {
+      "params": null,
+      "result": "AboutInfo"
+    },
+    "diag.report": {
+      "params": null,
+      "result": "DiagReport",
+      "doc": "Runs every platform self-check (also: BetterWindows.exe --diagnose)."
+    },
+    "system.pickPath": {
+      "params": "PickPathParams",
+      "result": "PickPathResult",
+      "doc": "Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest)."
+    }
+  },
+  "enums": {
+    "PickKind": {
+      "values": [
+        "file",
+        "folder",
+        "image",
+        "app"
+      ],
+      "doc": "file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk."
+    }
   }
 }

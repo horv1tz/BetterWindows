@@ -17,6 +17,14 @@ rules that the catalog cannot express. **Source of truth for shapes: `protocol/*
 * JSON rules: camelCase property names; enums are lowerCamelCase strings; `null`/absent are equivalent (the host omits nulls);
   unknown properties are ignored by both sides (forward compatible); numbers are doubles (never put 64-bit ints on the wire).
 
+### 1.1 How the page and `/dyn/*` are served (important)
+
+`WebResourceRequested` is **not raised** for hosts mapped with `SetVirtualHostNameToFolderMapping` (documented WebView2 behaviour), so the host must NOT use
+that mapping. Instead the bridge registers `AddWebResourceRequestedFilter("https://app.local/*", CoreWebView2WebResourceContext.All)` and answers EVERY request
+itself (with a `GetDeferral()`): paths under `/dyn/` come from `IDynamicResourceProvider`; everything else is a static file of the UI bundle (`wwwroot`),
+with strict path normalisation (no `..`, no absolute paths, only inside wwwroot), correct content types, `/` -> `index.html`, 404 otherwise.
+In dev mode (`--ui-url`) the page is navigated to the dev server origin and `/dyn/*` of THAT origin is intercepted the same way.
+
 ## 2. Identifiers
 
 | thing | wire form |
@@ -57,12 +65,19 @@ rules that the catalog cannot express. **Source of truth for shapes: `protocol/*
 * The dock window is transparent and as small as possible to keep the rest of the screen clickable. The **UI owns the size**:
   it sends `surface.resize { width, height }` (DIPs) whenever the dock's content or magnification headroom changes
   (idle: bar only; while the pointer is over the dock: bar + headroom for magnified icons and tooltips).
-  The host clamps to the monitor, keeps the window centred on its edge and (if `reserveSpace`) re-registers the AppBar for
-  the *bar* thickness only (headroom is never reserved).
-* `surface.shape` (all surfaces): the UI reports its glass panels (rounded rects). The host sets DWM blur-behind on exactly
-  those regions and uses them as the window region so that transparent pixels are click-through.
-* Auto-hide: the host owns pointer detection at the screen edge → `dock.reveal { revealed }`. The UI animates in/out and then
+  The host clamps to the monitor, keeps the window centred on its edge and (if `reserveSpace` and not auto-hide) re-registers the AppBar for
+  `barThickness` only (the UI states it: the always-visible bar's extent from the docked edge in DIPs; headroom and tooltips are never reserved).
+* `surface.shape` (dock and menubar): the UI reports its glass panels (`rects`, rounded) and interactive-but-not-glass areas (`hitRects`, e.g.
+  magnified icons that overflow the panel, tooltips). Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via
+  `SetWindowRgn`, so everything else is click-through; backdrop = `DWMWA_SYSTEMBACKDROP_TYPE` (transient/acrylic) on Windows 11 22H2+ (the undocumented
+  accent API only behind a feature flag on older builds). `DwmEnableBlurBehindWindow` MUST NOT be used (no blur since Windows 8). A whole-window backdrop cannot
+  be restricted to sub-rects, so `SurfaceInit.glassOverflow` tells the UI whether `hitRects` stay un-blurred: **if false, the UI must keep ALL dock content
+  (magnified icons, tooltips) inside the glass rects** (grow the panel instead of overflowing it). Overlay/settings never get a region; desktop has none.
+* Auto-hide: the HOST owns pointer detection at the screen edge (it polls the cursor) and the dock window geometry → `dock.reveal { revealed }`.
+  `ISurfaceManager.SetDockRevealed` is only a Core override (keep it revealed while a dockMenu popover is open). The UI animates in/out and then
   sends `surface.resize` to the collapsed size.
+* Fullscreen suppression is OWNED BY THE HOST (per monitor, from the AppBar fullscreen notification and `IWindowSystem.FullscreenChanged`): it hides that
+  monitor's menubar/dock (and un-reserves their space) and sends `surface.visibility`. Core hides surfaces only for its own reasons (reason-keyed).
 * `dock.bounce` plays a launch/attention animation. `dock.state` is the single source of truth for icons/indicators.
 
 ### Overlay and popovers
@@ -105,6 +120,13 @@ fallback tile). Cache: immutable per URL (the `rev` query busts it).
 | `/dyn/art/<rev>` | current media cover art |
 | `/dyn/wallpaper/<monitorId>?rev=<n>` | wallpaper (jpeg/png) |
 | `/dyn/tray/<id>?rev=<n>` | tray icon |
+
+## 8.1 Hotkey strings
+
+`Mod+Mod+Key`. Modifiers: `Ctrl`/`Control`, `Alt`, `Shift`, `Win`/`Super` (case-insensitive, any order on input; canonical output order `Ctrl+Alt+Shift+Win+Key`).
+Keys: `A`-`Z`, `0`-`9`, `F1`-`F24`, `Space`, `Enter`, `Tab`, `Esc`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right`,
+punctuation by name (`Backtick`, `Minus`, `Equals`, `LeftBracket`, `RightBracket`, `Backslash`, `Semicolon`, `Quote`, `Comma`, `Period`, `Slash`), `Num0`-`Num9`.
+At least one modifier unless the key is `F1`-`F24`. Empty string = unassigned. The C# parser (`HotkeyParser`, core-status) and the TS one (settings UI) implement exactly this.
 
 ## 9. Errors
 `{ ok:false, error:{ code, message } }` — codes: `badRequest` (invalid/missing payload), `notFound` (unknown call or entity),

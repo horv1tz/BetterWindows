@@ -1,28 +1,83 @@
 {
   "domain": "overlay",
   "enums": {
-    "OverlayMode": { "values": ["spotlight", "launchpad", "missionControl", "popover"], "doc": "What the full-screen overlay surface currently shows." },
-    "PopoverKind": ["apple", "controlCenter", "calendar", "battery", "network", "sound", "bluetooth", "media", "dockMenu", "windowList", "desktopMenu"]
+    "OverlayMode": {
+      "values": [
+        "spotlight",
+        "launchpad",
+        "missionControl",
+        "popover"
+      ],
+      "doc": "What the full-screen overlay surface currently shows."
+    },
+    "PopoverKind": [
+      "apple",
+      "controlCenter",
+      "calendar",
+      "battery",
+      "network",
+      "sound",
+      "bluetooth",
+      "media",
+      "dockMenu",
+      "windowList",
+      "desktopMenu",
+      "appMenu"
+    ]
   },
   "types": {
     "PopoverRequest": {
       "kind": "PopoverKind",
-      "anchor": { "type": "Rect", "doc": "In DIPs, relative to the client area of the surface that sent it (overlay.open) or of the overlay (overlay.show)." },
-      "itemId": { "type": "string?", "doc": "dockMenu/windowList: the dock item." },
-      "data": "any"
+      "anchor": {
+        "type": "Rect",
+        "doc": "In DIPs, relative to the client area of the surface that sent it (overlay.open) or of the overlay (overlay.show)."
+      },
+      "itemId": {
+        "type": "string?",
+        "doc": "dockMenu/windowList: the dock item."
+      },
+      "data": {
+        "type": "any",
+        "doc": "appMenu: { appId } of the active app (items call dock.hide / dock.quit with itemId = appId)."
+      }
     },
-    "OverlayRequest": { "mode": "OverlayMode", "popover": "PopoverRequest?", "monitorId": "string?" },
+    "OverlayRequest": {
+      "mode": "OverlayMode",
+      "popover": "PopoverRequest?",
+      "monitorId": "string?"
+    },
     "OverlayShow": {
-      "mode": "OverlayMode", "popover": "PopoverRequest?", "monitorId": "string",
-      "token": { "type": "int", "doc": "Increments on every show; stale async results can be dropped." }
+      "mode": "OverlayMode",
+      "popover": "PopoverRequest?",
+      "monitorId": "string",
+      "token": {
+        "type": "int",
+        "doc": "Increments on every show; stale async results can be dropped."
+      }
     }
   },
   "events": {
-    "overlay.show": { "dir": "host", "payload": "OverlayShow", "doc": "Sent to the overlay surface after the host has shown/positioned the overlay window." },
-    "overlay.hide": { "dir": "host", "payload": null, "doc": "Dismiss whatever is open (hotkey toggled, focus lost, another app activated)." }
+    "overlay.show": {
+      "dir": "host",
+      "payload": "OverlayShow",
+      "doc": "Sent to the overlay surface after the host has shown/positioned the overlay window."
+    },
+    "overlay.hide": {
+      "dir": "host",
+      "payload": null,
+      "doc": "Dismiss whatever is open (hotkey toggled, focus lost, another app activated)."
+    }
   },
   "calls": {
-    "overlay.open": { "params": "OverlayRequest", "result": null, "doc": "Any surface asks the host to open the overlay (e.g. menubar -> controlCenter popover). Anchor is translated to overlay coordinates." },
-    "overlay.close": { "params": null, "result": null, "doc": "Overlay UI finished (Esc, backdrop click, item chosen). Host hides the window." }
+    "overlay.open": {
+      "params": "OverlayRequest",
+      "result": null,
+      "doc": "Any surface asks the host to open the overlay (e.g. menubar -> controlCenter popover). Anchor is translated to overlay coordinates."
+    },
+    "overlay.close": {
+      "params": null,
+      "result": null,
+      "doc": "Overlay UI finished (Esc, backdrop click, item chosen). Host hides the window."
+    }
   }
 }

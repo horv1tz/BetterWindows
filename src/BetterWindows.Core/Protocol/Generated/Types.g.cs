@@ -12,6 +12,15 @@ public static class ProtocolInfo
 }
 
 [JsonConverter(typeof(CamelEnumConverter))]
+public enum DesktopIconKind
+{
+    Shortcut,
+    File,
+    Folder,
+    Special,
+}
+
+[JsonConverter(typeof(CamelEnumConverter))]
 public enum DockBounceKind
 {
     Launch,
@@ -95,6 +104,18 @@ public enum OverlayMode
     Popover,
 }
 
+/// <summary>
+/// file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk.
+/// </summary>
+[JsonConverter(typeof(CamelEnumConverter))]
+public enum PickKind
+{
+    File,
+    Folder,
+    Image,
+    App,
+}
+
 [JsonConverter(typeof(CamelEnumConverter))]
 public enum PinnedKind
 {
@@ -116,6 +137,7 @@ public enum PopoverKind
     DockMenu,
     WindowList,
     DesktopMenu,
+    AppMenu,
 }
 
 [JsonConverter(typeof(CamelEnumConverter))]
@@ -260,14 +282,19 @@ public sealed record AddShortcutParams
     [JsonPropertyName("path")] public string Path { get; init; } = "";
     [JsonPropertyName("x")] public int? X { get; init; }
     [JsonPropertyName("y")] public int? Y { get; init; }
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record AddWidgetParams
 {
     [JsonPropertyName("type")] public WidgetType Type { get; init; } = WidgetType.Clock;
     [JsonPropertyName("size")] public WidgetSize? Size { get; init; }
+    /// <summary>
+    /// Absent: the host cascades at (48+24n, 80+24n) DIP on the target monitor.
+    /// </summary>
     [JsonPropertyName("x")] public double? X { get; init; }
     [JsonPropertyName("y")] public double? Y { get; init; }
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record AppearanceSettings
@@ -376,8 +403,17 @@ public sealed record BrightnessState
     [JsonPropertyName("level")] public double Level { get; init; } = 0.0;
 }
 
+public sealed record DesktopCell
+{
+    [JsonPropertyName("x")] public int X { get; init; } = 0;
+    [JsonPropertyName("y")] public int Y { get; init; } = 0;
+}
+
 public sealed record DesktopIcon
 {
+    /// <summary>
+    /// 'sc:&lt;guid&gt;' (user shortcut), 'fs:&lt;lower-cased path&gt;' (desktop folder item), 'special:thisPc' | 'special:recycleBin'.
+    /// </summary>
     [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("name")] public string Name { get; init; } = "";
     [JsonPropertyName("iconUrl")] public string IconUrl { get; init; } = "";
@@ -390,6 +426,7 @@ public sealed record DesktopIcon
     /// </summary>
     [JsonPropertyName("y")] public int Y { get; init; } = 0;
     [JsonPropertyName("target")] public string Target { get; init; } = "";
+    [JsonPropertyName("kind")] public DesktopIconKind Kind { get; init; } = DesktopIconKind.Shortcut;
 }
 
 public sealed record DesktopIdParams
@@ -425,6 +462,18 @@ public sealed record DesktopSettings
     [JsonPropertyName("gridSnap")] public bool GridSnap { get; init; } = true;
     [JsonPropertyName("shortcuts")] public IReadOnlyList<DesktopShortcut> Shortcuts { get; init; } = Array.Empty<DesktopShortcut>();
     [JsonPropertyName("widgets")] public IReadOnlyList<WidgetInstance> Widgets { get; init; } = Array.Empty<WidgetInstance>();
+    /// <summary>
+    /// monitorId -&gt; wallpaper path; overrides wallpaperPath, which is the default for monitors without an entry.
+    /// </summary>
+    [JsonPropertyName("wallpapers")] public IReadOnlyDictionary<string, string> Wallpapers { get; init; } = new Dictionary<string, string>();
+    /// <summary>
+    /// Also show the contents of the user's Desktop folder (+ This PC, Recycle Bin) as icons; otherwise only 'shortcuts'. With hideNativeIcons on, turning this off makes those items unreachable from the desktop.
+    /// </summary>
+    [JsonPropertyName("showDesktopFolder")] public bool ShowDesktopFolder { get; init; } = true;
+    /// <summary>
+    /// Icon id -&gt; grid cell for icons that are not in 'shortcuts' (desktop-folder items, specials).
+    /// </summary>
+    [JsonPropertyName("placements")] public IReadOnlyDictionary<string, DesktopCell> Placements { get; init; } = new Dictionary<string, DesktopCell>();
 }
 
 public sealed record DesktopShortcut
@@ -434,6 +483,10 @@ public sealed record DesktopShortcut
     [JsonPropertyName("target")] public string Target { get; init; } = "";
     [JsonPropertyName("x")] public int X { get; init; } = 0;
     [JsonPropertyName("y")] public int Y { get; init; } = 0;
+    /// <summary>
+    /// null = primary monitor.
+    /// </summary>
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record DesktopState
@@ -444,6 +497,10 @@ public sealed record DesktopState
     [JsonPropertyName("iconSize")] public int IconSize { get; init; } = 0;
     [JsonPropertyName("icons")] public IReadOnlyList<DesktopIcon> Icons { get; init; } = Array.Empty<DesktopIcon>();
     [JsonPropertyName("widgets")] public IReadOnlyList<WidgetInstance> Widgets { get; init; } = Array.Empty<WidgetInstance>();
+    /// <summary>
+    /// The monitor this surface instance renders.
+    /// </summary>
+    [JsonPropertyName("monitorId")] public string MonitorId { get; init; } = "";
 }
 
 public sealed record DiagCheck
@@ -484,11 +541,18 @@ public sealed record DockItem
     [JsonPropertyName("running")] public bool Running { get; init; } = false;
     [JsonPropertyName("active")] public bool Active { get; init; } = false;
     [JsonPropertyName("attention")] public bool Attention { get; init; } = false;
+    /// <summary>
+    /// Reserved: always null on Windows (no API exposes taskbar overlay badges to other processes).
+    /// </summary>
     [JsonPropertyName("badge")] public string? Badge { get; init; }
     /// <summary>
     /// Windows of this app, most recently active first.
     /// </summary>
     [JsonPropertyName("windows")] public IReadOnlyList<WindowRef> Windows { get; init; } = Array.Empty<WindowRef>();
+    /// <summary>
+    /// Launch requested but no window yet. The host adds a transient item for unpinned apps and removes it on the first window or after 20 s.
+    /// </summary>
+    [JsonPropertyName("launching")] public bool Launching { get; init; } = false;
 }
 
 public sealed record DockItemParams
@@ -499,6 +563,15 @@ public sealed record DockItemParams
 public sealed record DockPinParams
 {
     [JsonPropertyName("appId")] public string AppId { get; init; } = "";
+    [JsonPropertyName("index")] public int? Index { get; init; }
+}
+
+public sealed record DockPinPathParams
+{
+    /// <summary>
+    /// Absolute path of a folder, exe or lnk to pin (the UI obtains it with system.pickPath).
+    /// </summary>
+    [JsonPropertyName("path")] public string Path { get; init; } = "";
     [JsonPropertyName("index")] public int? Index { get; init; }
 }
 
@@ -601,8 +674,14 @@ public sealed record IdParams
 
 public sealed record LaunchpadFolder
 {
+    /// <summary>
+    /// 'folder:&lt;guid&gt;'.
+    /// </summary>
     [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("name")] public string Name { get; init; } = "";
+    /// <summary>
+    /// App ids in in-folder order.
+    /// </summary>
     [JsonPropertyName("appIds")] public IReadOnlyList<string> AppIds { get; init; } = Array.Empty<string>();
 }
 
@@ -610,10 +689,18 @@ public sealed record LaunchpadSettings
 {
     [JsonPropertyName("folders")] public IReadOnlyList<LaunchpadFolder> Folders { get; init; } = Array.Empty<LaunchpadFolder>();
     /// <summary>
-    /// App ids in user order; unknown apps are appended alphabetically.
+    /// Top-level grid order: app ids AND folder ids. Apps that are members of a folder or listed in 'hidden' MUST NOT appear here. Apps missing from 'order' are appended alphabetically. Ids of uninstalled apps are pruned on save, folder ids are kept.
     /// </summary>
     [JsonPropertyName("order")] public IReadOnlyList<string> Order { get; init; } = Array.Empty<string>();
     [JsonPropertyName("hidden")] public IReadOnlyList<string> Hidden { get; init; } = Array.Empty<string>();
+}
+
+public sealed record LocaleState
+{
+    /// <summary>
+    /// Effective UI locale ('en' | 'ru' | ...), already resolved from settings.general.language.
+    /// </summary>
+    [JsonPropertyName("locale")] public string Locale { get; init; } = "en";
 }
 
 public sealed record LogParams
@@ -638,6 +725,9 @@ public sealed record McSnapshot
 
 public sealed record McSnapshotParams
 {
+    /// <summary>
+    /// null = the overlay's monitor. Only windows whose centre lies on this monitor are returned; bounds are DIPs relative to this monitor's top-left (converted with its scale).
+    /// </summary>
     [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
@@ -662,6 +752,10 @@ public sealed record McWindow
     [JsonPropertyName("bounds")] public Rect Bounds { get; init; } = new();
     [JsonPropertyName("minimized")] public bool Minimized { get; init; } = false;
     [JsonPropertyName("active")] public bool Active { get; init; } = false;
+    /// <summary>
+    /// Monitor whose area contains the window's centre.
+    /// </summary>
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record MediaControlParams
@@ -715,6 +809,10 @@ public sealed record MonitorInfo
     [JsonPropertyName("boundsPx")] public Rect BoundsPx { get; init; } = new();
     [JsonPropertyName("workAreaPx")] public Rect WorkAreaPx { get; init; } = new();
     [JsonPropertyName("scale")] public double Scale { get; init; } = 1.0;
+    /// <summary>
+    /// Monitor device interface path (IDesktopWallpaper.GetMonitorDevicePathAt form). id = MonitorIdentity.IdFromDevicePath(devicePath).
+    /// </summary>
+    [JsonPropertyName("devicePath")] public string? DevicePath { get; init; }
 }
 
 public sealed record MoveWidgetParams
@@ -769,6 +867,21 @@ public sealed record OverlayShow
     [JsonPropertyName("token")] public int Token { get; init; } = 0;
 }
 
+public sealed record PickPathParams
+{
+    [JsonPropertyName("kind")] public PickKind Kind { get; init; } = PickKind.File;
+    [JsonPropertyName("title")] public string? Title { get; init; }
+    [JsonPropertyName("multiple")] public bool Multiple { get; init; } = false;
+}
+
+public sealed record PickPathResult
+{
+    /// <summary>
+    /// Absolute paths; empty = cancelled.
+    /// </summary>
+    [JsonPropertyName("paths")] public IReadOnlyList<string> Paths { get; init; } = Array.Empty<string>();
+}
+
 public sealed record PinnedItem
 {
     /// <summary>
@@ -800,6 +913,9 @@ public sealed record PopoverRequest
     /// dockMenu/windowList: the dock item.
     /// </summary>
     [JsonPropertyName("itemId")] public string? ItemId { get; init; }
+    /// <summary>
+    /// appMenu: { appId } of the active app (items call dock.hide / dock.quit with itemId = appId).
+    /// </summary>
     [JsonPropertyName("data")] public System.Text.Json.Nodes.JsonNode? Data { get; init; }
 }
 
@@ -851,9 +967,19 @@ public sealed record ReminderUpdateParams
 {
     [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("title")] public string? Title { get; init; }
+    /// <summary>
+    /// absent = unchanged; empty string = clear the field.
+    /// </summary>
     [JsonPropertyName("due")] public string? Due { get; init; }
+    /// <summary>
+    /// absent = unchanged; empty string = clear the field.
+    /// </summary>
     [JsonPropertyName("notes")] public string? Notes { get; init; }
     [JsonPropertyName("done")] public bool? Done { get; init; }
+    /// <summary>
+    /// absent = unchanged; empty string = clear the field.
+    /// </summary>
+    [JsonPropertyName("list")] public string? List { get; init; }
 }
 
 public sealed record SearchAction
@@ -882,6 +1008,12 @@ public sealed record SearchPreview
     [JsonPropertyName("imageUrl")] public string? ImageUrl { get; init; }
 }
 
+public sealed record SearchPreviewParams
+{
+    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
+    [JsonPropertyName("resultId")] public string ResultId { get; init; } = "";
+}
+
 public sealed record SearchQueryParams
 {
     [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
@@ -890,6 +1022,10 @@ public sealed record SearchQueryParams
 
 public sealed record SearchRecent
 {
+    /// <summary>
+    /// Pass to search.perform / search.preview for results of this list; resolvable until the next search.query.
+    /// </summary>
+    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
     [JsonPropertyName("results")] public IReadOnlyList<SearchResult> Results { get; init; } = Array.Empty<SearchResult>();
 }
 
@@ -911,6 +1047,9 @@ public sealed record SearchResult
     /// First action marked primary runs on Enter.
     /// </summary>
     [JsonPropertyName("actions")] public IReadOnlyList<SearchAction> Actions { get; init; } = Array.Empty<SearchAction>();
+    /// <summary>
+    /// Only CHEAP inline previews (calculator, text snippets). Use search.preview for expensive ones (file content, images) for the selected result only.
+    /// </summary>
     [JsonPropertyName("preview")] public SearchPreview? Preview { get; init; }
 }
 
@@ -965,6 +1104,10 @@ public sealed record SettingsPatchParams
 public sealed record SetWallpaperParams
 {
     [JsonPropertyName("path")] public string Path { get; init; } = "";
+    /// <summary>
+    /// null = all monitors.
+    /// </summary>
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record ShapeRect
@@ -1009,6 +1152,10 @@ public sealed record SurfaceInit
     /// 'windows' or 'mock'.
     /// </summary>
     [JsonPropertyName("platform")] public string Platform { get; init; } = "windows";
+    /// <summary>
+    /// True if the host can restrict the backdrop to 'rects' while 'hitRects' stay un-blurred. If false the UI must keep ALL dock content (magnified icons, tooltips) inside the glass rects (grow the panel instead of overflowing it).
+    /// </summary>
+    [JsonPropertyName("glassOverflow")] public bool GlassOverflow { get; init; } = false;
 }
 
 public sealed record SurfaceReadyParams
@@ -1021,16 +1168,27 @@ public sealed record SurfaceResizeParams
 {
     [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
     [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
+    /// <summary>
+    /// Dock only. DIP extent of the always-visible bar measured from the docked screen edge (EXCLUDES magnification headroom and tooltips). The host reserves ceil(barThickness x monitor scale) physical px through the AppBar when settings.dock.reserveSpace &amp;&amp; !autoHide; null keeps the previous value.
+    /// </summary>
+    [JsonPropertyName("barThickness")] public double? BarThickness { get; init; }
 }
 
 /// <summary>
-/// The glass panels of a surface, in DIPs relative to the window client area.
+/// The UI's glass panels (and interactive-but-not-glass areas), in DIPs relative to the window client area.
 /// </summary>
 public sealed record SurfaceShapeParams
 {
+    /// <summary>
+    /// Glass panels (rounded rects): visible, interactive and backed by the blur/acrylic backdrop.
+    /// </summary>
     [JsonPropertyName("rects")] public IReadOnlyList<ShapeRect> Rects { get; init; } = Array.Empty<ShapeRect>();
     /// <summary>
-    /// Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window).
+    /// Visible and interactive but NOT glass (magnified dock icons, tooltips that overflow the panel). Included in the window region and hit-testing, excluded from the backdrop where the host can restrict it (see SurfaceInit.glassOverflow). May be empty.
+    /// </summary>
+    [JsonPropertyName("hitRects")] public IReadOnlyList<ShapeRect> HitRects { get; init; } = Array.Empty<ShapeRect>();
+    /// <summary>
+    /// Master switch: false = no backdrop (reduceTransparency, or the UI wants flat panels).
     /// </summary>
     [JsonPropertyName("blur")] public bool Blur { get; init; } = true;
 }
@@ -1087,6 +1245,9 @@ public sealed record UpdateWidgetParams
 {
     [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("size")] public WidgetSize? Size { get; init; }
+    /// <summary>
+    /// When present, REPLACES the widget's whole config object (not merged); absent = unchanged.
+    /// </summary>
     [JsonPropertyName("config")] public System.Text.Json.Nodes.JsonNode? Config { get; init; }
 }
 
@@ -1169,9 +1330,13 @@ public sealed record WidgetInstance
     [JsonPropertyName("x")] public double X { get; init; } = 0.0;
     [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
     /// <summary>
-    /// Widget-specific JSON (e.g. notes: { text }).
+    /// Widget-specific JSON object. desktop.updateWidget REPLACES the whole object. Schemas: clock {style:'digital'|'analog', seconds:bool, timezone?:string}; calendar {weekNumbers:bool}; weather {} (uses settings.weather); reminders {list?:string}; media {}; battery {}; notes {text:string}.
     /// </summary>
     [JsonPropertyName("config")] public System.Text.Json.Nodes.JsonNode? Config { get; init; }
+    /// <summary>
+    /// null = primary monitor.
+    /// </summary>
+    [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record WindowHandleParams
@@ -1193,5 +1358,9 @@ public sealed record WindowRef
     [JsonPropertyName("maximized")] public bool Maximized { get; init; } = false;
     [JsonPropertyName("active")] public bool Active { get; init; } = false;
     [JsonPropertyName("desktopId")] public string? DesktopId { get; init; }
+    /// <summary>
+    /// The window's process runs elevated: the shell (not elevated) cannot activate/minimise/close it (UIPI). UI shows a hint.
+    /// </summary>
+    [JsonPropertyName("elevated")] public bool Elevated { get; init; } = false;
 }
 

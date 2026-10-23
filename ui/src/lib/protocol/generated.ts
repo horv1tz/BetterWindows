@@ -3,6 +3,9 @@
 
 export const PROTOCOL_VERSION = 1;
 
+export type DesktopIconKind = 'shortcut' | 'file' | 'folder' | 'special';
+export const DesktopIconKindValues: readonly DesktopIconKind[] = ['shortcut', 'file', 'folder', 'special'];
+
 export type DockBounceKind = 'launch' | 'attention';
 export const DockBounceKindValues: readonly DockBounceKind[] = ['launch', 'attention'];
 
@@ -31,11 +34,15 @@ export const NetworkKindValues: readonly NetworkKind[] = ['none', 'wifi', 'ether
 export type OverlayMode = 'spotlight' | 'launchpad' | 'missionControl' | 'popover';
 export const OverlayModeValues: readonly OverlayMode[] = ['spotlight', 'launchpad', 'missionControl', 'popover'];
 
+/** file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk. */
+export type PickKind = 'file' | 'folder' | 'image' | 'app';
+export const PickKindValues: readonly PickKind[] = ['file', 'folder', 'image', 'app'];
+
 export type PinnedKind = 'app' | 'folder';
 export const PinnedKindValues: readonly PinnedKind[] = ['app', 'folder'];
 
-export type PopoverKind = 'apple' | 'controlCenter' | 'calendar' | 'battery' | 'network' | 'sound' | 'bluetooth' | 'media' | 'dockMenu' | 'windowList' | 'desktopMenu';
-export const PopoverKindValues: readonly PopoverKind[] = ['apple', 'controlCenter', 'calendar', 'battery', 'network', 'sound', 'bluetooth', 'media', 'dockMenu', 'windowList', 'desktopMenu'];
+export type PopoverKind = 'apple' | 'controlCenter' | 'calendar' | 'battery' | 'network' | 'sound' | 'bluetooth' | 'media' | 'dockMenu' | 'windowList' | 'desktopMenu' | 'appMenu';
+export const PopoverKindValues: readonly PopoverKind[] = ['apple', 'controlCenter', 'calendar', 'battery', 'network', 'sound', 'bluetooth', 'media', 'dockMenu', 'windowList', 'desktopMenu', 'appMenu'];
 
 export type PowerAction = 'lock' | 'sleep' | 'hibernate' | 'restart' | 'shutdown' | 'logout';
 export const PowerActionValues: readonly PowerAction[] = ['lock', 'sleep', 'hibernate', 'restart', 'shutdown', 'logout'];
@@ -98,13 +105,16 @@ export interface AddShortcutParams {
   path: string;
   x?: number;
   y?: number;
+  monitorId?: string;
 }
 
 export interface AddWidgetParams {
   type: WidgetType;
   size?: WidgetSize;
+  /** Absent: the host cascades at (48+24n, 80+24n) DIP on the target monitor. */
   x?: number;
   y?: number;
+  monitorId?: string;
 }
 
 export interface AppearanceSettings {
@@ -190,7 +200,13 @@ export interface BrightnessState {
   level: number;
 }
 
+export interface DesktopCell {
+  x: number;
+  y: number;
+}
+
 export interface DesktopIcon {
+  /** 'sc:<guid>' (user shortcut), 'fs:<lower-cased path>' (desktop folder item), 'special:thisPc' | 'special:recycleBin'. */
   id: string;
   name: string;
   iconUrl: string;
@@ -199,6 +215,7 @@ export interface DesktopIcon {
   /** Grid row. */
   y: number;
   target: string;
+  kind: DesktopIconKind;
 }
 
 export interface DesktopIdParams {
@@ -228,6 +245,12 @@ export interface DesktopSettings {
   gridSnap: boolean;
   shortcuts: DesktopShortcut[];
   widgets: WidgetInstance[];
+  /** monitorId -> wallpaper path; overrides wallpaperPath, which is the default for monitors without an entry. */
+  wallpapers: Record<string, string>;
+  /** Also show the contents of the user's Desktop folder (+ This PC, Recycle Bin) as icons; otherwise only 'shortcuts'. With hideNativeIcons on, turning this off makes those items unreachable from the desktop. */
+  showDesktopFolder: boolean;
+  /** Icon id -> grid cell for icons that are not in 'shortcuts' (desktop-folder items, specials). */
+  placements: Record<string, DesktopCell>;
 }
 
 export interface DesktopShortcut {
@@ -236,6 +259,8 @@ export interface DesktopShortcut {
   target: string;
   x: number;
   y: number;
+  /** null = primary monitor. */
+  monitorId?: string;
 }
 
 export interface DesktopState {
@@ -245,6 +270,8 @@ export interface DesktopState {
   iconSize: number;
   icons: DesktopIcon[];
   widgets: WidgetInstance[];
+  /** The monitor this surface instance renders. */
+  monitorId: string;
 }
 
 export interface DiagCheck {
@@ -277,9 +304,12 @@ export interface DockItem {
   running: boolean;
   active: boolean;
   attention: boolean;
+  /** Reserved: always null on Windows (no API exposes taskbar overlay badges to other processes). */
   badge?: string;
   /** Windows of this app, most recently active first. */
   windows: WindowRef[];
+  /** Launch requested but no window yet. The host adds a transient item for unpinned apps and removes it on the first window or after 20 s. */
+  launching: boolean;
 }
 
 export interface DockItemParams {
@@ -288,6 +318,12 @@ export interface DockItemParams {
 
 export interface DockPinParams {
   appId: string;
+  index?: number;
+}
+
+export interface DockPinPathParams {
+  /** Absolute path of a folder, exe or lnk to pin (the UI obtains it with system.pickPath). */
+  path: string;
   index?: number;
 }
 
@@ -364,16 +400,23 @@ export interface IdParams {
 }
 
 export interface LaunchpadFolder {
+  /** 'folder:<guid>'. */
   id: string;
   name: string;
+  /** App ids in in-folder order. */
   appIds: string[];
 }
 
 export interface LaunchpadSettings {
   folders: LaunchpadFolder[];
-  /** App ids in user order; unknown apps are appended alphabetically. */
+  /** Top-level grid order: app ids AND folder ids. Apps that are members of a folder or listed in 'hidden' MUST NOT appear here. Apps missing from 'order' are appended alphabetically. Ids of uninstalled apps are pruned on save, folder ids are kept. */
   order: string[];
   hidden: string[];
+}
+
+export interface LocaleState {
+  /** Effective UI locale ('en' | 'ru' | ...), already resolved from settings.general.language. */
+  locale: string;
 }
 
 export interface LogParams {
@@ -394,6 +437,7 @@ export interface McSnapshot {
 }
 
 export interface McSnapshotParams {
+  /** null = the overlay's monitor. Only windows whose centre lies on this monitor are returned; bounds are DIPs relative to this monitor's top-left (converted with its scale). */
   monitorId?: string;
 }
 
@@ -414,6 +458,8 @@ export interface McWindow {
   bounds: Rect;
   minimized: boolean;
   active: boolean;
+  /** Monitor whose area contains the window's centre. */
+  monitorId?: string;
 }
 
 export interface MediaControlParams {
@@ -459,6 +505,8 @@ export interface MonitorInfo {
   boundsPx: Rect;
   workAreaPx: Rect;
   scale: number;
+  /** Monitor device interface path (IDesktopWallpaper.GetMonitorDevicePathAt form). id = MonitorIdentity.IdFromDevicePath(devicePath). */
+  devicePath?: string;
 }
 
 export interface MoveWidgetParams {
@@ -499,6 +547,17 @@ export interface OverlayShow {
   token: number;
 }
 
+export interface PickPathParams {
+  kind: PickKind;
+  title?: string;
+  multiple: boolean;
+}
+
+export interface PickPathResult {
+  /** Absolute paths; empty = cancelled. */
+  paths: string[];
+}
+
 export interface PinnedItem {
   /** Stable id: 'aumid:<AUMID>' | 'exe:<lowercased full path>' | 'dir:<full path>'. */
   id: string;
@@ -519,6 +578,7 @@ export interface PopoverRequest {
   anchor: Rect;
   /** dockMenu/windowList: the dock item. */
   itemId?: string;
+  /** appMenu: { appId } of the active app (items call dock.hide / dock.quit with itemId = appId). */
   data?: unknown;
 }
 
@@ -561,9 +621,13 @@ export interface ReminderList {
 export interface ReminderUpdateParams {
   id: string;
   title?: string;
+  /** absent = unchanged; empty string = clear the field. */
   due?: string;
+  /** absent = unchanged; empty string = clear the field. */
   notes?: string;
   done?: boolean;
+  /** absent = unchanged; empty string = clear the field. */
+  list?: string;
 }
 
 export interface SearchAction {
@@ -588,12 +652,19 @@ export interface SearchPreview {
   imageUrl?: string;
 }
 
+export interface SearchPreviewParams {
+  requestId: string;
+  resultId: string;
+}
+
 export interface SearchQueryParams {
   requestId: string;
   query: string;
 }
 
 export interface SearchRecent {
+  /** Pass to search.perform / search.preview for results of this list; resolvable until the next search.query. */
+  requestId: string;
   results: SearchResult[];
 }
 
@@ -608,6 +679,7 @@ export interface SearchResult {
   score: number;
   /** First action marked primary runs on Enter. */
   actions: SearchAction[];
+  /** Only CHEAP inline previews (calculator, text snippets). Use search.preview for expensive ones (file content, images) for the selected result only. */
   preview?: SearchPreview;
 }
 
@@ -647,6 +719,8 @@ export interface SettingsPatchParams {
 
 export interface SetWallpaperParams {
   path: string;
+  /** null = all monitors. */
+  monitorId?: string;
 }
 
 export interface ShapeRect {
@@ -681,6 +755,8 @@ export interface SurfaceInit {
   features: FeatureFlags;
   /** 'windows' or 'mock'. */
   platform: string;
+  /** True if the host can restrict the backdrop to 'rects' while 'hitRects' stay un-blurred. If false the UI must keep ALL dock content (magnified icons, tooltips) inside the glass rects (grow the panel instead of overflowing it). */
+  glassOverflow: boolean;
 }
 
 export interface SurfaceReadyParams {
@@ -691,12 +767,17 @@ export interface SurfaceReadyParams {
 export interface SurfaceResizeParams {
   width: number;
   height: number;
+  /** Dock only. DIP extent of the always-visible bar measured from the docked screen edge (EXCLUDES magnification headroom and tooltips). The host reserves ceil(barThickness x monitor scale) physical px through the AppBar when settings.dock.reserveSpace && !autoHide; null keeps the previous value. */
+  barThickness?: number;
 }
 
-/** The glass panels of a surface, in DIPs relative to the window client area. */
+/** The UI's glass panels (and interactive-but-not-glass areas), in DIPs relative to the window client area. */
 export interface SurfaceShapeParams {
+  /** Glass panels (rounded rects): visible, interactive and backed by the blur/acrylic backdrop. */
   rects: ShapeRect[];
-  /** Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window). */
+  /** Visible and interactive but NOT glass (magnified dock icons, tooltips that overflow the panel). Included in the window region and hit-testing, excluded from the backdrop where the host can restrict it (see SurfaceInit.glassOverflow). May be empty. */
+  hitRects: ShapeRect[];
+  /** Master switch: false = no backdrop (reduceTransparency, or the UI wants flat panels). */
   blur: boolean;
 }
 
@@ -742,6 +823,7 @@ export interface TrayState {
 export interface UpdateWidgetParams {
   id: string;
   size?: WidgetSize;
+  /** When present, REPLACES the widget's whole config object (not merged); absent = unchanged. */
   config?: unknown;
 }
 
@@ -811,8 +893,10 @@ export interface WidgetInstance {
   size: WidgetSize;
   x: number;
   y: number;
-  /** Widget-specific JSON (e.g. notes: { text }). */
+  /** Widget-specific JSON object. desktop.updateWidget REPLACES the whole object. Schemas: clock {style:'digital'|'analog', seconds:bool, timezone?:string}; calendar {weekNumbers:bool}; weather {} (uses settings.weather); reminders {list?:string}; media {}; battery {}; notes {text:string}. */
   config?: unknown;
+  /** null = primary monitor. */
+  monitorId?: string;
 }
 
 export interface WindowHandleParams {
@@ -830,6 +914,8 @@ export interface WindowRef {
   maximized: boolean;
   active: boolean;
   desktopId?: string;
+  /** The window's process runs elevated: the shell (not elevated) cannot activate/minimise/close it (UIPI). UI shows a hint. */
+  elevated: boolean;
 }
 
 // ---- default factories (mirror the C# initialisers) ----
@@ -962,6 +1048,13 @@ export function defaultBrightnessState(): BrightnessState {
   };
 }
 
+export function defaultDesktopCell(): DesktopCell {
+  return {
+    x: 0,
+    y: 0,
+  };
+}
+
 export function defaultDesktopIcon(): DesktopIcon {
   return {
     id: '',
@@ -970,6 +1063,7 @@ export function defaultDesktopIcon(): DesktopIcon {
     x: 0,
     y: 0,
     target: '',
+    kind: "shortcut",
   };
 }
 
@@ -1005,6 +1099,9 @@ export function defaultDesktopSettings(): DesktopSettings {
     gridSnap: true,
     shortcuts: [],
     widgets: [],
+    wallpapers: {},
+    showDesktopFolder: true,
+    placements: {},
   };
 }
 
@@ -1025,6 +1122,7 @@ export function defaultDesktopState(): DesktopState {
     iconSize: 0,
     icons: [],
     widgets: [],
+    monitorId: '',
   };
 }
 
@@ -1062,6 +1160,7 @@ export function defaultDockItem(): DockItem {
     active: false,
     attention: false,
     windows: [],
+    launching: false,
   };
 }
 
@@ -1074,6 +1173,12 @@ export function defaultDockItemParams(): DockItemParams {
 export function defaultDockPinParams(): DockPinParams {
   return {
     appId: '',
+  };
+}
+
+export function defaultDockPinPathParams(): DockPinPathParams {
+  return {
+    path: '',
   };
 }
 
@@ -1171,6 +1276,12 @@ export function defaultLaunchpadSettings(): LaunchpadSettings {
     folders: [],
     order: [],
     hidden: [],
+  };
+}
+
+export function defaultLocaleState(): LocaleState {
+  return {
+    locale: "en",
   };
 }
 
@@ -1307,6 +1418,19 @@ export function defaultOverlayShow(): OverlayShow {
   };
 }
 
+export function defaultPickPathParams(): PickPathParams {
+  return {
+    kind: 'file',
+    multiple: false,
+  };
+}
+
+export function defaultPickPathResult(): PickPathResult {
+  return {
+    paths: [],
+  };
+}
+
 export function defaultPinnedItem(): PinnedItem {
   return {
     id: '',
@@ -1403,6 +1527,13 @@ export function defaultSearchPreview(): SearchPreview {
   };
 }
 
+export function defaultSearchPreviewParams(): SearchPreviewParams {
+  return {
+    requestId: '',
+    resultId: '',
+  };
+}
+
 export function defaultSearchQueryParams(): SearchQueryParams {
   return {
     requestId: '',
@@ -1412,6 +1543,7 @@ export function defaultSearchQueryParams(): SearchQueryParams {
 
 export function defaultSearchRecent(): SearchRecent {
   return {
+    requestId: '',
     results: [],
   };
 }
@@ -1501,6 +1633,7 @@ export function defaultSurfaceInit(): SurfaceInit {
     protocolVersion: 0,
     features: defaultFeatureFlags(),
     platform: "windows",
+    glassOverflow: false,
   };
 }
 
@@ -1520,6 +1653,7 @@ export function defaultSurfaceResizeParams(): SurfaceResizeParams {
 export function defaultSurfaceShapeParams(): SurfaceShapeParams {
   return {
     rects: [],
+    hitRects: [],
     blur: true,
   };
 }
@@ -1674,6 +1808,7 @@ export function defaultWindowRef(): WindowRef {
     minimized: false,
     maximized: false,
     active: false,
+    elevated: false,
   };
 }
 
@@ -1688,6 +1823,8 @@ export interface HostEvents {
   'settings.changed': Settings;
   /** Settings window is already open: switch to this page. */
   'settings.navigate': SettingsOpenParams;
+  /** The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value. */
+  'locale.changed': LocaleState;
   'desktop.state': DesktopState;
   'reminders.changed': ReminderList;
   /** A reminder's due time passed (fires once). */
@@ -1715,15 +1852,17 @@ export interface HostEvents {
   'dock.bounce': DockBounce;
   /** A thumbnail became available after mc.snapshot. */
   'mc.thumbnail': McThumbnail;
+  /** Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced >= 100 ms). mc.thumbnail still fills in thumbnails. */
+  'mc.changed': McSnapshot;
 }
 
 /** Events sent from the UI to the host (fire-and-forget): type -> payload. */
 export interface UiEvents {
-  /** Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes. */
+  /** Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes. */
   'surface.resize': SurfaceResizeParams;
   /** UI log line, forwarded to the host log. */
   'surface.log': LogParams;
-  /** The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces. */
+  /** The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. */
   'surface.shape': SurfaceShapeParams;
 }
 
@@ -1766,10 +1905,13 @@ export interface Calls {
   'search.perform': { params: SearchPerformParams; result: void };
   /** Shown when the query is empty. */
   'search.recent': { params: void; result: SearchRecent };
+  /** Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable. */
+  'search.preview': { params: SearchPreviewParams; result: SearchPreview };
   'audio.setVolume': { params: VolumeParams; result: void };
   'audio.setMuted': { params: MuteParams; result: void };
   'audio.setDevice': { params: AudioDeviceParams; result: void };
   'brightness.set': { params: BrightnessParams; result: void };
+  /** Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme. */
   'theme.setPreference': { params: ThemePreferenceParams; result: void };
   'media.control': { params: MediaControlParams; result: void };
   'tray.click': { params: TrayClickParams; result: void };
@@ -1782,17 +1924,20 @@ export interface Calls {
   'system.about': { params: void; result: AboutInfo };
   /** Runs every platform self-check (also: BetterWindows.exe --diagnose). */
   'diag.report': { params: void; result: DiagReport };
+  /** Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). */
+  'system.pickPath': { params: PickPathParams; result: PickPathResult };
   /** Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer. */
   'dock.activate': { params: DockItemParams; result: void };
   'dock.activateWindow': { params: WindowHandleParams; result: void };
   'dock.closeWindow': { params: WindowHandleParams; result: void };
+  /** Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps. */
   'dock.pin': { params: DockPinParams; result: void };
   'dock.unpin': { params: DockItemParams; result: void };
   'dock.reorder': { params: DockReorderParams; result: void };
   'dock.newWindow': { params: DockItemParams; result: void };
-  /** Close all windows of the app (WM_CLOSE). */
+  /** Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu). */
   'dock.quit': { params: DockItemParams; result: void };
-  /** Minimise all windows of the app. */
+  /** Minimise all windows of the app. itemId may be ANY running app id (used by the app menu). */
   'dock.hide': { params: DockItemParams; result: void };
   'dock.revealInExplorer': { params: DockItemParams; result: void };
   'mc.snapshot': { params: McSnapshotParams; result: McSnapshot };
@@ -1802,6 +1947,8 @@ export interface Calls {
   'mc.moveWindow': { params: McMoveParams; result: void };
   'mc.createDesktop': { params: void; result: DesktopInfo };
   'mc.removeDesktop': { params: DesktopIdParams; result: void };
+  /** Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>). */
+  'dock.pinPath': { params: DockPinPathParams; result: void };
 }
 
 export type HostEventType = keyof HostEvents;
@@ -1814,6 +1961,7 @@ export const HOST_EVENT_TYPES: readonly HostEventType[] = [
   'theme.changed',
   'settings.changed',
   'settings.navigate',
+  'locale.changed',
   'desktop.state',
   'reminders.changed',
   'reminders.due',
@@ -1832,12 +1980,14 @@ export const HOST_EVENT_TYPES: readonly HostEventType[] = [
   'dock.reveal',
   'dock.bounce',
   'mc.thumbnail',
+  'mc.changed',
 ];
 /** Host events that are idempotent full-state snapshots: the bridge caches the latest and replays it to late subscribers. */
 export const STATE_EVENT_TYPES: readonly HostEventType[] = [
   'apps.changed',
   'theme.changed',
   'settings.changed',
+  'locale.changed',
   'desktop.state',
   'reminders.changed',
   'status.battery',
@@ -1880,6 +2030,7 @@ export const CALL_TYPES: readonly CallType[] = [
   'search.cancel',
   'search.perform',
   'search.recent',
+  'search.preview',
   'audio.setVolume',
   'audio.setMuted',
   'audio.setDevice',
@@ -1893,6 +2044,7 @@ export const CALL_TYPES: readonly CallType[] = [
   'system.showTaskbar',
   'system.about',
   'diag.report',
+  'system.pickPath',
   'dock.activate',
   'dock.activateWindow',
   'dock.closeWindow',
@@ -1910,4 +2062,5 @@ export const CALL_TYPES: readonly CallType[] = [
   'mc.moveWindow',
   'mc.createDesktop',
   'mc.removeDesktop',
+  'dock.pinPath',
 ];

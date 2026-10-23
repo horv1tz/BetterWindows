@@ -30,6 +30,7 @@ public static class TestPorts
         Add<IAutostartService, FakeAutostartService>(sc);
         Add<IWallpaperService, FakeWallpaperService>(sc);
         Add<IDesktopIconsController, FakeDesktopIconsController>(sc);
+        Add<IDesktopFolderSource, FakeDesktopFolderSource>(sc);
         Add<IBatterySource, FakeBatterySource>(sc);
         Add<INetworkSource, FakeNetworkSource>(sc);
         Add<IBluetoothSource, FakeBluetoothSource>(sc);
@@ -41,6 +42,7 @@ public static class TestPorts
         Add<ISurfaceManager, FakeSurfaceManager>(sc);
         Add<IAppLifecycle, FakeAppLifecycle>(sc);
         Add<IClipboard, FakeClipboard>(sc);
+        Add<IFilePicker, FakeFilePicker>(sc);
         return sc;
     }
 

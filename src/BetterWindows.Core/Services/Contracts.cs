@@ -75,6 +75,11 @@ public interface IDynamicResourceProvider
 {
     /// <param name="pathAndQuery">e.g. "/dyn/icon/app/aumid%3AMicrosoft.Edge?s=128"</param>
     Task<DynResource?> GetAsync(string pathAndQuery, CancellationToken ct = default);
+    /// <summary>
+    /// Capture and cache a window's thumbnail NOW (best effort, never throws). Mission Control shows other-desktop/minimised windows from the last good capture, because those
+    /// cannot be captured later; core-desktop calls this for the window that just LOST the foreground.
+    /// </summary>
+    Task PrewarmWindowThumbnailAsync(long handle, CancellationToken ct = default);
 }
 
 /// <summary>

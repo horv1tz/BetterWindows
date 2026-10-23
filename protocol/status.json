@@ -194,7 +194,8 @@
     },
     "theme.setPreference": {
       "params": "ThemePreferenceParams",
-      "result": null
+      "result": null,
+      "doc": "Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme."
     },
     "media.control": {
       "params": "MediaControlParams",
