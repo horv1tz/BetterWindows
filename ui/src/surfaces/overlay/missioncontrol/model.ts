@@ -26,10 +26,6 @@ export function visibleWindows(snap: McSnapshot, selectedDesktopId: string | nul
   return snap.windows.filter((w) => w.desktopId === undefined || w.desktopId === selectedDesktopId);
 }
 
-export function windowCountOn(snap: McSnapshot, desktopId: string): number {
-  return snap.windows.filter((w) => w.desktopId === desktopId).length;
-}
-
 export interface PreviewRect {
   x: number;
   y: number;

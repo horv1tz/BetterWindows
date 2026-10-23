@@ -1,28 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flipDelta, flipKeyframes, flipTransform, isNoopFlip, offsetBox, realBoxInViewport } from './motion';
-
-describe('realBoxInViewport', () => {
-  it('maps monitor DIP bounds into the viewport per axis', () => {
-    // a 1920x1080 monitor shown in a 960x540 viewport: everything halves
-    expect(realBoxInViewport({ x: 100, y: 200, width: 400, height: 300 }, { w: 1920, h: 1080 }, { w: 960, h: 540 }))
-      .toEqual({ x: 50, y: 100, w: 200, h: 150 });
-  });
-
-  it('is the identity when the viewport is the monitor', () => {
-    const b = realBoxInViewport({ x: 7, y: 9, width: 30, height: 40 }, { w: 1440, h: 900 }, { w: 1440, h: 900 });
-    expect(b).toEqual({ x: 7, y: 9, w: 30, h: 40 });
-  });
-
-  it('handles a non-uniform viewport scale without distorting the mapping', () => {
-    const b = realBoxInViewport({ x: 100, y: 100, width: 100, height: 100 }, { w: 1000, h: 500 }, { w: 500, h: 500 });
-    expect(b).toEqual({ x: 50, y: 100, w: 50, h: 100 });
-  });
-
-  it('falls back to scale 1 for a degenerate monitor size', () => {
-    const b = realBoxInViewport({ x: 10, y: 10, width: 20, height: 20 }, { w: 0, h: 0 }, { w: 500, h: 500 });
-    expect(b).toEqual({ x: 10, y: 10, w: 20, h: 20 });
-  });
-});
+import { flipDelta, flipKeyframes, flipTransform, isNoopFlip } from './motion';
 
 describe('flipDelta and flipTransform', () => {
   it('a card that did not move or resize needs no animation', () => {
@@ -34,6 +11,11 @@ describe('flipDelta and flipTransform', () => {
 
   it('translation is the difference of the top-left corners', () => {
     expect(flipDelta({ x: 0, y: 0, w: 100, h: 100 }, { x: 300, y: 120, w: 100, h: 100 })).toEqual({ dx: -300, dy: -120, sx: 1, sy: 1 });
+  });
+
+  it('a sub-pixel change is a no-op, a visible one is not', () => {
+    expect(isNoopFlip(flipDelta({ x: 0.2, y: 0, w: 10, h: 10 }, { x: 0, y: 0, w: 10, h: 10 }))).toBe(true);
+    expect(isNoopFlip(flipDelta({ x: 3, y: 0, w: 10, h: 10 }, { x: 0, y: 0, w: 10, h: 10 }))).toBe(false);
   });
 
   it('scale maps the target size back to the real window size', () => {
@@ -56,7 +38,7 @@ describe('flipDelta and flipTransform', () => {
     expect(to.y + mapY(to.h)).toBeCloseTo(from.y + from.h, 9);
   });
 
-  it('degenerate target boxes never produce Infinity or NaN', () => {
+  it('degenerate boxes never produce Infinity or NaN', () => {
     const d = flipDelta({ x: 0, y: 0, w: 100, h: 100 }, { x: 0, y: 0, w: 0, h: 0 });
     expect(Number.isFinite(d.sx) && Number.isFinite(d.sy)).toBe(true);
     const zeroFrom = flipDelta({ x: 0, y: 0, w: 0, h: 0 }, { x: 0, y: 0, w: 100, h: 100 });
@@ -73,11 +55,5 @@ describe('flipDelta and flipTransform', () => {
     expect(frames[0]).toEqual({ transform: 'translate(-50px, 0px) scale(2, 2)' });
     expect(frames[1]).toEqual({ transform: 'translate(0px, 0px) scale(1, 1)' });
     for (const f of frames) expect(Object.keys(f)).toEqual(['transform']);
-  });
-});
-
-describe('offsetBox', () => {
-  it('moves a slot by the grid origin and keeps its size', () => {
-    expect(offsetBox({ x: 10, y: 20, w: 30, h: 40 }, { x: 100, y: 200 })).toEqual({ x: 110, y: 220, w: 30, h: 40 });
   });
 });

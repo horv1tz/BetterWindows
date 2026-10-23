@@ -87,12 +87,11 @@ describe('layoutWindows: basics', () => {
     expect(slots.map((s) => s.id)).toEqual(input.map((i) => i.id));
   });
 
-  it('packs five identical windows into two rows on a wide screen (split 2 + 3, in either order)', () => {
+  it('packs five identical windows into two rows on a wide screen (split 2 + 3)', () => {
     const slots = layoutWindows(items(5), { w: 1920, h: 1000 }, 16);
-    const rowCounts = [...new Map<number, number>(
-      slots.map((s) => [Math.round(s.y), 0] as const),
-    ).keys()].map((y) => slots.filter((s) => Math.round(s.y) === y).length).sort();
-    expect(rowCounts).toEqual([2, 3]);
+    const rowsOf = new Map<number, number>();
+    for (const s of slots) rowsOf.set(Math.round(s.y), (rowsOf.get(Math.round(s.y)) ?? 0) + 1);
+    expect([...rowsOf.values()].sort()).toEqual([2, 3]);
   });
 
   it('uses a single row for two windows on a wide area', () => {

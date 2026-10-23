@@ -6,7 +6,6 @@ import {
   pickSelectedDesktop,
   previewRects,
   visibleWindows,
-  windowCountOn,
   withWindowOnDesktop,
   withoutWindow,
 } from './model';
@@ -82,13 +81,6 @@ describe('visibleWindows', () => {
 
   it('keeps the host order (most recently active first)', () => {
     expect(visibleWindows(snap([win('b', 'd1'), win('a', 'd1')]), 'd1').map((w) => w.handle)).toEqual(['b', 'a']);
-  });
-});
-
-describe('windowCountOn', () => {
-  it('counts only windows placed on that desktop', () => {
-    expect(windowCountOn(snap([win('1', 'd1'), win('2', 'd1'), win('3', 'd2')]), 'd1')).toBe(2);
-    expect(windowCountOn(snap([win('1', undefined)]), 'd1')).toBe(0);
   });
 });
 

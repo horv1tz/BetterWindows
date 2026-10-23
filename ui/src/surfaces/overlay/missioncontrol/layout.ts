@@ -32,6 +32,9 @@ export interface Slot {
   h: number;
 }
 
+/** Height of the title row under each thumbnail; it lives inside the layout gap, so it never overlaps a neighbour. */
+export const CARD_LABEL_H = 26;
+
 const sanitize = (v: number): number => (Number.isFinite(v) && v > 0 ? v : 1);
 
 /**

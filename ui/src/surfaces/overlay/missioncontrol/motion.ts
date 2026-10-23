@@ -1,6 +1,7 @@
 /**
- * Pure geometry for Mission Control motion: mapping real window bounds into the overlay viewport, FLIP deltas, and the
- * WAAPI keyframes that animate a card from its old box to its new one. Only transform and opacity are animated.
+ * Pure geometry for Mission Control motion: FLIP deltas and the WAAPI keyframes that animate a card from its old box to its
+ * new one. Only transform is animated (the fade-out of removed cards uses opacity and transform). Boxes are CSS px in the
+ * overlay viewport, which covers its monitor, so real window bounds (DIPs) are already in the same units.
  */
 
 export interface Box {
@@ -8,28 +9,6 @@ export interface Box {
   y: number;
   w: number;
   h: number;
-}
-
-export interface Bounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface Size {
-  w: number;
-  h: number;
-}
-
-/**
- * Maps a window rectangle (DIPs, relative to its monitor) into viewport CSS pixels. The overlay covers its whole monitor,
- * so the scale is viewport / monitor per axis (1 when they match).
- */
-export function realBoxInViewport(b: Bounds, monitorDip: Size, viewport: Size): Box {
-  const sx = monitorDip.w > 0 ? viewport.w / monitorDip.w : 1;
-  const sy = monitorDip.h > 0 ? viewport.h / monitorDip.h : 1;
-  return { x: b.x * sx, y: b.y * sy, w: b.width * sx, h: b.height * sy };
 }
 
 export interface FlipDelta {
@@ -63,17 +42,6 @@ export function flipTransform(d: FlipDelta): string {
 export function flipKeyframes(from: Box, to: Box): Keyframe[] {
   const d = flipDelta(from, to);
   return [{ transform: flipTransform(d) }, { transform: 'translate(0px, 0px) scale(1, 1)' }];
-}
-
-/** Position of a card on the overlay: the layout slot offset by the grid's origin in the viewport. */
-export function offsetBox(b: Box, origin: { x: number; y: number }): Box {
-  return { x: b.x + origin.x, y: b.y + origin.y, w: b.w, h: b.h };
-}
-
-/** Minimal Keyframe shape so this file does not depend on DOM lib typings at runtime. */
-interface Keyframe {
-  transform?: string;
-  opacity?: number;
 }
 
 function round(v: number, digits = 2): number {

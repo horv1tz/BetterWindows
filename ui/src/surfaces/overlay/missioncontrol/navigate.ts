@@ -43,3 +43,14 @@ export function firstInReadingOrder(slots: readonly NavSlot[]): string | null {
   }
   return best?.id ?? null;
 }
+
+/** The arrow key as a navigation direction, or null for any other key. */
+export function navigateKey(key: string): Direction | null {
+  switch (key) {
+    case 'ArrowLeft': return 'left';
+    case 'ArrowRight': return 'right';
+    case 'ArrowUp': return 'up';
+    case 'ArrowDown': return 'down';
+    default: return null;
+  }
+}
