@@ -14,6 +14,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
+  <!-- status stream: WMI brightness (System.Management) and SystemEvents.UserPreferenceChanged for theme/animation settings.
+       VersionOverride is used because Directory.Packages.props is a frozen contract file (see contractRequests: add the two PackageVersion lines there). -->
+  <ItemGroup>
+    <PackageReference Include="System.Management" VersionOverride="8.0.0" />
+    <PackageReference Include="Microsoft.Win32.SystemEvents" VersionOverride="8.0.0" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BetterWindows.Core\BetterWindows.Core.csproj" />
     <InternalsVisibleTo Include="BetterWindows.Windows.Tests" />
