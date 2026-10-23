@@ -1,7 +1,7 @@
 // The whole desktop surface against the mock host: what the user sees and which protocol calls their actions produce.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Surface from './Surface.svelte';
-import { bootDesktop, spyCalls, teardownDesktop, tick } from './testSupport';
+import { bootDesktop, settingsBridge, spyCalls, teardownDesktop, tick } from './testSupport';
 import { cleanup, fire, flushSync, ke, me, pe, render, screen, waitFor } from './domTest';
 
 vi.mock('svelte', async () => await import('../../../node_modules/svelte/src/index-client.js'));
@@ -36,8 +36,8 @@ describe('desktop Surface', () => {
   });
 
   it('renders nothing while the layer is disabled', async () => {
-    const { bridge } = await mountSurface();
-    await bridge.call('settings.patch', { patch: { desktop: { enabled: false } } });
+    await mountSurface();
+    await settingsBridge().call('settings.patch', { patch: { desktop: { enabled: false } } });
     await tick(30);
     flushSync();
     expect(document.querySelector('.wallpaper')).toBeNull();

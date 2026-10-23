@@ -67,7 +67,7 @@ describe('menu bar: layout and visibility', () => {
   it('renders the default items left to right: system, app name, then the right cluster ending with the clock', async () => {
     await boot();
     expect(labels().map((l) => l!.replace(/[0-9]+/g, 'N'))).toEqual([
-      'System menu', 'File Explorer', 'Now playing: Blinding Lights by The Weeknd', 'Bluetooth, N connected', 'Wi-Fi Home-NG, signal N of N',
+      'System menu', 'Microsoft Edge', 'Now playing: Blinding Lights by The Weeknd', 'Bluetooth, N connected', 'Wi-Fi Home-NG, signal N of N',
       'Sound, volume N%', 'Battery N%', 'Spotlight search', 'Control Center', expect.stringMatching(/^Date and time, /),
     ]);
   });
@@ -167,7 +167,8 @@ describe('menu bar: layout and visibility', () => {
 describe('menu bar: active app', () => {
   it('shows the name of the active app and updates it', async () => {
     await boot();
-    expect(item('File Explorer').textContent?.trim()).toBe('File Explorer');
+    // the dock mock's fixture makes Microsoft Edge the foreground window at start
+    expect(item('Microsoft Edge').textContent?.trim()).toBe('Microsoft Edge');
     host().setActiveApp(appByName('Terminal').id);
     await settle();
     expect(item('Terminal').textContent?.trim()).toBe('Terminal');
@@ -188,10 +189,10 @@ describe('menu bar: active app', () => {
 
   it('opens the appMenu popover with the app id as data and the name button as anchor', async () => {
     await boot();
-    await click(item('File Explorer'));
+    await click(item('Microsoft Edge'));
     expect(opened).toEqual([{
       mode: 'popover', monitorId: '1',
-      popover: { kind: 'appMenu', anchor: { x: 100, y: 3, width: 30, height: 22 }, data: { appId: appByName('File Explorer').id } },
+      popover: { kind: 'appMenu', anchor: { x: 100, y: 3, width: 30, height: 22 }, data: { appId: appByName('Microsoft Edge').id } },
     }]);
   });
 });

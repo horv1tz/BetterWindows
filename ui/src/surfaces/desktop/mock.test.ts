@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockBridge } from '$mock/mockBridge';
 import { resetMockHost } from '$mock/host';
+import { settingsBridge } from './testSupport';
 import type { DesktopState, ReminderList } from '$lib/protocol/generated';
 import { makeWeather, searchCities } from '$mock/domains/weather';
 import { applyReminderUpdate, isoLocal, seedReminders } from '$mock/domains/reminders';
@@ -58,7 +59,7 @@ describe('desktop mock: state', () => {
 
   it('showDesktopFolder=false leaves only user shortcuts', async () => {
     const d = await desktop();
-    await d.b.call('settings.patch', { patch: { desktop: { showDesktopFolder: false } } });
+    await settingsBridge().call('settings.patch', { patch: { desktop: { showDesktopFolder: false } } });
     await tick(); await tick();
     expect(d.state.icons.every((i) => i.kind === 'shortcut')).toBe(true);
   });
@@ -259,13 +260,14 @@ describe('weather mock', () => {
     expect(snap.location).toBe('Moscow');
     const seen: string[] = [];
     b.on('settings.changed', (s) => seen.push(s.weather.locationName));
-    await b.call('weather.setLocation', { name: 'Sydney', latitude: -33.87, longitude: 151.2 });
+    await settingsBridge().call('weather.setLocation', { name: 'Sydney', latitude: -33.87, longitude: 151.2 });
     await tick(); await tick();
     expect(seen.at(-1)).toBe('Sydney');
     expect((await b.call('weather.get', { force: false })).location).toBe('Sydney');
-    await expect(b.call('weather.setLocation', { name: '', latitude: 0, longitude: 0 })).rejects.toMatchObject({ code: 'badRequest' });
-    await expect(b.call('weather.setLocation', { name: 'X', latitude: 99, longitude: 0 })).rejects.toMatchObject({ code: 'badRequest' });
-    const found = await b.call('weather.search', { query: 'Pari' });
+    const settings = settingsBridge();
+    await expect(settings.call('weather.setLocation', { name: '', latitude: 0, longitude: 0 })).rejects.toMatchObject({ code: 'badRequest' });
+    await expect(settings.call('weather.setLocation', { name: 'X', latitude: 99, longitude: 0 })).rejects.toMatchObject({ code: 'badRequest' });
+    const found = await settings.call('weather.search', { query: 'Pari' });
     expect(found.locations[0].name).toBe('Paris');
   });
   it('?weather=none gives an unavailable snapshot without error, ?weather=error rejects, error-once recovers', async () => {

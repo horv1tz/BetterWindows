@@ -42,7 +42,7 @@ describe('playground', () => {
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(host.theme.mode).toBe('light');
     const seen: string[] = [];
-    const other = new MockBridge({ surface: 'dock' });
+    const other = new MockBridge({ surface: 'settings' }); // settings.patch is settings/overlay only
     other.on('theme.changed', (t) => seen.push(t.mode));
     await fire(document.querySelector('[data-action=theme]')!, me('click'));
     await flush();
@@ -128,7 +128,8 @@ describe('playground', () => {
   it('settings.openWindow opens a floating settings window; closing it removes the iframe', async () => {
     await open();
     expect(document.querySelector('[data-faux=settings]')).toBeNull();
-    const bridge = new MockBridge({ surface: 'menubar', monitorId: '1' });
+    // settings.openWindow is allowed from overlay and settings only (CALL_SURFACES)
+    const bridge = new MockBridge({ surface: 'overlay' });
     await bridge.call('settings.openWindow', { page: 'widgets' });
     await flush();
     const win = document.querySelector('[data-faux=settings]') as HTMLElement;

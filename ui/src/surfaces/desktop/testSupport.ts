@@ -29,6 +29,14 @@ export function teardownDesktop() {
   resetMockHost();
 }
 
+/**
+ * A settings-window bridge on the same mock host. Settings-only calls (settings.patch, weather.setLocation, ...) are forbidden from the
+ * desktop surface by CALL_SURFACES, so tests that change settings do it from here, the way the real settings window does.
+ */
+export function settingsBridge() {
+  return new MockBridge({ surface: 'settings' });
+}
+
 /** Records every call made through the bridge while still running it. */
 export function spyCalls(bridge: MockBridge) {
   const calls: Array<{ type: string; params: unknown }> = [];

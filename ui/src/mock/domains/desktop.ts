@@ -203,7 +203,8 @@ export default function register(host: MockHost) {
     const icon = [...monitors].flatMap((m) => iconsFor(d, m)).find((i) => i.id === id);
     if (!icon) throw new BridgeError('notFound', `no desktop icon '${id}'`);
     const app = appById(`aumid:${icon.target}`) ?? APPS.find((a) => a.aumid === icon.target);
-    if (app) await host.dispatchCall(ctx, 'apps.launch', { appId: app.id });
+    // The desktop surface may not call apps.launch (CALL_SURFACES); the real host launches from its own DesktopController, so the mock just logs.
+    if (app) console.info('[mock] desktop.open launch', app.name);
     else console.info('[mock] desktop.open', icon.kind, icon.target);
   });
 

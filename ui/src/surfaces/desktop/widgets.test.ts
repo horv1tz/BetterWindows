@@ -8,7 +8,7 @@ import ClockWidget from './widgets/ClockWidget.svelte';
 import CalendarWidget from './widgets/CalendarWidget.svelte';
 import MediaWidget from './widgets/MediaWidget.svelte';
 import BatteryWidget from './widgets/BatteryWidget.svelte';
-import { bootDesktop, spyCalls, teardownDesktop, tick } from './testSupport';
+import { bootDesktop, settingsBridge, spyCalls, teardownDesktop, tick } from './testSupport';
 import { cleanup, fire, flushSync, ke, me, render, screen, waitFor } from './domTest';
 
 vi.mock('svelte', async () => await import('../../../node_modules/svelte/src/index-client.js'));
@@ -178,7 +178,7 @@ describe('WeatherWidget', () => {
     render(WeatherWidget, props('weather', 'small'));
     await waitFor(() => expect(document.querySelector('.temp')).not.toBeNull(), { timeout: 2000 });
     const celsius = Number(document.querySelector('.temp')!.textContent!.replace('°', ''));
-    await bridge.call('settings.patch', { patch: { weather: { unit: 'f' } } });
+    await settingsBridge().call('settings.patch', { patch: { weather: { unit: 'f' } } });
     await settle();
     const f = Number(document.querySelector('.temp')!.textContent!.replace('°', ''));
     expect(f).toBe(Math.round((celsius * 9) / 5 + 32));
@@ -240,7 +240,7 @@ describe('WeatherWidget', () => {
     const calls = spyCalls(bridge);
     render(WeatherWidget, props('weather', 'small'));
     await waitFor(() => expect(document.querySelector('.temp')).not.toBeNull(), { timeout: 2000 });
-    await bridge.call('weather.setLocation', { name: 'Sydney', latitude: -33.87, longitude: 151.2 });
+    await settingsBridge().call('weather.setLocation', { name: 'Sydney', latitude: -33.87, longitude: 151.2 });
     await waitFor(() => expect(screen.getByText('Sydney')).toBeTruthy(), { timeout: 2500 });
     expect(calls.filter((c) => c.type === 'weather.get').pop()?.params).toEqual({ force: true });
   });
