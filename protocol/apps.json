@@ -20,8 +20,7 @@
       "apps": "AppEntry[]"
     },
     "AppLaunchParams": {
-      "appId": "string",
-      "args": "string?"
+      "appId": "string"
     },
     "AppIdParams": {
       "appId": "string"
@@ -32,22 +31,39 @@
       "dir": "host",
       "payload": "AppList",
       "doc": "The installed-app catalog changed (install/uninstall).",
-      "state": true
+      "state": true,
+      "initial": [
+        "overlay"
+      ]
     }
   },
   "calls": {
     "apps.list": {
       "params": null,
-      "result": "AppList"
+      "result": "AppList",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "apps.launch": {
       "params": "AppLaunchParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay"
+      ],
+      "doc": "Launch a catalog or running app by id (no arguments are ever accepted from the UI). Unknown ids -> notFound."
     },
     "apps.reveal": {
       "params": "AppIdParams",
       "result": null,
-      "doc": "Show the app's exe/shortcut in Explorer."
+      "doc": "Show the app's exe/shortcut in Explorer.",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     }
   }
 }

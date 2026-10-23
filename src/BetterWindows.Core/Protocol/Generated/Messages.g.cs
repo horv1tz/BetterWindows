@@ -6,10 +6,12 @@ namespace BetterWindows.Core.Protocol;
 
 public enum MessageKind { HostEvent, UiEvent, Call }
 
-public sealed record MessageDef(string Type, MessageKind Kind, string Domain, Type? Payload, Type? Result)
+public sealed record MessageDef(string Type, MessageKind Kind, string Domain, Type? Payload, Type? Result, SurfaceKind[]? Surfaces = null, bool State = false, SurfaceKind[]? Initial = null)
 {
     /// <summary>For calls: the params type; for events: the payload type.</summary>
     public Type? Params => Payload;
+    /// <summary>Surface kinds allowed to send this call / ui event; null = all.</summary>
+    public bool IsAllowedFrom(SurfaceKind kind) => Surfaces is null || Array.IndexOf(Surfaces, kind) >= 0;
 }
 
 /// <summary>Wire names of every protocol message.</summary>
@@ -24,7 +26,7 @@ public static class Msg
     /// </summary>
     public const string AppsList = "apps.list";
     /// <summary>
-    /// Call (ui -&gt; host)
+    /// Call (ui -&gt; host). Launch a catalog or running app by id (no arguments are ever accepted from the UI). Unknown ids -&gt; notFound.
     /// </summary>
     public const string AppsLaunch = "apps.launch";
     /// <summary>
@@ -156,11 +158,11 @@ public static class Msg
     /// </summary>
     public const string RemindersRemove = "reminders.remove";
     /// <summary>
-    /// Event (host -&gt; ui). Sent to the overlay surface after the host has shown/positioned the overlay window.
+    /// Event (host -&gt; ui). Published by the HOST (SurfaceManager) after it has shown/positioned the overlay window; never posted to a page that has not completed surface.ready.
     /// </summary>
     public const string OverlayShow = "overlay.show";
     /// <summary>
-    /// Event (host -&gt; ui). Dismiss whatever is open (hotkey toggled, focus lost, another app activated).
+    /// Event (host -&gt; ui). Published by the HOST when IT hides the overlay (hotkey toggle, deactivation, monitor change).
     /// </summary>
     public const string OverlayHide = "overlay.hide";
     /// <summary>
@@ -168,7 +170,7 @@ public static class Msg
     /// </summary>
     public const string OverlayOpen = "overlay.open";
     /// <summary>
-    /// Call (ui -&gt; host). Overlay UI finished (Esc, backdrop click, item chosen). Host hides the window.
+    /// Call (ui -&gt; host). UI-initiated hide: the UI plays its exit animation, THEN calls overlay.close {token}. Host-initiated hides (hotkey toggle, deactivation, monitor change) post overlay.hide and raise ISurfaceManager.OverlayHidden.
     /// </summary>
     public const string OverlayClose = "overlay.close";
     /// <summary>
@@ -260,7 +262,7 @@ public static class Msg
     /// </summary>
     public const string SystemOpen = "system.open";
     /// <summary>
-    /// Call (ui -&gt; host). Restore the Windows taskbar (unless false) and exit.
+    /// Call (ui -&gt; host). ALWAYS restores the taskbar and desktop icons, then exits.
     /// </summary>
     public const string SystemQuit = "system.quit";
     /// <summary>
@@ -386,96 +388,158 @@ public static class MessageCatalog
 {
     public static readonly IReadOnlyList<MessageDef> All = new MessageDef[]
     {
-        new("apps.changed", MessageKind.HostEvent, "apps", typeof(AppList), null),
-        new("apps.list", MessageKind.Call, "apps", null, typeof(AppList)),
-        new("apps.launch", MessageKind.Call, "apps", typeof(AppLaunchParams), null),
-        new("apps.reveal", MessageKind.Call, "apps", typeof(AppIdParams), null),
-        new("surface.resize", MessageKind.UiEvent, "common", typeof(SurfaceResizeParams), null),
-        new("surface.log", MessageKind.UiEvent, "common", typeof(LogParams), null),
-        new("surface.visibility", MessageKind.HostEvent, "common", typeof(SurfaceVisibility), null),
-        new("theme.changed", MessageKind.HostEvent, "common", typeof(ThemeState), null),
-        new("settings.changed", MessageKind.HostEvent, "common", typeof(Settings), null),
-        new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null),
-        new("settings.navigate", MessageKind.HostEvent, "common", typeof(SettingsOpenParams), null),
-        new("locale.changed", MessageKind.HostEvent, "common", typeof(LocaleState), null),
-        new("surface.ready", MessageKind.Call, "common", typeof(SurfaceReadyParams), typeof(SurfaceInit)),
-        new("settings.get", MessageKind.Call, "common", null, typeof(Settings)),
-        new("settings.patch", MessageKind.Call, "common", typeof(SettingsPatchParams), typeof(Settings)),
-        new("settings.openWindow", MessageKind.Call, "common", typeof(SettingsOpenParams), null),
-        new("desktop.state", MessageKind.HostEvent, "desktop", typeof(DesktopState), null),
-        new("reminders.changed", MessageKind.HostEvent, "desktop", typeof(ReminderList), null),
-        new("reminders.due", MessageKind.HostEvent, "desktop", typeof(Reminder), null),
-        new("desktop.moveIcon", MessageKind.Call, "desktop", typeof(DesktopMoveParams), null),
-        new("desktop.open", MessageKind.Call, "desktop", typeof(IdParams), null),
-        new("desktop.addShortcut", MessageKind.Call, "desktop", typeof(AddShortcutParams), typeof(DesktopIcon)),
-        new("desktop.removeShortcut", MessageKind.Call, "desktop", typeof(IdParams), null),
-        new("desktop.setWallpaper", MessageKind.Call, "desktop", typeof(SetWallpaperParams), null),
-        new("desktop.moveWidget", MessageKind.Call, "desktop", typeof(MoveWidgetParams), null),
-        new("desktop.addWidget", MessageKind.Call, "desktop", typeof(AddWidgetParams), typeof(WidgetInstance)),
-        new("desktop.removeWidget", MessageKind.Call, "desktop", typeof(IdParams), null),
-        new("desktop.updateWidget", MessageKind.Call, "desktop", typeof(UpdateWidgetParams), typeof(WidgetInstance)),
-        new("weather.get", MessageKind.Call, "desktop", typeof(WeatherGetParams), typeof(WeatherSnapshot)),
-        new("weather.search", MessageKind.Call, "desktop", typeof(WeatherSearchParams), typeof(WeatherLocations)),
-        new("weather.setLocation", MessageKind.Call, "desktop", typeof(WeatherLocation), null),
-        new("reminders.list", MessageKind.Call, "desktop", null, typeof(ReminderList)),
-        new("reminders.add", MessageKind.Call, "desktop", typeof(ReminderAddParams), typeof(Reminder)),
-        new("reminders.update", MessageKind.Call, "desktop", typeof(ReminderUpdateParams), typeof(Reminder)),
-        new("reminders.remove", MessageKind.Call, "desktop", typeof(IdParams), null),
-        new("overlay.show", MessageKind.HostEvent, "overlay", typeof(OverlayShow), null),
-        new("overlay.hide", MessageKind.HostEvent, "overlay", null, null),
-        new("overlay.open", MessageKind.Call, "overlay", typeof(OverlayRequest), null),
-        new("overlay.close", MessageKind.Call, "overlay", null, null),
-        new("search.results", MessageKind.HostEvent, "search", typeof(SearchResults), null),
-        new("search.query", MessageKind.Call, "search", typeof(SearchQueryParams), null),
-        new("search.cancel", MessageKind.Call, "search", typeof(SearchCancelParams), null),
-        new("search.perform", MessageKind.Call, "search", typeof(SearchPerformParams), null),
-        new("search.recent", MessageKind.Call, "search", null, typeof(SearchRecent)),
-        new("search.preview", MessageKind.Call, "search", typeof(SearchPreviewParams), typeof(SearchPreview)),
-        new("status.battery", MessageKind.HostEvent, "status", typeof(BatteryState), null),
-        new("status.network", MessageKind.HostEvent, "status", typeof(NetworkState), null),
-        new("status.audio", MessageKind.HostEvent, "status", typeof(AudioState), null),
-        new("status.brightness", MessageKind.HostEvent, "status", typeof(BrightnessState), null),
-        new("status.bluetooth", MessageKind.HostEvent, "status", typeof(BluetoothState), null),
-        new("media.state", MessageKind.HostEvent, "status", typeof(MediaState), null),
-        new("tray.state", MessageKind.HostEvent, "status", typeof(TrayState), null),
-        new("audio.setVolume", MessageKind.Call, "status", typeof(VolumeParams), null),
-        new("audio.setMuted", MessageKind.Call, "status", typeof(MuteParams), null),
-        new("audio.setDevice", MessageKind.Call, "status", typeof(AudioDeviceParams), null),
-        new("brightness.set", MessageKind.Call, "status", typeof(BrightnessParams), null),
-        new("theme.setPreference", MessageKind.Call, "status", typeof(ThemePreferenceParams), null),
-        new("media.control", MessageKind.Call, "status", typeof(MediaControlParams), null),
-        new("tray.click", MessageKind.Call, "status", typeof(TrayClickParams), null),
-        new("system.power", MessageKind.Call, "system", typeof(PowerParams), null),
-        new("system.open", MessageKind.Call, "system", typeof(OpenParams), null),
-        new("system.quit", MessageKind.Call, "system", typeof(QuitParams), null),
-        new("system.showTaskbar", MessageKind.Call, "system", typeof(ShowTaskbarParams), null),
-        new("system.about", MessageKind.Call, "system", null, typeof(AboutInfo)),
-        new("diag.report", MessageKind.Call, "system", null, typeof(DiagReport)),
-        new("system.pickPath", MessageKind.Call, "system", typeof(PickPathParams), typeof(PickPathResult)),
-        new("system.monitors", MessageKind.Call, "system", null, typeof(MonitorList)),
-        new("activeApp.changed", MessageKind.HostEvent, "windows", typeof(ActiveAppState), null),
-        new("dock.state", MessageKind.HostEvent, "windows", typeof(DockState), null),
-        new("dock.reveal", MessageKind.HostEvent, "windows", typeof(DockRevealState), null),
-        new("dock.bounce", MessageKind.HostEvent, "windows", typeof(DockBounce), null),
-        new("mc.thumbnail", MessageKind.HostEvent, "windows", typeof(McThumbnail), null),
-        new("mc.changed", MessageKind.HostEvent, "windows", typeof(McSnapshot), null),
-        new("dock.activate", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("dock.activateWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
-        new("dock.closeWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
-        new("dock.pin", MessageKind.Call, "windows", typeof(DockPinParams), null),
-        new("dock.unpin", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("dock.reorder", MessageKind.Call, "windows", typeof(DockReorderParams), null),
-        new("dock.newWindow", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("dock.quit", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("dock.hide", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("dock.revealInExplorer", MessageKind.Call, "windows", typeof(DockItemParams), null),
-        new("mc.snapshot", MessageKind.Call, "windows", typeof(McSnapshotParams), typeof(McSnapshot)),
-        new("mc.activateWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
-        new("mc.closeWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null),
-        new("mc.switchDesktop", MessageKind.Call, "windows", typeof(DesktopIdParams), null),
-        new("mc.moveWindow", MessageKind.Call, "windows", typeof(McMoveParams), null),
-        new("mc.createDesktop", MessageKind.Call, "windows", null, typeof(DesktopInfo)),
-        new("mc.removeDesktop", MessageKind.Call, "windows", typeof(DesktopIdParams), null),
-        new("dock.pinPath", MessageKind.Call, "windows", typeof(DockPinPathParams), null),
+        new("apps.changed", MessageKind.HostEvent, "apps", typeof(AppList), null, null, true, new[] { SurfaceKind.Overlay }),
+        new("apps.list", MessageKind.Call, "apps", null, typeof(AppList), new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("apps.launch", MessageKind.Call, "apps", typeof(AppLaunchParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay }, false, null),
+        new("apps.reveal", MessageKind.Call, "apps", typeof(AppIdParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("surface.resize", MessageKind.UiEvent, "common", typeof(SurfaceResizeParams), null, new[] { SurfaceKind.Dock }, false, null),
+        new("surface.log", MessageKind.UiEvent, "common", typeof(LogParams), null, null, false, null),
+        new("surface.visibility", MessageKind.HostEvent, "common", typeof(SurfaceVisibility), null, null, false, null),
+        new("theme.changed", MessageKind.HostEvent, "common", typeof(ThemeState), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
+        new("settings.changed", MessageKind.HostEvent, "common", typeof(Settings), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
+        new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Menubar }, false, null),
+        new("settings.navigate", MessageKind.HostEvent, "common", typeof(SettingsOpenParams), null, null, false, null),
+        new("locale.changed", MessageKind.HostEvent, "common", typeof(LocaleState), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
+        new("surface.ready", MessageKind.Call, "common", typeof(SurfaceReadyParams), typeof(SurfaceInit), null, false, null),
+        new("settings.get", MessageKind.Call, "common", null, typeof(Settings), null, false, null),
+        new("settings.patch", MessageKind.Call, "common", typeof(SettingsPatchParams), typeof(Settings), new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("settings.openWindow", MessageKind.Call, "common", typeof(SettingsOpenParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.state", MessageKind.HostEvent, "desktop", typeof(DesktopState), null, null, true, new[] { SurfaceKind.Desktop }),
+        new("reminders.changed", MessageKind.HostEvent, "desktop", typeof(ReminderList), null, null, true, new[] { SurfaceKind.Overlay, SurfaceKind.Desktop }),
+        new("reminders.due", MessageKind.HostEvent, "desktop", typeof(Reminder), null, null, false, null),
+        new("desktop.moveIcon", MessageKind.Call, "desktop", typeof(DesktopMoveParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.open", MessageKind.Call, "desktop", typeof(IdParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.addShortcut", MessageKind.Call, "desktop", typeof(AddShortcutParams), typeof(DesktopIcon), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.removeShortcut", MessageKind.Call, "desktop", typeof(IdParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.setWallpaper", MessageKind.Call, "desktop", typeof(SetWallpaperParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.moveWidget", MessageKind.Call, "desktop", typeof(MoveWidgetParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.addWidget", MessageKind.Call, "desktop", typeof(AddWidgetParams), typeof(WidgetInstance), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.removeWidget", MessageKind.Call, "desktop", typeof(IdParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("desktop.updateWidget", MessageKind.Call, "desktop", typeof(UpdateWidgetParams), typeof(WidgetInstance), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("weather.get", MessageKind.Call, "desktop", typeof(WeatherGetParams), typeof(WeatherSnapshot), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("weather.search", MessageKind.Call, "desktop", typeof(WeatherSearchParams), typeof(WeatherLocations), new[] { SurfaceKind.Settings }, false, null),
+        new("weather.setLocation", MessageKind.Call, "desktop", typeof(WeatherLocation), null, new[] { SurfaceKind.Settings }, false, null),
+        new("reminders.list", MessageKind.Call, "desktop", null, typeof(ReminderList), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay }, false, null),
+        new("reminders.add", MessageKind.Call, "desktop", typeof(ReminderAddParams), typeof(Reminder), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay }, false, null),
+        new("reminders.update", MessageKind.Call, "desktop", typeof(ReminderUpdateParams), typeof(Reminder), new[] { SurfaceKind.Desktop, SurfaceKind.Overlay }, false, null),
+        new("reminders.remove", MessageKind.Call, "desktop", typeof(IdParams), null, new[] { SurfaceKind.Desktop, SurfaceKind.Overlay }, false, null),
+        new("overlay.show", MessageKind.HostEvent, "overlay", typeof(OverlayShow), null, null, false, null),
+        new("overlay.hide", MessageKind.HostEvent, "overlay", null, null, null, false, null),
+        new("overlay.open", MessageKind.Call, "overlay", typeof(OverlayRequest), null, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Desktop, SurfaceKind.Overlay }, false, null),
+        new("overlay.close", MessageKind.Call, "overlay", typeof(OverlayCloseParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("search.results", MessageKind.HostEvent, "search", typeof(SearchResults), null, null, false, null),
+        new("search.query", MessageKind.Call, "search", typeof(SearchQueryParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("search.cancel", MessageKind.Call, "search", typeof(SearchCancelParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("search.perform", MessageKind.Call, "search", typeof(SearchPerformParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("search.recent", MessageKind.Call, "search", null, typeof(SearchRecent), new[] { SurfaceKind.Overlay }, false, null),
+        new("search.preview", MessageKind.Call, "search", typeof(SearchPreviewParams), typeof(SearchPreview), new[] { SurfaceKind.Overlay }, false, null),
+        new("status.battery", MessageKind.HostEvent, "status", typeof(BatteryState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop }),
+        new("status.network", MessageKind.HostEvent, "status", typeof(NetworkState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay }),
+        new("status.audio", MessageKind.HostEvent, "status", typeof(AudioState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay }),
+        new("status.brightness", MessageKind.HostEvent, "status", typeof(BrightnessState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay }),
+        new("status.bluetooth", MessageKind.HostEvent, "status", typeof(BluetoothState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop }),
+        new("media.state", MessageKind.HostEvent, "status", typeof(MediaState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop }),
+        new("tray.state", MessageKind.HostEvent, "status", typeof(TrayState), null, null, true, new[] { SurfaceKind.Menubar }),
+        new("audio.setVolume", MessageKind.Call, "status", typeof(VolumeParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("audio.setMuted", MessageKind.Call, "status", typeof(MuteParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("audio.setDevice", MessageKind.Call, "status", typeof(AudioDeviceParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("brightness.set", MessageKind.Call, "status", typeof(BrightnessParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("theme.setPreference", MessageKind.Call, "status", typeof(ThemePreferenceParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("media.control", MessageKind.Call, "status", typeof(MediaControlParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Desktop }, false, null),
+        new("tray.click", MessageKind.Call, "status", typeof(TrayClickParams), null, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay }, false, null),
+        new("system.power", MessageKind.Call, "system", typeof(PowerParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("system.open", MessageKind.Call, "system", typeof(OpenParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("system.quit", MessageKind.Call, "system", null, null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("system.showTaskbar", MessageKind.Call, "system", typeof(ShowTaskbarParams), null, new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("system.about", MessageKind.Call, "system", null, typeof(AboutInfo), new[] { SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("diag.report", MessageKind.Call, "system", null, typeof(DiagReport), new[] { SurfaceKind.Settings }, false, null),
+        new("system.pickPath", MessageKind.Call, "system", typeof(PickPathParams), typeof(PickPathResult), new[] { SurfaceKind.Settings }, false, null),
+        new("system.monitors", MessageKind.Call, "system", null, typeof(MonitorList), new[] { SurfaceKind.Settings }, false, null),
+        new("activeApp.changed", MessageKind.HostEvent, "windows", typeof(ActiveAppState), null, null, true, new[] { SurfaceKind.Menubar, SurfaceKind.Overlay }),
+        new("dock.state", MessageKind.HostEvent, "windows", typeof(DockState), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Overlay }),
+        new("dock.reveal", MessageKind.HostEvent, "windows", typeof(DockRevealState), null, null, false, null),
+        new("dock.bounce", MessageKind.HostEvent, "windows", typeof(DockBounce), null, null, false, null),
+        new("mc.thumbnail", MessageKind.HostEvent, "windows", typeof(McThumbnail), null, null, false, null),
+        new("mc.changed", MessageKind.HostEvent, "windows", typeof(McSnapshot), null, null, false, null),
+        new("dock.activate", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.activateWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.closeWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.pin", MessageKind.Call, "windows", typeof(DockPinParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.unpin", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.reorder", MessageKind.Call, "windows", typeof(DockReorderParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.newWindow", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.quit", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.hide", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("dock.revealInExplorer", MessageKind.Call, "windows", typeof(DockItemParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+        new("mc.snapshot", MessageKind.Call, "windows", typeof(McSnapshotParams), typeof(McSnapshot), new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.activateWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.closeWindow", MessageKind.Call, "windows", typeof(WindowHandleParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.switchDesktop", MessageKind.Call, "windows", typeof(DesktopIdParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.moveWindow", MessageKind.Call, "windows", typeof(McMoveParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.createDesktop", MessageKind.Call, "windows", null, typeof(DesktopInfo), new[] { SurfaceKind.Overlay }, false, null),
+        new("mc.removeDesktop", MessageKind.Call, "windows", typeof(DesktopIdParams), null, new[] { SurfaceKind.Overlay }, false, null),
+        new("dock.pinPath", MessageKind.Call, "windows", typeof(DockPinPathParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Overlay, SurfaceKind.Settings }, false, null),
+    };
+
+    public static readonly IReadOnlyDictionary<string, MessageDef> ByType = All.ToDictionary(m => m.Type);
+}
+
+/// <summary>Which state events each surface kind receives right after surface.ready (docs/IPC.md section 3).</summary>
+public static class InitialState
+{
+    public static IReadOnlyList<string> For(SurfaceKind kind) => ByKind.TryGetValue(kind, out var l) ? l : Array.Empty<string>();
+    public static bool IsState(string type) => MessageCatalog.ByType.TryGetValue(type, out var m) && m.State;
+    public static IReadOnlyList<SurfaceKind> KindsOf(string type) => MessageCatalog.ByType.TryGetValue(type, out var m) && m.Initial is not null ? m.Initial : Array.Empty<SurfaceKind>();
+    private static readonly IReadOnlyDictionary<SurfaceKind, string[]> ByKind = new Dictionary<SurfaceKind, string[]>
+    {
+        [SurfaceKind.Dock] = new[] { "theme.changed", "settings.changed", "locale.changed", "dock.state" },
+        [SurfaceKind.Menubar] = new[] { "theme.changed", "settings.changed", "locale.changed", "status.battery", "status.network", "status.audio", "status.brightness", "status.bluetooth", "media.state", "tray.state", "activeApp.changed" },
+        [SurfaceKind.Overlay] = new[] { "apps.changed", "theme.changed", "settings.changed", "locale.changed", "reminders.changed", "status.battery", "status.network", "status.audio", "status.brightness", "status.bluetooth", "media.state", "activeApp.changed", "dock.state" },
+        [SurfaceKind.Desktop] = new[] { "theme.changed", "settings.changed", "locale.changed", "desktop.state", "reminders.changed", "status.battery", "status.bluetooth", "media.state" },
+        [SurfaceKind.Settings] = new[] { "theme.changed", "settings.changed", "locale.changed" },
+    };
+}
+
+/// <summary>Validation limits declared in protocol JSON (single source for Core validation and the settings UI).</summary>
+public sealed record FieldLimit(double? Min = null, double? Max = null, int? MaxItems = null, int? MaxLength = null, string? Pattern = null);
+
+public static class SettingsLimits
+{
+    /// <summary>Key = "TypeName.fieldName" (wire name), e.g. "DockSettings.iconSize".</summary>
+    public static readonly IReadOnlyDictionary<string, FieldLimit> All = new Dictionary<string, FieldLimit>
+    {
+        ["AppearanceSettings.accent"] = new(Pattern: @"^(system|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$"),
+        ["PinnedItem.target"] = new(MaxLength: 4096),
+        ["DockSettings.iconSize"] = new(Min: 32, Max: 128),
+        ["DockSettings.magnifiedSize"] = new(Min: 32, Max: 192),
+        ["DockSettings.pins"] = new(MaxItems: 100),
+        ["SpotlightSettings.hotkey"] = new(MaxLength: 64),
+        ["SpotlightSettings.providers"] = new(MaxItems: 16),
+        ["SpotlightSettings.webSearchUrl"] = new(MaxLength: 512),
+        ["SpotlightSettings.maxResults"] = new(Min: 1, Max: 30),
+        ["HotkeySettings.launchpad"] = new(MaxLength: 64),
+        ["HotkeySettings.missionControl"] = new(MaxLength: 64),
+        ["HotkeySettings.exit"] = new(MaxLength: 64),
+        ["HotkeySettings.toggleTaskbar"] = new(MaxLength: 64),
+        ["HotCornerSettings.dwellMs"] = new(Min: 50, Max: 2000),
+        ["DesktopShortcut.name"] = new(MaxLength: 256),
+        ["DesktopShortcut.target"] = new(MaxLength: 4096),
+        ["WidgetInstance.x"] = new(Min: -16384, Max: 16384),
+        ["WidgetInstance.y"] = new(Min: -16384, Max: 16384),
+        ["DesktopSettings.wallpaperPath"] = new(MaxLength: 4096),
+        ["DesktopSettings.iconSize"] = new(Min: 32, Max: 128),
+        ["DesktopSettings.shortcuts"] = new(MaxItems: 500),
+        ["DesktopSettings.widgets"] = new(MaxItems: 100),
+        ["DesktopSettings.wallpapers"] = new(MaxItems: 64),
+        ["DesktopSettings.placements"] = new(MaxItems: 2000),
+        ["WeatherSettings.locationName"] = new(MaxLength: 256),
+        ["WeatherSettings.latitude"] = new(Min: -90, Max: 90),
+        ["WeatherSettings.longitude"] = new(Min: -180, Max: 180),
+        ["LaunchpadFolder.name"] = new(MaxLength: 128),
+        ["LaunchpadFolder.appIds"] = new(MaxItems: 200),
+        ["LaunchpadSettings.folders"] = new(MaxItems: 100),
+        ["LaunchpadSettings.order"] = new(MaxItems: 2000),
+        ["LaunchpadSettings.hidden"] = new(MaxItems: 2000),
+        ["GeneralSettings.language"] = new(Pattern: @"^(auto|en|ru)$"),
     };
 }

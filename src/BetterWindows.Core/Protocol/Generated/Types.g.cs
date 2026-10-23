@@ -279,7 +279,7 @@ public sealed record ActiveAppState
 
 public sealed record AddShortcutParams
 {
-    [JsonPropertyName("path")] public string Path { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("path")] public string Path { get; init; } = "";
     [JsonPropertyName("x")] public int? X { get; init; }
     [JsonPropertyName("y")] public int? Y { get; init; }
     [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
@@ -287,7 +287,7 @@ public sealed record AddShortcutParams
 
 public sealed record AddWidgetParams
 {
-    [JsonPropertyName("type")] public WidgetType Type { get; init; } = WidgetType.Clock;
+    [JsonRequired] [JsonPropertyName("type")] public WidgetType Type { get; init; } = WidgetType.Clock;
     [JsonPropertyName("size")] public WidgetSize? Size { get; init; }
     /// <summary>
     /// Absent: the host cascades at (48+24n, 80+24n) DIP on the target monitor.
@@ -327,13 +327,12 @@ public sealed record AppEntry
 
 public sealed record AppIdParams
 {
-    [JsonPropertyName("appId")] public string AppId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("appId")] public string AppId { get; init; } = "";
 }
 
 public sealed record AppLaunchParams
 {
-    [JsonPropertyName("appId")] public string AppId { get; init; } = "";
-    [JsonPropertyName("args")] public string? Args { get; init; }
+    [JsonRequired] [JsonPropertyName("appId")] public string AppId { get; init; } = "";
 }
 
 public sealed record AppList
@@ -350,7 +349,7 @@ public sealed record AudioDevice
 
 public sealed record AudioDeviceParams
 {
-    [JsonPropertyName("deviceId")] public string DeviceId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("deviceId")] public string DeviceId { get; init; } = "";
 }
 
 public sealed record AudioState
@@ -391,7 +390,7 @@ public sealed record BluetoothState
 
 public sealed record BrightnessParams
 {
-    [JsonPropertyName("level")] public double Level { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("level")] public double Level { get; init; } = 0.0;
 }
 
 public sealed record BrightnessState
@@ -431,7 +430,7 @@ public sealed record DesktopIcon
 
 public sealed record DesktopIdParams
 {
-    [JsonPropertyName("desktopId")] public string DesktopId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("desktopId")] public string DesktopId { get; init; } = "";
 }
 
 public sealed record DesktopInfo
@@ -444,9 +443,9 @@ public sealed record DesktopInfo
 
 public sealed record DesktopMoveParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
-    [JsonPropertyName("x")] public int X { get; init; } = 0;
-    [JsonPropertyName("y")] public int Y { get; init; } = 0;
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("x")] public int X { get; init; } = 0;
+    [JsonRequired] [JsonPropertyName("y")] public int Y { get; init; } = 0;
 }
 
 public sealed record DesktopSettings
@@ -557,12 +556,12 @@ public sealed record DockItem
 
 public sealed record DockItemParams
 {
-    [JsonPropertyName("itemId")] public string ItemId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("itemId")] public string ItemId { get; init; } = "";
 }
 
 public sealed record DockPinParams
 {
-    [JsonPropertyName("appId")] public string AppId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("appId")] public string AppId { get; init; } = "";
     [JsonPropertyName("index")] public int? Index { get; init; }
 }
 
@@ -571,7 +570,7 @@ public sealed record DockPinPathParams
     /// <summary>
     /// Absolute path of a folder, exe or lnk to pin (the UI obtains it with system.pickPath).
     /// </summary>
-    [JsonPropertyName("path")] public string Path { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("path")] public string Path { get; init; } = "";
     [JsonPropertyName("index")] public int? Index { get; init; }
 }
 
@@ -580,7 +579,7 @@ public sealed record DockReorderParams
     /// <summary>
     /// Full ordered list of PINNED item ids.
     /// </summary>
-    [JsonPropertyName("itemIds")] public IReadOnlyList<string> ItemIds { get; init; } = Array.Empty<string>();
+    [JsonRequired] [JsonPropertyName("itemIds")] public IReadOnlyList<string> ItemIds { get; init; } = Array.Empty<string>();
 }
 
 public sealed record DockRevealState
@@ -669,7 +668,7 @@ public sealed record HotkeySettings
 
 public sealed record IdParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
 }
 
 public sealed record LaunchpadFolder
@@ -705,15 +704,15 @@ public sealed record LocaleState
 
 public sealed record LogParams
 {
-    [JsonPropertyName("level")] public LogLevel Level { get; init; } = LogLevel.Debug;
-    [JsonPropertyName("message")] public string Message { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("level")] public LogLevel Level { get; init; } = LogLevel.Debug;
+    [JsonRequired] [JsonPropertyName("message")] public string Message { get; init; } = "";
     [JsonPropertyName("data")] public System.Text.Json.Nodes.JsonNode? Data { get; init; }
 }
 
 public sealed record McMoveParams
 {
-    [JsonPropertyName("handle")] public string Handle { get; init; } = "";
-    [JsonPropertyName("desktopId")] public string DesktopId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("handle")] public string Handle { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("desktopId")] public string DesktopId { get; init; } = "";
 }
 
 public sealed record McSnapshot
@@ -721,6 +720,10 @@ public sealed record McSnapshot
     [JsonPropertyName("desktops")] public IReadOnlyList<DesktopInfo> Desktops { get; init; } = Array.Empty<DesktopInfo>();
     [JsonPropertyName("desktopsSupported")] public bool DesktopsSupported { get; init; } = false;
     [JsonPropertyName("windows")] public IReadOnlyList<McWindow> Windows { get; init; } = Array.Empty<McWindow>();
+    /// <summary>
+    /// Monotonic per overlay show. The UI drops a snapshot or mc.changed whose rev is lower than the last one applied.
+    /// </summary>
+    [JsonPropertyName("rev")] public int Rev { get; init; } = 0;
 }
 
 public sealed record McSnapshotParams
@@ -760,7 +763,7 @@ public sealed record McWindow
 
 public sealed record MediaControlParams
 {
-    [JsonPropertyName("action")] public MediaAction Action { get; init; } = MediaAction.Play;
+    [JsonRequired] [JsonPropertyName("action")] public MediaAction Action { get; init; } = MediaAction.Play;
     [JsonPropertyName("positionSec")] public double? PositionSec { get; init; }
 }
 
@@ -822,14 +825,14 @@ public sealed record MonitorList
 
 public sealed record MoveWidgetParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
-    [JsonPropertyName("x")] public double X { get; init; } = 0.0;
-    [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("x")] public double X { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
 }
 
 public sealed record MuteParams
 {
-    [JsonPropertyName("muted")] public bool Muted { get; init; } = false;
+    [JsonRequired] [JsonPropertyName("muted")] public bool Muted { get; init; } = false;
 }
 
 public sealed record NetworkState
@@ -849,14 +852,22 @@ public sealed record NetworkState
 public sealed record OpenParams
 {
     /// <summary>
-    /// URL, file/folder path or ms-settings: URI; opened via the shell.
+    /// http(s) URL or ms-settings: URI ONLY; any path or other scheme is rejected with badRequest. Files and folders are opened only by id (search.perform, desktop.open, dock.activate, apps.reveal, dock.revealInExplorer).
     /// </summary>
-    [JsonPropertyName("target")] public string Target { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("target")] public string Target { get; init; } = "";
+}
+
+public sealed record OverlayCloseParams
+{
+    /// <summary>
+    /// OverlayShow.token of the show being closed. The host ignores a close whose token is not the current one (stale animation finishing after a re-show).
+    /// </summary>
+    [JsonRequired] [JsonPropertyName("token")] public int Token { get; init; } = 0;
 }
 
 public sealed record OverlayRequest
 {
-    [JsonPropertyName("mode")] public OverlayMode Mode { get; init; } = OverlayMode.Spotlight;
+    [JsonRequired] [JsonPropertyName("mode")] public OverlayMode Mode { get; init; } = OverlayMode.Spotlight;
     [JsonPropertyName("popover")] public PopoverRequest? Popover { get; init; }
     [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
@@ -874,7 +885,7 @@ public sealed record OverlayShow
 
 public sealed record PickPathParams
 {
-    [JsonPropertyName("kind")] public PickKind Kind { get; init; } = PickKind.File;
+    [JsonRequired] [JsonPropertyName("kind")] public PickKind Kind { get; init; } = PickKind.File;
     [JsonPropertyName("title")] public string? Title { get; init; }
     [JsonPropertyName("multiple")] public bool Multiple { get; init; } = false;
 }
@@ -903,17 +914,17 @@ public sealed record PinnedItem
 
 public sealed record Point
 {
-    [JsonPropertyName("x")] public double X { get; init; } = 0.0;
-    [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("x")] public double X { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
 }
 
 public sealed record PopoverRequest
 {
-    [JsonPropertyName("kind")] public PopoverKind Kind { get; init; } = PopoverKind.Apple;
+    [JsonRequired] [JsonPropertyName("kind")] public PopoverKind Kind { get; init; } = PopoverKind.Apple;
     /// <summary>
     /// In DIPs, relative to the client area of the surface that sent it (overlay.open) or of the overlay (overlay.show).
     /// </summary>
-    [JsonPropertyName("anchor")] public Rect Anchor { get; init; } = new();
+    [JsonRequired] [JsonPropertyName("anchor")] public Rect Anchor { get; init; } = new();
     /// <summary>
     /// dockMenu/windowList: the dock item.
     /// </summary>
@@ -926,20 +937,15 @@ public sealed record PopoverRequest
 
 public sealed record PowerParams
 {
-    [JsonPropertyName("action")] public PowerAction Action { get; init; } = PowerAction.Lock;
-}
-
-public sealed record QuitParams
-{
-    [JsonPropertyName("restoreTaskbar")] public bool RestoreTaskbar { get; init; } = true;
+    [JsonRequired] [JsonPropertyName("action")] public PowerAction Action { get; init; } = PowerAction.Lock;
 }
 
 public sealed record Rect
 {
-    [JsonPropertyName("x")] public double X { get; init; } = 0.0;
-    [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
-    [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
-    [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("x")] public double X { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
 }
 
 public sealed record Reminder
@@ -957,7 +963,7 @@ public sealed record Reminder
 
 public sealed record ReminderAddParams
 {
-    [JsonPropertyName("title")] public string Title { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("title")] public string Title { get; init; } = "";
     [JsonPropertyName("due")] public string? Due { get; init; }
     [JsonPropertyName("notes")] public string? Notes { get; init; }
     [JsonPropertyName("list")] public string? List { get; init; }
@@ -970,7 +976,7 @@ public sealed record ReminderList
 
 public sealed record ReminderUpdateParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("title")] public string? Title { get; init; }
     /// <summary>
     /// absent = unchanged; empty string = clear the field.
@@ -996,13 +1002,13 @@ public sealed record SearchAction
 
 public sealed record SearchCancelParams
 {
-    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
 }
 
 public sealed record SearchPerformParams
 {
-    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
-    [JsonPropertyName("resultId")] public string ResultId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("resultId")] public string ResultId { get; init; } = "";
     [JsonPropertyName("actionId")] public string? ActionId { get; init; }
 }
 
@@ -1015,14 +1021,14 @@ public sealed record SearchPreview
 
 public sealed record SearchPreviewParams
 {
-    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
-    [JsonPropertyName("resultId")] public string ResultId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("resultId")] public string ResultId { get; init; } = "";
 }
 
 public sealed record SearchQueryParams
 {
-    [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
-    [JsonPropertyName("query")] public string Query { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("requestId")] public string RequestId { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("query")] public string Query { get; init; } = "";
 }
 
 public sealed record SearchRecent
@@ -1101,14 +1107,14 @@ public sealed record SettingsOpenParams
 public sealed record SettingsPatchParams
 {
     /// <summary>
-    /// A JSON object deep-merged into the settings (objects merge, arrays/primitives replace).
+    /// RFC 7386 JSON Merge Patch applied to the serialised current Settings: objects merge recursively (including map&lt;&gt; fields), arrays and primitives replace, null DELETES the key (nullable -&gt; null, non-nullable -&gt; its default, map entry removed). A key that does not exist in Settings -&gt; badRequest naming the path. 'version' is never patchable. Patch &lt;= 256 KB. The host validates/clamps (see docs/IPC.md section 12) and returns the stored value; settings.changed carries the same value.
     /// </summary>
     [JsonPropertyName("patch")] public System.Text.Json.Nodes.JsonNode? Patch { get; init; }
 }
 
 public sealed record SetWallpaperParams
 {
-    [JsonPropertyName("path")] public string Path { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("path")] public string Path { get; init; } = "";
     /// <summary>
     /// null = all monitors.
     /// </summary>
@@ -1117,19 +1123,19 @@ public sealed record SetWallpaperParams
 
 public sealed record ShapeRect
 {
-    [JsonPropertyName("x")] public double X { get; init; } = 0.0;
-    [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
-    [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
-    [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("x")] public double X { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("y")] public double Y { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
     /// <summary>
     /// Corner radius in DIPs.
     /// </summary>
-    [JsonPropertyName("radius")] public double Radius { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("radius")] public double Radius { get; init; } = 0.0;
 }
 
 public sealed record ShowTaskbarParams
 {
-    [JsonPropertyName("show")] public bool Show { get; init; } = false;
+    [JsonRequired] [JsonPropertyName("show")] public bool Show { get; init; } = false;
 }
 
 public sealed record SpotlightSettings
@@ -1163,16 +1169,19 @@ public sealed record SurfaceInit
     [JsonPropertyName("glassOverflow")] public bool GlassOverflow { get; init; } = false;
 }
 
+/// <summary>
+/// Informational only: the host IGNORES surface/monitorId for identity (it uses the SurfaceId it assigned when it attached the WebView) and rejects a mismatch with badRequest.
+/// </summary>
 public sealed record SurfaceReadyParams
 {
-    [JsonPropertyName("surface")] public SurfaceKind Surface { get; init; } = SurfaceKind.Dock;
+    [JsonRequired] [JsonPropertyName("surface")] public SurfaceKind Surface { get; init; } = SurfaceKind.Dock;
     [JsonPropertyName("monitorId")] public string? MonitorId { get; init; }
 }
 
 public sealed record SurfaceResizeParams
 {
-    [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
-    [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("width")] public double Width { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("height")] public double Height { get; init; } = 0.0;
     /// <summary>
     /// Dock only. DIP extent of the always-visible bar measured from the docked screen edge (EXCLUDES magnification headroom and tooltips). The host reserves ceil(barThickness x monitor scale) physical px through the AppBar when settings.dock.reserveSpace &amp;&amp; !autoHide; null keeps the previous value.
     /// </summary>
@@ -1187,11 +1196,11 @@ public sealed record SurfaceShapeParams
     /// <summary>
     /// Glass panels (rounded rects): visible, interactive and backed by the blur/acrylic backdrop.
     /// </summary>
-    [JsonPropertyName("rects")] public IReadOnlyList<ShapeRect> Rects { get; init; } = Array.Empty<ShapeRect>();
+    [JsonRequired] [JsonPropertyName("rects")] public IReadOnlyList<ShapeRect> Rects { get; init; } = Array.Empty<ShapeRect>();
     /// <summary>
     /// Visible and interactive but NOT glass (magnified dock icons, tooltips that overflow the panel). Included in the window region and hit-testing, excluded from the backdrop where the host can restrict it (see SurfaceInit.glassOverflow). May be empty.
     /// </summary>
-    [JsonPropertyName("hitRects")] public IReadOnlyList<ShapeRect> HitRects { get; init; } = Array.Empty<ShapeRect>();
+    [JsonRequired] [JsonPropertyName("hitRects")] public IReadOnlyList<ShapeRect> HitRects { get; init; } = Array.Empty<ShapeRect>();
     /// <summary>
     /// Master switch: false = no backdrop (reduceTransparency, or the UI wants flat panels).
     /// </summary>
@@ -1211,7 +1220,7 @@ public sealed record TaskbarSettings
 
 public sealed record ThemePreferenceParams
 {
-    [JsonPropertyName("preference")] public ThemePreference Preference { get; init; } = ThemePreference.Auto;
+    [JsonRequired] [JsonPropertyName("preference")] public ThemePreference Preference { get; init; } = ThemePreference.Auto;
 }
 
 public sealed record ThemeState
@@ -1227,8 +1236,8 @@ public sealed record ThemeState
 
 public sealed record TrayClickParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
-    [JsonPropertyName("button")] public TrayButton Button { get; init; } = TrayButton.Left;
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("button")] public TrayButton Button { get; init; } = TrayButton.Left;
     [JsonPropertyName("anchor")] public Point? Anchor { get; init; }
 }
 
@@ -1248,7 +1257,7 @@ public sealed record TrayState
 
 public sealed record UpdateWidgetParams
 {
-    [JsonPropertyName("id")] public string Id { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("id")] public string Id { get; init; } = "";
     [JsonPropertyName("size")] public WidgetSize? Size { get; init; }
     /// <summary>
     /// When present, REPLACES the widget's whole config object (not merged); absent = unchanged.
@@ -1258,7 +1267,7 @@ public sealed record UpdateWidgetParams
 
 public sealed record VolumeParams
 {
-    [JsonPropertyName("volume")] public double Volume { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("volume")] public double Volume { get; init; } = 0.0;
 }
 
 public sealed record WeatherDay
@@ -1283,11 +1292,11 @@ public sealed record WeatherHour
 
 public sealed record WeatherLocation
 {
-    [JsonPropertyName("name")] public string Name { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("name")] public string Name { get; init; } = "";
     [JsonPropertyName("country")] public string? Country { get; init; }
     [JsonPropertyName("admin")] public string? Admin { get; init; }
-    [JsonPropertyName("latitude")] public double Latitude { get; init; } = 0.0;
-    [JsonPropertyName("longitude")] public double Longitude { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("latitude")] public double Latitude { get; init; } = 0.0;
+    [JsonRequired] [JsonPropertyName("longitude")] public double Longitude { get; init; } = 0.0;
 }
 
 public sealed record WeatherLocations
@@ -1297,7 +1306,7 @@ public sealed record WeatherLocations
 
 public sealed record WeatherSearchParams
 {
-    [JsonPropertyName("query")] public string Query { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("query")] public string Query { get; init; } = "";
 }
 
 public sealed record WeatherSettings
@@ -1346,7 +1355,7 @@ public sealed record WidgetInstance
 
 public sealed record WindowHandleParams
 {
-    [JsonPropertyName("handle")] public string Handle { get; init; } = "";
+    [JsonRequired] [JsonPropertyName("handle")] public string Handle { get; init; } = "";
 }
 
 /// <summary>

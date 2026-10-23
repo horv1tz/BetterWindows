@@ -7,13 +7,7 @@
     "OpenParams": {
       "target": {
         "type": "string",
-        "doc": "URL, file/folder path or ms-settings: URI; opened via the shell."
-      }
-    },
-    "QuitParams": {
-      "restoreTaskbar": {
-        "type": "bool",
-        "default": true
+        "doc": "http(s) URL or ms-settings: URI ONLY; any path or other scheme is rejected with badRequest. Files and folders are opened only by id (search.perform, desktop.open, dock.activate, apps.reveal, dock.revealInExplorer)."
       }
     },
     "ShowTaskbarParams": {
@@ -38,7 +32,10 @@
     "PickPathParams": {
       "kind": "PickKind",
       "title": "string?",
-      "multiple": "bool"
+      "multiple": {
+        "type": "bool",
+        "default": false
+      }
     },
     "PickPathResult": {
       "paths": {
@@ -53,40 +50,69 @@
   "calls": {
     "system.power": {
       "params": "PowerParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "system.open": {
       "params": "OpenParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "system.quit": {
-      "params": "QuitParams",
+      "params": null,
       "result": null,
-      "doc": "Restore the Windows taskbar (unless false) and exit."
+      "doc": "ALWAYS restores the taskbar and desktop icons, then exits.",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "system.showTaskbar": {
       "params": "ShowTaskbarParams",
       "result": null,
-      "doc": "Temporarily show/hide the native taskbar without changing settings."
+      "doc": "Temporarily show/hide the native taskbar without changing settings.",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "system.about": {
       "params": null,
-      "result": "AboutInfo"
+      "result": "AboutInfo",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "diag.report": {
       "params": null,
       "result": "DiagReport",
-      "doc": "Runs every platform self-check (also: BetterWindows.exe --diagnose)."
+      "doc": "Runs every platform self-check (also: BetterWindows.exe --diagnose).",
+      "surfaces": [
+        "settings"
+      ]
     },
     "system.pickPath": {
       "params": "PickPathParams",
       "result": "PickPathResult",
-      "doc": "Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest)."
+      "doc": "Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest).",
+      "surfaces": [
+        "settings"
+      ]
     },
     "system.monitors": {
       "params": null,
       "result": "MonitorList",
-      "doc": "All connected monitors (for per-monitor wallpaper/widget pickers in the settings window)."
+      "doc": "All connected monitors (for per-monitor wallpaper/widget pickers in the settings window).",
+      "surfaces": [
+        "settings"
+      ]
     }
   },
   "enums": {

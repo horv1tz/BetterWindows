@@ -141,69 +141,127 @@
     "status.battery": {
       "dir": "host",
       "payload": "BatteryState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay",
+        "desktop"
+      ]
     },
     "status.network": {
       "dir": "host",
       "payload": "NetworkState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay"
+      ]
     },
     "status.audio": {
       "dir": "host",
       "payload": "AudioState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay"
+      ]
     },
     "status.brightness": {
       "dir": "host",
       "payload": "BrightnessState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay"
+      ]
     },
     "status.bluetooth": {
       "dir": "host",
       "payload": "BluetoothState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay",
+        "desktop"
+      ]
     },
     "media.state": {
       "dir": "host",
       "payload": "MediaState",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay",
+        "desktop"
+      ]
     },
     "tray.state": {
       "dir": "host",
       "payload": "TrayState",
       "doc": "Third-party notification-area icons (needs features.trayHosting; otherwise supported=false).",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar"
+      ]
     }
   },
   "calls": {
     "audio.setVolume": {
       "params": "VolumeParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "audio.setMuted": {
       "params": "MuteParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "audio.setDevice": {
       "params": "AudioDeviceParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "brightness.set": {
       "params": "BrightnessParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "theme.setPreference": {
       "params": "ThemePreferenceParams",
       "result": null,
-      "doc": "Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme."
+      "doc": "Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme.",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "media.control": {
       "params": "MediaControlParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay",
+        "desktop"
+      ]
     },
     "tray.click": {
       "params": "TrayClickParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "menubar",
+        "overlay"
+      ]
     }
   }
 }

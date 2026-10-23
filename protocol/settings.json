@@ -66,7 +66,8 @@
       "accent": {
         "type": "string",
         "default": "system",
-        "doc": "'system' or a CSS hex colour."
+        "doc": "'system' or a CSS hex colour.",
+        "pattern": "^(system|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$"
       },
       "reduceTransparency": "bool",
       "reduceMotion": "bool"
@@ -79,7 +80,8 @@
       "kind": "PinnedKind",
       "target": {
         "type": "string",
-        "doc": "AUMID, exe path or folder path."
+        "doc": "AUMID, exe path or folder path.",
+        "maxLength": 4096
       },
       "name": "string?"
     },
@@ -95,7 +97,9 @@
       "iconSize": {
         "type": "int",
         "default": 56,
-        "doc": "DIP, clamped 32..128."
+        "doc": "DIP, clamped 32..128.",
+        "min": 32,
+        "max": 128
       },
       "magnification": {
         "type": "bool",
@@ -104,7 +108,9 @@
       "magnifiedSize": {
         "type": "int",
         "default": 88,
-        "doc": "DIP, clamped to iconSize..192."
+        "doc": "DIP, clamped to iconSize..192.",
+        "min": 32,
+        "max": 192
       },
       "autoHide": {
         "type": "bool",
@@ -127,7 +133,10 @@
         "type": "DockMonitor",
         "default": "primary"
       },
-      "pins": "PinnedItem[]"
+      "pins": {
+        "type": "PinnedItem[]",
+        "maxItems": 100
+      }
     },
     "MenuBarSettings": {
       "enabled": {
@@ -166,7 +175,8 @@
     "SpotlightSettings": {
       "hotkey": {
         "type": "string",
-        "default": "Alt+Space"
+        "default": "Alt+Space",
+        "maxLength": 64
       },
       "providers": {
         "type": "string[]",
@@ -178,33 +188,41 @@
           "windows",
           "files",
           "web"
-        ]
+        ],
+        "maxItems": 16
       },
       "webSearchUrl": {
         "type": "string",
-        "default": "https://duckduckgo.com/?q={query}"
+        "default": "https://duckduckgo.com/?q={query}",
+        "maxLength": 512
       },
       "maxResults": {
         "type": "int",
-        "default": 9
+        "default": 9,
+        "min": 1,
+        "max": 30
       }
     },
     "HotkeySettings": {
       "launchpad": {
         "type": "string",
-        "default": "Ctrl+Alt+L"
+        "default": "Ctrl+Alt+L",
+        "maxLength": 64
       },
       "missionControl": {
         "type": "string",
-        "default": "Ctrl+Alt+M"
+        "default": "Ctrl+Alt+M",
+        "maxLength": 64
       },
       "exit": {
         "type": "string",
-        "default": "Ctrl+Alt+Q"
+        "default": "Ctrl+Alt+Q",
+        "maxLength": 64
       },
       "toggleTaskbar": {
         "type": "string",
-        "default": "Ctrl+Alt+Shift+T"
+        "default": "Ctrl+Alt+Shift+T",
+        "maxLength": 64
       }
     },
     "HotCornerSettings": {
@@ -230,7 +248,9 @@
       },
       "dwellMs": {
         "type": "int",
-        "default": 150
+        "default": 150,
+        "min": 50,
+        "max": 2000
       }
     },
     "TaskbarSettings": {
@@ -241,8 +261,14 @@
     },
     "DesktopShortcut": {
       "id": "string",
-      "name": "string",
-      "target": "string",
+      "name": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "target": {
+        "type": "string",
+        "maxLength": 4096
+      },
       "x": "int",
       "y": "int",
       "monitorId": {
@@ -257,8 +283,16 @@
         "type": "WidgetSize",
         "default": "medium"
       },
-      "x": "double",
-      "y": "double",
+      "x": {
+        "type": "double",
+        "min": -16384,
+        "max": 16384
+      },
+      "y": {
+        "type": "double",
+        "min": -16384,
+        "max": 16384
+      },
       "config": {
         "type": "any",
         "doc": "Widget-specific JSON object. desktop.updateWidget REPLACES the whole object. Schemas: clock {style:'digital'|'analog', seconds:bool, timezone?:string}; calendar {weekNumbers:bool}; weather {} (uses settings.weather); reminders {list?:string}; media {}; battery {}; notes {text:string}."
@@ -278,24 +312,36 @@
         "type": "bool",
         "default": true
       },
-      "wallpaperPath": "string?",
+      "wallpaperPath": {
+        "type": "string?",
+        "maxLength": 4096
+      },
       "wallpaperFit": {
         "type": "WallpaperFit",
         "default": "fill"
       },
       "iconSize": {
         "type": "int",
-        "default": 64
+        "default": 64,
+        "min": 32,
+        "max": 128
       },
       "gridSnap": {
         "type": "bool",
         "default": true
       },
-      "shortcuts": "DesktopShortcut[]",
-      "widgets": "WidgetInstance[]",
+      "shortcuts": {
+        "type": "DesktopShortcut[]",
+        "maxItems": 500
+      },
+      "widgets": {
+        "type": "WidgetInstance[]",
+        "maxItems": 100
+      },
       "wallpapers": {
         "type": "map<string>",
-        "doc": "monitorId -> wallpaper path; overrides wallpaperPath, which is the default for monitors without an entry."
+        "doc": "monitorId -> wallpaper path; overrides wallpaperPath, which is the default for monitors without an entry.",
+        "maxItems": 64
       },
       "showDesktopFolder": {
         "type": "bool",
@@ -304,13 +350,25 @@
       },
       "placements": {
         "type": "map<DesktopCell>",
-        "doc": "Icon id -> grid cell for icons that are not in 'shortcuts' (desktop-folder items, specials)."
+        "doc": "Icon id -> grid cell for icons that are not in 'shortcuts' (desktop-folder items, specials).",
+        "maxItems": 2000
       }
     },
     "WeatherSettings": {
-      "locationName": "string",
-      "latitude": "double?",
-      "longitude": "double?",
+      "locationName": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "latitude": {
+        "type": "double?",
+        "min": -90,
+        "max": 90
+      },
+      "longitude": {
+        "type": "double?",
+        "min": -180,
+        "max": 180
+      },
       "unit": {
         "type": "TemperatureUnit",
         "default": "c"
@@ -321,19 +379,30 @@
         "type": "string",
         "doc": "'folder:<guid>'."
       },
-      "name": "string",
+      "name": {
+        "type": "string",
+        "maxLength": 128
+      },
       "appIds": {
         "type": "string[]",
-        "doc": "App ids in in-folder order."
+        "doc": "App ids in in-folder order.",
+        "maxItems": 200
       }
     },
     "LaunchpadSettings": {
-      "folders": "LaunchpadFolder[]",
+      "folders": {
+        "type": "LaunchpadFolder[]",
+        "maxItems": 100
+      },
       "order": {
         "type": "string[]",
-        "doc": "Top-level grid order: app ids AND folder ids. Apps that are members of a folder or listed in 'hidden' MUST NOT appear here. Apps missing from 'order' are appended alphabetically. Ids of uninstalled apps are pruned on save, folder ids are kept."
+        "doc": "Top-level grid order: app ids AND folder ids. Apps that are members of a folder or listed in 'hidden' MUST NOT appear here. Apps missing from 'order' are appended alphabetically. Ids of uninstalled apps are pruned on save, folder ids are kept.",
+        "maxItems": 2000
       },
-      "hidden": "string[]"
+      "hidden": {
+        "type": "string[]",
+        "maxItems": 2000
+      }
     },
     "GeneralSettings": {
       "autostart": {
@@ -343,7 +412,8 @@
       "language": {
         "type": "string",
         "default": "auto",
-        "doc": "'auto' | 'en' | 'ru'."
+        "doc": "'auto' | 'en' | 'ru'.",
+        "pattern": "^(auto|en|ru)$"
       },
       "checkUpdates": {
         "type": "bool",

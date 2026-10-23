@@ -41,10 +41,10 @@ for (const d of domains) {
     types.set(n, { fields, doc: $doc, domain: d.domain });
   }
   for (const [t, v] of Object.entries(d.events ?? {})) {
-    messages.push({ type: t, kind: 'event', dir: v.dir, payload: v.payload ?? null, doc: v.doc, domain: d.domain, state: !!v.state });
+    messages.push({ type: t, kind: 'event', dir: v.dir, payload: v.payload ?? null, doc: v.doc, domain: d.domain, state: !!v.state, initial: v.initial ?? null, surfaces: v.surfaces ?? null });
   }
   for (const [t, v] of Object.entries(d.calls ?? {})) {
-    messages.push({ type: t, kind: 'call', dir: 'ui', params: v.params ?? null, result: v.result ?? null, doc: v.doc, domain: d.domain });
+    messages.push({ type: t, kind: 'call', dir: 'ui', params: v.params ?? null, result: v.result ?? null, doc: v.doc, domain: d.domain, surfaces: v.surfaces ?? null });
   }
 }
 
@@ -73,6 +73,36 @@ for (const m of messages) {
   seen.add(m.type);
   if (m.kind === 'event' && !['host', 'ui'].includes(m.dir)) fail(`${m.type}: event dir must be "host" or "ui"`);
   for (const k of ['payload', 'params', 'result']) if (m[k]) parseType(m[k]);
+}
+
+// ---------- surfaces / initial validation ----------
+const SURFACES = enums.get('SurfaceKind')?.values ?? fail('SurfaceKind enum missing');
+for (const m of messages) {
+  for (const s of m.surfaces ?? []) if (!SURFACES.includes(s)) fail(`${m.type}: unknown surface "${s}"`);
+  for (const s of m.initial ?? []) if (!SURFACES.includes(s)) fail(`${m.type}: unknown initial surface "${s}"`);
+  if (m.kind === 'event' && m.dir === 'host' && m.state && !m.initial) fail(`state event ${m.type} needs "initial": [surface kinds that receive it on surface.ready]`);
+}
+
+// Types reachable from UI -> host input (call params, ui events): their non-nullable fields without a default are JSON-required.
+const uiInputTypes = new Set();
+const walkInput = (t) => {
+  if (t.kind === 'type') {
+    if (uiInputTypes.has(t.name)) return;
+    uiInputTypes.add(t.name);
+    for (const f of fieldDefs(t.name)) walkInput(f.type);
+  } else if (t.kind === 'list' || t.kind === 'map') walkInput(t.item);
+};
+for (const m of messages) {
+  if (m.kind === 'call' && m.params) walkInput(parseType(m.params));
+  if (m.kind === 'event' && m.dir === 'ui' && m.payload) walkInput(parseType(m.payload));
+}
+
+// Field limits declared in protocol JSON (min/max/maxItems/maxLength/pattern) -> SettingsLimits (C#) + SETTINGS_LIMITS (TS)
+const limits = [];
+for (const [n] of types) for (const f of fieldDefs(n)) {
+  const l = {};
+  for (const k of ['min', 'max', 'maxItems', 'maxLength', 'pattern']) if (f.spec[k] !== undefined) l[k] = f.spec[k];
+  if (Object.keys(l).length) limits.push([`${n}.${f.name}`, l]);
 }
 
 // ---------- C# ----------
@@ -126,14 +156,15 @@ for (const [n, t] of [...types].sort((a, b) => a[0].localeCompare(b[0]))) {
   for (const f of fieldDefs(n)) {
     const def = csDefault(f);
     cs += docCsx(f.doc, '    ');
-    cs += `    [JsonPropertyName("${f.name}")] public ${csType(f.type)} ${pascal(f.name)} { get; init; }${def ? ` = ${def};` : ''}\n`;
+    const req = uiInputTypes.has(n) && !f.type.nullable && f.spec.default === undefined ? '[JsonRequired] ' : '';
+    cs += `    ${req}[JsonPropertyName("${f.name}")] public ${csType(f.type)} ${pascal(f.name)} { get; init; }${def ? ` = ${def};` : ''}\n`;
   }
   cs += '}\n\n';
 }
 // message constants + catalog
 let msgs = HEADER + '#nullable enable\nnamespace BetterWindows.Core.Protocol;\n\n';
 msgs += 'public enum MessageKind { HostEvent, UiEvent, Call }\n\n';
-msgs += 'public sealed record MessageDef(string Type, MessageKind Kind, string Domain, Type? Payload, Type? Result)\n{\n    /// <summary>For calls: the params type; for events: the payload type.</summary>\n    public Type? Params => Payload;\n}\n\n';
+msgs += 'public sealed record MessageDef(string Type, MessageKind Kind, string Domain, Type? Payload, Type? Result, SurfaceKind[]? Surfaces = null, bool State = false, SurfaceKind[]? Initial = null)\n{\n    /// <summary>For calls: the params type; for events: the payload type.</summary>\n    public Type? Params => Payload;\n    /// <summary>Surface kinds allowed to send this call / ui event; null = all.</summary>\n    public bool IsAllowedFrom(SurfaceKind kind) => Surfaces is null || Array.IndexOf(Surfaces, kind) >= 0;\n}\n\n';
 msgs += '/// <summary>Wire names of every protocol message.</summary>\npublic static class Msg\n{\n';
 for (const m of messages) {
   msgs += docCsx(`${m.kind === 'call' ? 'Call (ui -> host)' : m.dir === 'host' ? 'Event (host -> ui)' : 'Event (ui -> host)'}` + (m.doc ? `. ${m.doc}` : ''), '    ');
@@ -143,7 +174,20 @@ msgs += '}\n\n/// <summary>Reflection-free catalog of all messages; used by test
 for (const m of messages) {
   const k = m.kind === 'call' ? 'MessageKind.Call' : m.dir === 'host' ? 'MessageKind.HostEvent' : 'MessageKind.UiEvent';
   const p = m.kind === 'call' ? m.params : m.payload;
-  msgs += `        new("${m.type}", ${k}, "${m.domain}", ${p ? `typeof(${p})` : 'null'}, ${m.kind === 'call' && m.result ? `typeof(${m.result})` : 'null'}),\n`;
+  const sk = (a) => (a ? `new[] { ${a.map((x) => 'SurfaceKind.' + pascal(x)).join(', ')} }` : 'null');
+  msgs += `        new("${m.type}", ${k}, "${m.domain}", ${p ? `typeof(${p})` : 'null'}, ${m.kind === 'call' && m.result ? `typeof(${m.result})` : 'null'}, ${sk(m.surfaces)}, ${m.state ? 'true' : 'false'}, ${sk(m.initial)}),\n`;
+}
+msgs += '    };\n\n    public static readonly IReadOnlyDictionary<string, MessageDef> ByType = All.ToDictionary(m => m.Type);\n}\n\n';
+msgs += '/// <summary>Which state events each surface kind receives right after surface.ready (docs/IPC.md section 3).</summary>\npublic static class InitialState\n{\n    public static IReadOnlyList<string> For(SurfaceKind kind) => ByKind.TryGetValue(kind, out var l) ? l : Array.Empty<string>();\n    public static bool IsState(string type) => MessageCatalog.ByType.TryGetValue(type, out var m) && m.State;\n    public static IReadOnlyList<SurfaceKind> KindsOf(string type) => MessageCatalog.ByType.TryGetValue(type, out var m) && m.Initial is not null ? m.Initial : Array.Empty<SurfaceKind>();\n    private static readonly IReadOnlyDictionary<SurfaceKind, string[]> ByKind = new Dictionary<SurfaceKind, string[]>\n    {\n';
+for (const kind of SURFACES) msgs += `        [SurfaceKind.${pascal(kind)}] = new[] { ${messages.filter((m) => m.state && m.initial?.includes(kind)).map((m) => '"' + m.type + '"').join(', ')} },\n`;
+msgs += '    };\n}\n\n';
+msgs += '/// <summary>Validation limits declared in protocol JSON (single source for Core validation and the settings UI).</summary>\npublic sealed record FieldLimit(double? Min = null, double? Max = null, int? MaxItems = null, int? MaxLength = null, string? Pattern = null);\n\npublic static class SettingsLimits\n{\n    /// <summary>Key = "TypeName.fieldName" (wire name), e.g. "DockSettings.iconSize".</summary>\n    public static readonly IReadOnlyDictionary<string, FieldLimit> All = new Dictionary<string, FieldLimit>\n    {\n';
+for (const [k, l] of limits) {
+  const args = [];
+  if (l.min !== undefined) args.push(`Min: ${l.min}`); if (l.max !== undefined) args.push(`Max: ${l.max}`);
+  if (l.maxItems !== undefined) args.push(`MaxItems: ${l.maxItems}`); if (l.maxLength !== undefined) args.push(`MaxLength: ${l.maxLength}`);
+  if (l.pattern !== undefined) args.push(`Pattern: @"${l.pattern.replace(/"/g, '""')}"`);
+  msgs += `        ["${k}"] = new(${args.join(', ')}),\n`;
 }
 msgs += '    };\n}\n';
 
@@ -199,6 +243,9 @@ for (const m of messages.filter((m) => m.kind === 'call')) ts += docTs(m.doc, ' 
 ts += '}\n\nexport type HostEventType = keyof HostEvents;\nexport type UiEventType = keyof UiEvents;\nexport type CallType = keyof Calls;\n\n';
 ts += 'export const HOST_EVENT_TYPES: readonly HostEventType[] = [\n' + messages.filter((m) => m.kind === 'event' && m.dir === 'host').map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
 ts += '/** Host events that are idempotent full-state snapshots: the bridge caches the latest and replays it to late subscribers. */\nexport const STATE_EVENT_TYPES: readonly HostEventType[] = [\n' + messages.filter((m) => m.kind === 'event' && m.dir === 'host' && m.state).map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
+ts += '/** Which state events each surface kind receives right after surface.ready (the mock host pushes exactly these). */\nexport const INITIAL_STATE: Record<SurfaceKind, readonly HostEventType[]> = {\n' + SURFACES.map((k) => `  ${k}: [${messages.filter((m) => m.state && m.initial?.includes(k)).map((m) => `'${m.type}'`).join(', ')}],`).join('\n') + '\n};\n';
+ts += '/** Surface kinds allowed to send each restricted call / ui event (absent = all). The host answers others with code "forbidden". */\nexport const CALL_SURFACES: Partial<Record<CallType | UiEventType, readonly SurfaceKind[]>> = {\n' + messages.filter((m) => m.surfaces && (m.kind === 'call' || m.dir === 'ui')).map((m) => `  '${m.type}': [${m.surfaces.map((x) => `'${x}'`).join(', ')}],`).join('\n') + '\n};\n';
+ts += '/** Validation limits declared in protocol JSON. Key = "TypeName.fieldName". */\nexport const SETTINGS_LIMITS: Record<string, { min?: number; max?: number; maxItems?: number; maxLength?: number; pattern?: string }> = {\n' + limits.map(([k, l]) => `  '${k}': ${JSON.stringify(l)},`).join('\n') + '\n};\n';
 ts += 'export const CALL_TYPES: readonly CallType[] = [\n' + messages.filter((m) => m.kind === 'call').map((m) => `  '${m.type}',`).join('\n') + '\n];\n';
 
 // ---------- Markdown reference ----------
@@ -210,11 +257,11 @@ for (const d of domains) {
   md += `## ${d.domain}\n\n`;
   const ms = messages.filter((m) => m.domain === d.domain);
   if (ms.length) {
-    md += '| message | kind | payload / params | result | notes |\n|---|---|---|---|---|\n';
+    md += '| message | kind | payload / params | result | allowed from | notes |\n|---|---|---|---|---|---|\n';
     for (const m of ms) {
       const kind = m.kind === 'call' ? 'call (ui→host)' : m.dir === 'host' ? (m.state ? 'state event (host→ui)' : 'event (host→ui)') : 'event (ui→host)';
       const p = m.kind === 'call' ? m.params : m.payload;
-      md += `| \`${m.type}\` | ${kind} | ${p ? typeStr(p) : '–'} | ${m.kind === 'call' ? (m.result ? typeStr(m.result) : '–') : ''} | ${(m.doc ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} |\n`;
+      md += `| \`${m.type}\` | ${kind} | ${p ? typeStr(p) : '–'} | ${m.kind === 'call' ? (m.result ? typeStr(m.result) : '–') : ''} | ${m.surfaces ? m.surfaces.join(', ') : (m.kind === 'call' || m.dir === 'ui' ? 'all' : (m.initial ? 'initial: ' + m.initial.join(', ') : ''))} | ${(m.doc ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')} |\n`;
     }
     md += '\n';
   }

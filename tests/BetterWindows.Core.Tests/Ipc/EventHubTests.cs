@@ -6,21 +6,31 @@ namespace BetterWindows.Core.Tests.Ipc;
 public class EventHubTests
 {
     [Fact]
-    public void Publish_reaches_all_surfaces_with_envelope_shape()
+    public void Publish_reaches_all_ready_surfaces_with_envelope_shape()
     {
         using var h = new CoreHarness();
-        var dock = h.AddSurface(SurfaceKind.Dock);
         var bar = h.AddSurface(SurfaceKind.Menubar, "1");
+        var overlay = h.AddSurface(SurfaceKind.Overlay);
 
         h.Hub.Publish(Msg.StatusBattery, new BatteryState { Present = true, Percent = 80, Charging = true });
 
-        foreach (var s in new[] { dock, bar })
+        foreach (var s in new[] { bar, overlay })
         {
             var e = s.Events(Msg.StatusBattery).Single();
             e["v"]!.GetValue<int>().Should().Be(ProtocolInfo.Version);
             e["payload"]!["percent"]!.GetValue<int>().Should().Be(80);
             e["payload"]!["minutesRemaining"].Should().BeNull(); // nulls are omitted
         }
+    }
+
+    [Fact]
+    public void Surfaces_that_have_not_completed_the_handshake_receive_nothing()
+    {
+        using var h = new CoreHarness();
+        var notReady = h.AddSurface(SurfaceKind.Menubar, "1", ready: false);
+        h.Hub.Publish(Msg.ThemeChanged, new ThemeState());
+        h.Hub.PublishTo(notReady.Id, Msg.ThemeChanged, new ThemeState());
+        notReady.All.Should().BeEmpty();
     }
 
     [Fact]
@@ -46,15 +56,20 @@ public class EventHubTests
     public void A_throwing_surface_does_not_block_others()
     {
         using var h = new CoreHarness();
-        h.Registry.Register(new ThrowingSurface());
+        var broken = h.AddSurface(SurfaceKind.Overlay);
         var ok = h.AddSurface(SurfaceKind.Dock);
+        broken.Broken = true;
         h.Hub.Publish(Msg.ThemeChanged, new ThemeState());
         ok.Events(Msg.ThemeChanged).Should().HaveCount(1);
     }
 
-    private sealed class ThrowingSurface : BetterWindows.Core.Ipc.ISurfaceChannel
+    [Fact]
+    public void Non_finite_numbers_never_break_publishing()
     {
-        public BetterWindows.Core.Ipc.SurfaceId Id => new(SurfaceKind.Overlay);
-        public void Post(string json) => throw new InvalidOperationException("webview is gone");
+        using var h = new CoreHarness();
+        var bar = h.AddSurface(SurfaceKind.Menubar, "1");
+        var act = () => h.Hub.Publish(Msg.MediaState, new MediaState { Available = true, PositionSec = double.NaN, DurationSec = double.PositiveInfinity });
+        act.Should().NotThrow();
+        bar.Events(Msg.MediaState).Single()["payload"]!["positionSec"]!.GetValue<double>().Should().Be(0);
     }
 }

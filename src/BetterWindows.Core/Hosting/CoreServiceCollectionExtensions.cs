@@ -16,8 +16,10 @@ public static class CoreServiceCollectionExtensions
     public static IServiceCollection AddBetterWindowsCore(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IAppPaths, AppPaths>();
         services.AddSingleton<SurfaceRegistry>();
         services.AddSingleton<IEventHub, EventHub>();
+        services.AddSingleton<IStatePublisher, StatePublisher>();
         services.AddSingleton<IMessageRouter, MessageRouter>();
 
         services.AddSingleton<ISettingsService, SettingsService>();
@@ -25,27 +27,40 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<IAppCatalog, AppCatalog>();
         services.AddSingleton<IAppIdentityResolver, AppIdentityResolver>();
         services.AddSingleton<IWindowTracker, WindowTracker>();
+        // Services with a lifecycle are started by ShellRuntime BEFORE the controllers (dependency order = declaration order).
+        services.AddSingleton<IShellService>(sp => (IShellService)sp.GetRequiredService<IWindowTracker>());
         services.AddSingleton<IDynamicResourceProvider, DynamicResourceRouter>();
 
         // Order matters: infrastructure first so initial-state pushes find their dependencies ready.
-        services.AddSingleton<IShellController, SurfaceController>();
-        services.AddSingleton<IShellController, SystemController>();
-        services.AddSingleton<IShellController, AppsController>();
-        services.AddSingleton<IShellController, ActiveAppController>();
-        services.AddSingleton<IShellController, DockController>();
-        services.AddSingleton<IShellController, StatusController>();
-        services.AddSingleton<IShellController, MediaController>();
-        services.AddSingleton<IShellController, TrayController>();
-        services.AddSingleton<IShellController, OverlayController>();
-        services.AddSingleton<IShellController, HotkeyController>();
-        services.AddSingleton<IShellController, HotCornerController>();
-        services.AddSingleton<IShellController, SearchController>();
-        services.AddSingleton<IShellController, MissionControlController>();
-        services.AddSingleton<IShellController, DesktopController>();
-        services.AddSingleton<IShellController, WeatherController>();
-        services.AddSingleton<IShellController, RemindersController>();
+        services.AddController<SurfaceController>();
+        services.AddController<SystemController>();
+        services.AddController<AppsController>();
+        services.AddController<ActiveAppController>();
+        services.AddController<DockController>();
+        services.AddController<StatusController>();
+        services.AddController<MediaController>();
+        services.AddController<TrayController>();
+        services.AddController<OverlayController>();
+        services.AddController<HotkeyController>();
+        services.AddController<HotCornerController>();
+        services.AddController<SearchController>();
+        services.AddController<MissionControlController>();
+        services.AddController<DesktopController>();
+        services.AddController<WeatherController>();
+        services.AddController<RemindersController>();
 
         services.AddSingleton<ShellRuntime>();
         return services;
     }
+
+    /// <summary>
+    /// Registers a controller whose construction failure (a platform port that throws in its constructor, a missing dependency) must not take the whole app down:
+    /// it is replaced by a <see cref="FailedController"/> that ShellRuntime reports and skips.
+    /// </summary>
+    private static IServiceCollection AddController<T>(this IServiceCollection services) where T : class, IShellController =>
+        services.AddSingleton<IShellController>(sp =>
+        {
+            try { return ActivatorUtilities.CreateInstance<T>(sp); }
+            catch (Exception ex) { return new FailedController(typeof(T).Name, ex); }
+        });
 }

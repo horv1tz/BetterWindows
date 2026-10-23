@@ -143,7 +143,6 @@ export interface AppIdParams {
 
 export interface AppLaunchParams {
   appId: string;
-  args?: string;
 }
 
 export interface AppList {
@@ -434,6 +433,8 @@ export interface McSnapshot {
   desktops: DesktopInfo[];
   desktopsSupported: boolean;
   windows: McWindow[];
+  /** Monotonic per overlay show. The UI drops a snapshot or mc.changed whose rev is lower than the last one applied. */
+  rev: number;
 }
 
 export interface McSnapshotParams {
@@ -533,8 +534,13 @@ export interface NetworkState {
 }
 
 export interface OpenParams {
-  /** URL, file/folder path or ms-settings: URI; opened via the shell. */
+  /** http(s) URL or ms-settings: URI ONLY; any path or other scheme is rejected with badRequest. Files and folders are opened only by id (search.perform, desktop.open, dock.activate, apps.reveal, dock.revealInExplorer). */
   target: string;
+}
+
+export interface OverlayCloseParams {
+  /** OverlayShow.token of the show being closed. The host ignores a close whose token is not the current one (stale animation finishing after a re-show). */
+  token: number;
 }
 
 export interface OverlayRequest {
@@ -588,10 +594,6 @@ export interface PopoverRequest {
 
 export interface PowerParams {
   action: PowerAction;
-}
-
-export interface QuitParams {
-  restoreTaskbar: boolean;
 }
 
 export interface Rect {
@@ -717,7 +719,7 @@ export interface SettingsOpenParams {
 }
 
 export interface SettingsPatchParams {
-  /** A JSON object deep-merged into the settings (objects merge, arrays/primitives replace). */
+  /** RFC 7386 JSON Merge Patch applied to the serialised current Settings: objects merge recursively (including map<> fields), arrays and primitives replace, null DELETES the key (nullable -> null, non-nullable -> its default, map entry removed). A key that does not exist in Settings -> badRequest naming the path. 'version' is never patchable. Patch <= 256 KB. The host validates/clamps (see docs/IPC.md section 12) and returns the stored value; settings.changed carries the same value. */
   patch?: unknown;
 }
 
@@ -763,6 +765,7 @@ export interface SurfaceInit {
   glassOverflow: boolean;
 }
 
+/** Informational only: the host IGNORES surface/monitorId for identity (it uses the SurfaceId it assigned when it attached the WebView) and rejects a mismatch with badRequest. */
 export interface SurfaceReadyParams {
   surface: SurfaceKind;
   monitorId?: string;
@@ -1308,6 +1311,7 @@ export function defaultMcSnapshot(): McSnapshot {
     desktops: [],
     desktopsSupported: false,
     windows: [],
+    rev: 0,
   };
 }
 
@@ -1414,6 +1418,12 @@ export function defaultOpenParams(): OpenParams {
   };
 }
 
+export function defaultOverlayCloseParams(): OverlayCloseParams {
+  return {
+    token: 0,
+  };
+}
+
 export function defaultOverlayRequest(): OverlayRequest {
   return {
     mode: 'spotlight',
@@ -1466,12 +1476,6 @@ export function defaultPopoverRequest(): PopoverRequest {
 export function defaultPowerParams(): PowerParams {
   return {
     action: 'lock',
-  };
-}
-
-export function defaultQuitParams(): QuitParams {
-  return {
-    restoreTaskbar: true,
   };
 }
 
@@ -1839,9 +1843,9 @@ export interface HostEvents {
   'reminders.changed': ReminderList;
   /** A reminder's due time passed (fires once). */
   'reminders.due': Reminder;
-  /** Sent to the overlay surface after the host has shown/positioned the overlay window. */
+  /** Published by the HOST (SurfaceManager) after it has shown/positioned the overlay window; never posted to a page that has not completed surface.ready. */
   'overlay.show': OverlayShow;
-  /** Dismiss whatever is open (hotkey toggled, focus lost, another app activated). */
+  /** Published by the HOST when IT hides the overlay (hotkey toggle, deactivation, monitor change). */
   'overlay.hide': void;
   /** Streamed: fast providers answer first, files later. Ignore events whose requestId is not the latest. */
   'search.results': SearchResults;
@@ -1879,6 +1883,7 @@ export interface UiEvents {
 /** Request/response calls (UI -> host): type -> { params, result }. */
 export interface Calls {
   'apps.list': { params: void; result: AppList };
+  /** Launch a catalog or running app by id (no arguments are ever accepted from the UI). Unknown ids -> notFound. */
   'apps.launch': { params: AppLaunchParams; result: void };
   /** Show the app's exe/shortcut in Explorer. */
   'apps.reveal': { params: AppIdParams; result: void };
@@ -1907,8 +1912,8 @@ export interface Calls {
   'reminders.remove': { params: IdParams; result: void };
   /** Any surface asks the host to open the overlay (e.g. menubar -> controlCenter popover). Anchor is translated to overlay coordinates. */
   'overlay.open': { params: OverlayRequest; result: void };
-  /** Overlay UI finished (Esc, backdrop click, item chosen). Host hides the window. */
-  'overlay.close': { params: void; result: void };
+  /** UI-initiated hide: the UI plays its exit animation, THEN calls overlay.close {token}. Host-initiated hides (hotkey toggle, deactivation, monitor change) post overlay.hide and raise ISurfaceManager.OverlayHidden. */
+  'overlay.close': { params: OverlayCloseParams; result: void };
   /** Starts a search; results arrive as search.results. Starting a new query cancels the previous one. */
   'search.query': { params: SearchQueryParams; result: void };
   'search.cancel': { params: SearchCancelParams; result: void };
@@ -1927,8 +1932,8 @@ export interface Calls {
   'tray.click': { params: TrayClickParams; result: void };
   'system.power': { params: PowerParams; result: void };
   'system.open': { params: OpenParams; result: void };
-  /** Restore the Windows taskbar (unless false) and exit. */
-  'system.quit': { params: QuitParams; result: void };
+  /** ALWAYS restores the taskbar and desktop icons, then exits. */
+  'system.quit': { params: void; result: void };
   /** Temporarily show/hide the native taskbar without changing settings. */
   'system.showTaskbar': { params: ShowTaskbarParams; result: void };
   'system.about': { params: void; result: AboutInfo };
@@ -2012,6 +2017,116 @@ export const STATE_EVENT_TYPES: readonly HostEventType[] = [
   'activeApp.changed',
   'dock.state',
 ];
+/** Which state events each surface kind receives right after surface.ready (the mock host pushes exactly these). */
+export const INITIAL_STATE: Record<SurfaceKind, readonly HostEventType[]> = {
+  dock: ['theme.changed', 'settings.changed', 'locale.changed', 'dock.state'],
+  menubar: ['theme.changed', 'settings.changed', 'locale.changed', 'status.battery', 'status.network', 'status.audio', 'status.brightness', 'status.bluetooth', 'media.state', 'tray.state', 'activeApp.changed'],
+  overlay: ['apps.changed', 'theme.changed', 'settings.changed', 'locale.changed', 'reminders.changed', 'status.battery', 'status.network', 'status.audio', 'status.brightness', 'status.bluetooth', 'media.state', 'activeApp.changed', 'dock.state'],
+  desktop: ['theme.changed', 'settings.changed', 'locale.changed', 'desktop.state', 'reminders.changed', 'status.battery', 'status.bluetooth', 'media.state'],
+  settings: ['theme.changed', 'settings.changed', 'locale.changed'],
+};
+/** Surface kinds allowed to send each restricted call / ui event (absent = all). The host answers others with code "forbidden". */
+export const CALL_SURFACES: Partial<Record<CallType | UiEventType, readonly SurfaceKind[]>> = {
+  'apps.list': ['overlay', 'settings'],
+  'apps.launch': ['dock', 'overlay'],
+  'apps.reveal': ['dock', 'overlay', 'settings'],
+  'surface.resize': ['dock'],
+  'surface.shape': ['dock', 'menubar'],
+  'settings.patch': ['overlay', 'settings'],
+  'settings.openWindow': ['overlay', 'settings'],
+  'desktop.moveIcon': ['desktop', 'overlay', 'settings'],
+  'desktop.open': ['desktop', 'overlay', 'settings'],
+  'desktop.addShortcut': ['desktop', 'overlay', 'settings'],
+  'desktop.removeShortcut': ['desktop', 'overlay', 'settings'],
+  'desktop.setWallpaper': ['desktop', 'overlay', 'settings'],
+  'desktop.moveWidget': ['desktop', 'overlay', 'settings'],
+  'desktop.addWidget': ['desktop', 'overlay', 'settings'],
+  'desktop.removeWidget': ['desktop', 'overlay', 'settings'],
+  'desktop.updateWidget': ['desktop', 'overlay', 'settings'],
+  'weather.get': ['desktop', 'overlay', 'settings'],
+  'weather.search': ['settings'],
+  'weather.setLocation': ['settings'],
+  'reminders.list': ['desktop', 'overlay'],
+  'reminders.add': ['desktop', 'overlay'],
+  'reminders.update': ['desktop', 'overlay'],
+  'reminders.remove': ['desktop', 'overlay'],
+  'overlay.open': ['dock', 'menubar', 'desktop', 'overlay'],
+  'overlay.close': ['overlay'],
+  'search.query': ['overlay'],
+  'search.cancel': ['overlay'],
+  'search.perform': ['overlay'],
+  'search.recent': ['overlay'],
+  'search.preview': ['overlay'],
+  'audio.setVolume': ['overlay', 'settings'],
+  'audio.setMuted': ['overlay', 'settings'],
+  'audio.setDevice': ['overlay', 'settings'],
+  'brightness.set': ['overlay', 'settings'],
+  'theme.setPreference': ['overlay', 'settings'],
+  'media.control': ['overlay', 'desktop'],
+  'tray.click': ['menubar', 'overlay'],
+  'system.power': ['overlay', 'settings'],
+  'system.open': ['overlay', 'settings'],
+  'system.quit': ['overlay', 'settings'],
+  'system.showTaskbar': ['overlay', 'settings'],
+  'system.about': ['overlay', 'settings'],
+  'diag.report': ['settings'],
+  'system.pickPath': ['settings'],
+  'system.monitors': ['settings'],
+  'dock.activate': ['dock', 'overlay', 'settings'],
+  'dock.activateWindow': ['dock', 'overlay', 'settings'],
+  'dock.closeWindow': ['dock', 'overlay', 'settings'],
+  'dock.pin': ['dock', 'overlay', 'settings'],
+  'dock.unpin': ['dock', 'overlay', 'settings'],
+  'dock.reorder': ['dock', 'overlay', 'settings'],
+  'dock.newWindow': ['dock', 'overlay', 'settings'],
+  'dock.quit': ['dock', 'overlay', 'settings'],
+  'dock.hide': ['dock', 'overlay', 'settings'],
+  'dock.revealInExplorer': ['dock', 'overlay', 'settings'],
+  'mc.snapshot': ['overlay'],
+  'mc.activateWindow': ['overlay'],
+  'mc.closeWindow': ['overlay'],
+  'mc.switchDesktop': ['overlay'],
+  'mc.moveWindow': ['overlay'],
+  'mc.createDesktop': ['overlay'],
+  'mc.removeDesktop': ['overlay'],
+  'dock.pinPath': ['dock', 'overlay', 'settings'],
+};
+/** Validation limits declared in protocol JSON. Key = "TypeName.fieldName". */
+export const SETTINGS_LIMITS: Record<string, { min?: number; max?: number; maxItems?: number; maxLength?: number; pattern?: string }> = {
+  'AppearanceSettings.accent': {"pattern":"^(system|#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?)$"},
+  'PinnedItem.target': {"maxLength":4096},
+  'DockSettings.iconSize': {"min":32,"max":128},
+  'DockSettings.magnifiedSize': {"min":32,"max":192},
+  'DockSettings.pins': {"maxItems":100},
+  'SpotlightSettings.hotkey': {"maxLength":64},
+  'SpotlightSettings.providers': {"maxItems":16},
+  'SpotlightSettings.webSearchUrl': {"maxLength":512},
+  'SpotlightSettings.maxResults': {"min":1,"max":30},
+  'HotkeySettings.launchpad': {"maxLength":64},
+  'HotkeySettings.missionControl': {"maxLength":64},
+  'HotkeySettings.exit': {"maxLength":64},
+  'HotkeySettings.toggleTaskbar': {"maxLength":64},
+  'HotCornerSettings.dwellMs': {"min":50,"max":2000},
+  'DesktopShortcut.name': {"maxLength":256},
+  'DesktopShortcut.target': {"maxLength":4096},
+  'WidgetInstance.x': {"min":-16384,"max":16384},
+  'WidgetInstance.y': {"min":-16384,"max":16384},
+  'DesktopSettings.wallpaperPath': {"maxLength":4096},
+  'DesktopSettings.iconSize': {"min":32,"max":128},
+  'DesktopSettings.shortcuts': {"maxItems":500},
+  'DesktopSettings.widgets': {"maxItems":100},
+  'DesktopSettings.wallpapers': {"maxItems":64},
+  'DesktopSettings.placements': {"maxItems":2000},
+  'WeatherSettings.locationName': {"maxLength":256},
+  'WeatherSettings.latitude': {"min":-90,"max":90},
+  'WeatherSettings.longitude': {"min":-180,"max":180},
+  'LaunchpadFolder.name': {"maxLength":128},
+  'LaunchpadFolder.appIds': {"maxItems":200},
+  'LaunchpadSettings.folders': {"maxItems":100},
+  'LaunchpadSettings.order': {"maxItems":2000},
+  'LaunchpadSettings.hidden': {"maxItems":2000},
+  'GeneralSettings.language': {"pattern":"^(auto|en|ru)$"},
+};
 export const CALL_TYPES: readonly CallType[] = [
   'apps.list',
   'apps.launch',

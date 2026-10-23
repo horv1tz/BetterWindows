@@ -130,7 +130,11 @@
     "McSnapshot": {
       "desktops": "DesktopInfo[]",
       "desktopsSupported": "bool",
-      "windows": "McWindow[]"
+      "windows": "McWindow[]",
+      "rev": {
+        "type": "int",
+        "doc": "Monotonic per overlay show. The UI drops a snapshot or mc.changed whose rev is lower than the last one applied."
+      }
     },
     "McSnapshotParams": {
       "monitorId": {
@@ -162,13 +166,21 @@
       "dir": "host",
       "payload": "ActiveAppState",
       "doc": "Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name.",
-      "state": true
+      "state": true,
+      "initial": [
+        "menubar",
+        "overlay"
+      ]
     },
     "dock.state": {
       "dir": "host",
       "payload": "DockState",
       "doc": "Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms).",
-      "state": true
+      "state": true,
+      "initial": [
+        "dock",
+        "overlay"
+      ]
     },
     "dock.reveal": {
       "dir": "host",
@@ -194,79 +206,155 @@
     "dock.activate": {
       "params": "DockItemParams",
       "result": null,
-      "doc": "Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer."
+      "doc": "Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer.",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.activateWindow": {
       "params": "WindowHandleParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.closeWindow": {
       "params": "WindowHandleParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.pin": {
       "params": "DockPinParams",
       "result": null,
-      "doc": "Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps."
+      "doc": "Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps.",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.unpin": {
       "params": "DockItemParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.reorder": {
       "params": "DockReorderParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.newWindow": {
       "params": "DockItemParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.quit": {
       "params": "DockItemParams",
       "result": null,
-      "doc": "Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu)."
+      "doc": "Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu).",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.hide": {
       "params": "DockItemParams",
       "result": null,
-      "doc": "Minimise all windows of the app. itemId may be ANY running app id (used by the app menu)."
+      "doc": "Minimise all windows of the app. itemId may be ANY running app id (used by the app menu).",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "dock.revealInExplorer": {
       "params": "DockItemParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     },
     "mc.snapshot": {
       "params": "McSnapshotParams",
-      "result": "McSnapshot"
+      "result": "McSnapshot",
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.activateWindow": {
       "params": "WindowHandleParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.closeWindow": {
       "params": "WindowHandleParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.switchDesktop": {
       "params": "DesktopIdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.moveWindow": {
       "params": "McMoveParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.createDesktop": {
       "params": null,
-      "result": "DesktopInfo"
+      "result": "DesktopInfo",
+      "surfaces": [
+        "overlay"
+      ]
     },
     "mc.removeDesktop": {
       "params": "DesktopIdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "dock.pinPath": {
       "params": "DockPinPathParams",
       "result": null,
-      "doc": "Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>)."
+      "doc": "Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>).",
+      "surfaces": [
+        "dock",
+        "overlay",
+        "settings"
+      ]
     }
   }
 }

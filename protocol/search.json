@@ -95,25 +95,40 @@
     "search.query": {
       "params": "SearchQueryParams",
       "result": null,
-      "doc": "Starts a search; results arrive as search.results. Starting a new query cancels the previous one."
+      "doc": "Starts a search; results arrive as search.results. Starting a new query cancels the previous one.",
+      "surfaces": [
+        "overlay"
+      ]
     },
     "search.cancel": {
       "params": "SearchCancelParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "search.perform": {
       "params": "SearchPerformParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "overlay"
+      ]
     },
     "search.recent": {
       "params": null,
       "result": "SearchRecent",
-      "doc": "Shown when the query is empty."
+      "doc": "Shown when the query is empty.",
+      "surfaces": [
+        "overlay"
+      ]
     },
     "search.preview": {
       "params": "SearchPreviewParams",
       "result": "SearchPreview",
-      "doc": "Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable."
+      "doc": "Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable.",
+      "surfaces": [
+        "overlay"
+      ]
     }
   }
 }

@@ -5,12 +5,12 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## apps
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `apps.changed` | state event (host→ui) | `AppList` |  | The installed-app catalog changed (install/uninstall). |
-| `apps.list` | call (ui→host) | – | `AppList` |  |
-| `apps.launch` | call (ui→host) | `AppLaunchParams` | – |  |
-| `apps.reveal` | call (ui→host) | `AppIdParams` | – | Show the app's exe/shortcut in Explorer. |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `apps.changed` | state event (host→ui) | `AppList` |  | initial: overlay | The installed-app catalog changed (install/uninstall). |
+| `apps.list` | call (ui→host) | – | `AppList` | overlay, settings |  |
+| `apps.launch` | call (ui→host) | `AppLaunchParams` | – | dock, overlay | Launch a catalog or running app by id (no arguments are ever accepted from the UI). Unknown ids -> notFound. |
+| `apps.reveal` | call (ui→host) | `AppIdParams` | – | dock, overlay, settings | Show the app's exe/shortcut in Explorer. |
 
 **`AppEntry`**
 
@@ -35,7 +35,6 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | field | type | default | notes |
 |---|---|---|---|
 | `appId` | `string` |  |  |
-| `args` | `string?` |  |  |
 
 **`AppIdParams`**
 
@@ -45,20 +44,20 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## common
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `surface.resize` | event (ui→host) | `SurfaceResizeParams` |  | Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes. |
-| `surface.log` | event (ui→host) | `LogParams` |  | UI log line, forwarded to the host log. |
-| `surface.visibility` | event (host→ui) | `SurfaceVisibility` |  | The host shows/hides the surface window (fullscreen app, overlay open, ...). |
-| `theme.changed` | state event (host→ui) | `ThemeState` |  |  |
-| `settings.changed` | state event (host→ui) | `Settings` |  | Full settings after any change (from any surface, file edit, or reset). |
-| `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. |
-| `settings.navigate` | event (host→ui) | `SettingsOpenParams` |  | Settings window is already open: switch to this page. |
-| `locale.changed` | state event (host→ui) | `LocaleState` |  | The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value. |
-| `surface.ready` | call (ui→host) | `SurfaceReadyParams` | `SurfaceInit` | First message every surface sends. After replying the host pushes all current state events to this surface. |
-| `settings.get` | call (ui→host) | – | `Settings` |  |
-| `settings.patch` | call (ui→host) | `SettingsPatchParams` | `Settings` | Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result. |
-| `settings.openWindow` | call (ui→host) | `SettingsOpenParams` | – | Open (or focus) the settings window, optionally on a page. |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `surface.resize` | event (ui→host) | `SurfaceResizeParams` |  | dock | Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes. |
+| `surface.log` | event (ui→host) | `LogParams` |  | all | UI log line, forwarded to the host log. |
+| `surface.visibility` | event (host→ui) | `SurfaceVisibility` |  |  | The host shows/hides the surface window (fullscreen app, overlay open, ...). |
+| `theme.changed` | state event (host→ui) | `ThemeState` |  | initial: dock, menubar, overlay, desktop, settings |  |
+| `settings.changed` | state event (host→ui) | `Settings` |  | initial: dock, menubar, overlay, desktop, settings | Full settings after any change (from any surface, file edit, or reset). |
+| `surface.shape` | event (ui→host) | `SurfaceShapeParams` |  | dock, menubar | The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. |
+| `settings.navigate` | event (host→ui) | `SettingsOpenParams` |  |  | Settings window is already open: switch to this page. |
+| `locale.changed` | state event (host→ui) | `LocaleState` |  | initial: dock, menubar, overlay, desktop, settings | The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value. |
+| `surface.ready` | call (ui→host) | `SurfaceReadyParams` | `SurfaceInit` | all | First message every surface sends. After replying the host pushes all current state events to this surface. |
+| `settings.get` | call (ui→host) | – | `Settings` | all |  |
+| `settings.patch` | call (ui→host) | `SettingsPatchParams` | `Settings` | overlay, settings | Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result. |
+| `settings.openWindow` | call (ui→host) | `SettingsOpenParams` | – | overlay, settings | Open (or focus) the settings window, optionally on a page. |
 
 **enum `SurfaceKind`**: `dock` · `menubar` · `overlay` · `desktop` · `settings` — The five WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop, #/settings) selects the surface. 'settings' is a normal resizable window (System-Settings-like preferences + onboarding), opened from the Apple menu / tray icon.
 
@@ -116,7 +115,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `globalMenu` | `bool` |  |  |
 | `liveThumbnails` | `bool` |  |  |
 
-**`SurfaceReadyParams`**
+**`SurfaceReadyParams`** — Informational only: the host IGNORES surface/monitorId for identity (it uses the SurfaceId it assigned when it attached the WebView) and rejects a mismatch with badRequest.
 
 | field | type | default | notes |
 |---|---|---|---|
@@ -165,7 +164,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `patch` | `any` |  | A JSON object deep-merged into the settings (objects merge, arrays/primitives replace). |
+| `patch` | `any` |  | RFC 7386 JSON Merge Patch applied to the serialised current Settings: objects merge recursively (including map<> fields), arrays and primitives replace, null DELETES the key (nullable -> null, non-nullable -> its default, map entry removed). A key that does not exist in Settings -> badRequest naming the path. 'version' is never patchable. Patch <= 256 KB. The host validates/clamps (see docs/IPC.md section 12) and returns the stored value; settings.changed carries the same value. |
 
 **`ShapeRect`**
 
@@ -199,27 +198,27 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## desktop
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `desktop.state` | state event (host→ui) | `DesktopState` |  |  |
-| `reminders.changed` | state event (host→ui) | `ReminderList` |  |  |
-| `reminders.due` | event (host→ui) | `Reminder` |  | A reminder's due time passed (fires once). |
-| `desktop.moveIcon` | call (ui→host) | `DesktopMoveParams` | – |  |
-| `desktop.open` | call (ui→host) | `IdParams` | – |  |
-| `desktop.addShortcut` | call (ui→host) | `AddShortcutParams` | `DesktopIcon` |  |
-| `desktop.removeShortcut` | call (ui→host) | `IdParams` | – |  |
-| `desktop.setWallpaper` | call (ui→host) | `SetWallpaperParams` | – |  |
-| `desktop.moveWidget` | call (ui→host) | `MoveWidgetParams` | – |  |
-| `desktop.addWidget` | call (ui→host) | `AddWidgetParams` | `WidgetInstance` |  |
-| `desktop.removeWidget` | call (ui→host) | `IdParams` | – |  |
-| `desktop.updateWidget` | call (ui→host) | `UpdateWidgetParams` | `WidgetInstance` |  |
-| `weather.get` | call (ui→host) | `WeatherGetParams` | `WeatherSnapshot` |  |
-| `weather.search` | call (ui→host) | `WeatherSearchParams` | `WeatherLocations` |  |
-| `weather.setLocation` | call (ui→host) | `WeatherLocation` | – |  |
-| `reminders.list` | call (ui→host) | – | `ReminderList` |  |
-| `reminders.add` | call (ui→host) | `ReminderAddParams` | `Reminder` |  |
-| `reminders.update` | call (ui→host) | `ReminderUpdateParams` | `Reminder` |  |
-| `reminders.remove` | call (ui→host) | `IdParams` | – |  |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `desktop.state` | state event (host→ui) | `DesktopState` |  | initial: desktop |  |
+| `reminders.changed` | state event (host→ui) | `ReminderList` |  | initial: overlay, desktop |  |
+| `reminders.due` | event (host→ui) | `Reminder` |  |  | A reminder's due time passed (fires once). |
+| `desktop.moveIcon` | call (ui→host) | `DesktopMoveParams` | – | desktop, overlay, settings |  |
+| `desktop.open` | call (ui→host) | `IdParams` | – | desktop, overlay, settings |  |
+| `desktop.addShortcut` | call (ui→host) | `AddShortcutParams` | `DesktopIcon` | desktop, overlay, settings |  |
+| `desktop.removeShortcut` | call (ui→host) | `IdParams` | – | desktop, overlay, settings |  |
+| `desktop.setWallpaper` | call (ui→host) | `SetWallpaperParams` | – | desktop, overlay, settings |  |
+| `desktop.moveWidget` | call (ui→host) | `MoveWidgetParams` | – | desktop, overlay, settings |  |
+| `desktop.addWidget` | call (ui→host) | `AddWidgetParams` | `WidgetInstance` | desktop, overlay, settings |  |
+| `desktop.removeWidget` | call (ui→host) | `IdParams` | – | desktop, overlay, settings |  |
+| `desktop.updateWidget` | call (ui→host) | `UpdateWidgetParams` | `WidgetInstance` | desktop, overlay, settings |  |
+| `weather.get` | call (ui→host) | `WeatherGetParams` | `WeatherSnapshot` | desktop, overlay, settings |  |
+| `weather.search` | call (ui→host) | `WeatherSearchParams` | `WeatherLocations` | settings |  |
+| `weather.setLocation` | call (ui→host) | `WeatherLocation` | – | settings |  |
+| `reminders.list` | call (ui→host) | – | `ReminderList` | desktop, overlay |  |
+| `reminders.add` | call (ui→host) | `ReminderAddParams` | `Reminder` | desktop, overlay |  |
+| `reminders.update` | call (ui→host) | `ReminderUpdateParams` | `Reminder` | desktop, overlay |  |
+| `reminders.remove` | call (ui→host) | `IdParams` | – | desktop, overlay |  |
 
 **enum `DesktopIconKind`**: `shortcut` · `file` · `folder` · `special`
 
@@ -341,7 +340,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `force` | `bool` |  |  |
+| `force` | `bool` | `false` |  |
 
 **`WeatherLocation`**
 
@@ -404,12 +403,12 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## overlay
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `overlay.show` | event (host→ui) | `OverlayShow` |  | Sent to the overlay surface after the host has shown/positioned the overlay window. |
-| `overlay.hide` | event (host→ui) | – |  | Dismiss whatever is open (hotkey toggled, focus lost, another app activated). |
-| `overlay.open` | call (ui→host) | `OverlayRequest` | – | Any surface asks the host to open the overlay (e.g. menubar -> controlCenter popover). Anchor is translated to overlay coordinates. |
-| `overlay.close` | call (ui→host) | – | – | Overlay UI finished (Esc, backdrop click, item chosen). Host hides the window. |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `overlay.show` | event (host→ui) | `OverlayShow` |  |  | Published by the HOST (SurfaceManager) after it has shown/positioned the overlay window; never posted to a page that has not completed surface.ready. |
+| `overlay.hide` | event (host→ui) | – |  |  | Published by the HOST when IT hides the overlay (hotkey toggle, deactivation, monitor change). |
+| `overlay.open` | call (ui→host) | `OverlayRequest` | – | dock, menubar, desktop, overlay | Any surface asks the host to open the overlay (e.g. menubar -> controlCenter popover). Anchor is translated to overlay coordinates. |
+| `overlay.close` | call (ui→host) | `OverlayCloseParams` | – | overlay | UI-initiated hide: the UI plays its exit animation, THEN calls overlay.close {token}. Host-initiated hides (hotkey toggle, deactivation, monitor change) post overlay.hide and raise ISurfaceManager.OverlayHidden. |
 
 **enum `OverlayMode`**: `spotlight` · `launchpad` · `missionControl` · `popover` — What the full-screen overlay surface currently shows.
 
@@ -441,16 +440,22 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `monitorId` | `string` |  |  |
 | `token` | `int` |  | Increments on every show; stale async results can be dropped. |
 
+**`OverlayCloseParams`**
+
+| field | type | default | notes |
+|---|---|---|---|
+| `token` | `int` |  | OverlayShow.token of the show being closed. The host ignores a close whose token is not the current one (stale animation finishing after a re-show). |
+
 ## search
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `search.results` | event (host→ui) | `SearchResults` |  | Streamed: fast providers answer first, files later. Ignore events whose requestId is not the latest. |
-| `search.query` | call (ui→host) | `SearchQueryParams` | – | Starts a search; results arrive as search.results. Starting a new query cancels the previous one. |
-| `search.cancel` | call (ui→host) | `SearchCancelParams` | – |  |
-| `search.perform` | call (ui→host) | `SearchPerformParams` | – |  |
-| `search.recent` | call (ui→host) | – | `SearchRecent` | Shown when the query is empty. |
-| `search.preview` | call (ui→host) | `SearchPreviewParams` | `SearchPreview` | Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable. |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `search.results` | event (host→ui) | `SearchResults` |  |  | Streamed: fast providers answer first, files later. Ignore events whose requestId is not the latest. |
+| `search.query` | call (ui→host) | `SearchQueryParams` | – | overlay | Starts a search; results arrive as search.results. Starting a new query cancels the previous one. |
+| `search.cancel` | call (ui→host) | `SearchCancelParams` | – | overlay |  |
+| `search.perform` | call (ui→host) | `SearchPerformParams` | – | overlay |  |
+| `search.recent` | call (ui→host) | – | `SearchRecent` | overlay | Shown when the query is empty. |
+| `search.preview` | call (ui→host) | `SearchPreviewParams` | `SearchPreview` | overlay | Lazy preview for the selected result (text file head, image thumbnail url, ...). kind=none if unavailable. |
 
 **enum `SearchProviderId`**: `apps` · `files` · `calc` · `settings` · `commands` · `web` · `windows`
 
@@ -730,22 +735,22 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## status
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `status.battery` | state event (host→ui) | `BatteryState` |  |  |
-| `status.network` | state event (host→ui) | `NetworkState` |  |  |
-| `status.audio` | state event (host→ui) | `AudioState` |  |  |
-| `status.brightness` | state event (host→ui) | `BrightnessState` |  |  |
-| `status.bluetooth` | state event (host→ui) | `BluetoothState` |  |  |
-| `media.state` | state event (host→ui) | `MediaState` |  |  |
-| `tray.state` | state event (host→ui) | `TrayState` |  | Third-party notification-area icons (needs features.trayHosting; otherwise supported=false). |
-| `audio.setVolume` | call (ui→host) | `VolumeParams` | – |  |
-| `audio.setMuted` | call (ui→host) | `MuteParams` | – |  |
-| `audio.setDevice` | call (ui→host) | `AudioDeviceParams` | – |  |
-| `brightness.set` | call (ui→host) | `BrightnessParams` | – |  |
-| `theme.setPreference` | call (ui→host) | `ThemePreferenceParams` | – | Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme. |
-| `media.control` | call (ui→host) | `MediaControlParams` | – |  |
-| `tray.click` | call (ui→host) | `TrayClickParams` | – |  |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `status.battery` | state event (host→ui) | `BatteryState` |  | initial: menubar, overlay, desktop |  |
+| `status.network` | state event (host→ui) | `NetworkState` |  | initial: menubar, overlay |  |
+| `status.audio` | state event (host→ui) | `AudioState` |  | initial: menubar, overlay |  |
+| `status.brightness` | state event (host→ui) | `BrightnessState` |  | initial: menubar, overlay |  |
+| `status.bluetooth` | state event (host→ui) | `BluetoothState` |  | initial: menubar, overlay, desktop |  |
+| `media.state` | state event (host→ui) | `MediaState` |  | initial: menubar, overlay, desktop |  |
+| `tray.state` | state event (host→ui) | `TrayState` |  | initial: menubar | Third-party notification-area icons (needs features.trayHosting; otherwise supported=false). |
+| `audio.setVolume` | call (ui→host) | `VolumeParams` | – | overlay, settings |  |
+| `audio.setMuted` | call (ui→host) | `MuteParams` | – | overlay, settings |  |
+| `audio.setDevice` | call (ui→host) | `AudioDeviceParams` | – | overlay, settings |  |
+| `brightness.set` | call (ui→host) | `BrightnessParams` | – | overlay, settings |  |
+| `theme.setPreference` | call (ui→host) | `ThemePreferenceParams` | – | overlay, settings | Equivalent to settings.patch { appearance: { mode } }. It NEVER writes the Windows theme. |
+| `media.control` | call (ui→host) | `MediaControlParams` | – | overlay, desktop |  |
+| `tray.click` | call (ui→host) | `TrayClickParams` | – | menubar, overlay |  |
 
 **enum `NetworkKind`**: `none` · `wifi` · `ethernet` · `cellular` · `other`
 
@@ -898,16 +903,16 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## system
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `system.power` | call (ui→host) | `PowerParams` | – |  |
-| `system.open` | call (ui→host) | `OpenParams` | – |  |
-| `system.quit` | call (ui→host) | `QuitParams` | – | Restore the Windows taskbar (unless false) and exit. |
-| `system.showTaskbar` | call (ui→host) | `ShowTaskbarParams` | – | Temporarily show/hide the native taskbar without changing settings. |
-| `system.about` | call (ui→host) | – | `AboutInfo` |  |
-| `diag.report` | call (ui→host) | – | `DiagReport` | Runs every platform self-check (also: BetterWindows.exe --diagnose). |
-| `system.pickPath` | call (ui→host) | `PickPathParams` | `PickPathResult` | Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). |
-| `system.monitors` | call (ui→host) | – | `MonitorList` | All connected monitors (for per-monitor wallpaper/widget pickers in the settings window). |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `system.power` | call (ui→host) | `PowerParams` | – | overlay, settings |  |
+| `system.open` | call (ui→host) | `OpenParams` | – | overlay, settings |  |
+| `system.quit` | call (ui→host) | – | – | overlay, settings | ALWAYS restores the taskbar and desktop icons, then exits. |
+| `system.showTaskbar` | call (ui→host) | `ShowTaskbarParams` | – | overlay, settings | Temporarily show/hide the native taskbar without changing settings. |
+| `system.about` | call (ui→host) | – | `AboutInfo` | overlay, settings |  |
+| `diag.report` | call (ui→host) | – | `DiagReport` | settings | Runs every platform self-check (also: BetterWindows.exe --diagnose). |
+| `system.pickPath` | call (ui→host) | `PickPathParams` | `PickPathResult` | settings | Native open dialog owned by the calling surface's window (the UI cannot obtain filesystem paths any other way: <input type=file> and drag&drop give no path). The dialog is modal to the settings window; other surfaces may not call it (BadRequest). |
+| `system.monitors` | call (ui→host) | – | `MonitorList` | settings | All connected monitors (for per-monitor wallpaper/widget pickers in the settings window). |
 
 **enum `PickKind`**: `file` · `folder` · `image` · `app` — file = any file; folder; image = png/jpg/jpeg/bmp/webp; app = exe/lnk.
 
@@ -921,13 +926,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 | field | type | default | notes |
 |---|---|---|---|
-| `target` | `string` |  | URL, file/folder path or ms-settings: URI; opened via the shell. |
-
-**`QuitParams`**
-
-| field | type | default | notes |
-|---|---|---|---|
-| `restoreTaskbar` | `bool` | `true` |  |
+| `target` | `string` |  | http(s) URL or ms-settings: URI ONLY; any path or other scheme is rejected with badRequest. Files and folders are opened only by id (search.perform, desktop.open, dock.activate, apps.reveal, dock.revealInExplorer). |
 
 **`ShowTaskbarParams`**
 
@@ -966,7 +965,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 |---|---|---|---|
 | `kind` | `PickKind` |  |  |
 | `title` | `string?` |  |  |
-| `multiple` | `bool` |  |  |
+| `multiple` | `bool` | `false` |  |
 
 **`PickPathResult`**
 
@@ -982,32 +981,32 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 
 ## windows
 
-| message | kind | payload / params | result | notes |
-|---|---|---|---|---|
-| `activeApp.changed` | state event (host→ui) | `ActiveAppState` |  | Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name. |
-| `dock.state` | state event (host→ui) | `DockState` |  | Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms). |
-| `dock.reveal` | event (host→ui) | `DockRevealState` |  | Auto-hide: host detected the pointer at the dock edge (true) or leaving (false). |
-| `dock.bounce` | event (host→ui) | `DockBounce` |  |  |
-| `mc.thumbnail` | event (host→ui) | `McThumbnail` |  | A thumbnail became available after mc.snapshot. |
-| `mc.changed` | event (host→ui) | `McSnapshot` |  | Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced >= 100 ms). mc.thumbnail still fills in thumbnails. |
-| `dock.activate` | call (ui→host) | `DockItemParams` | – | Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer. |
-| `dock.activateWindow` | call (ui→host) | `WindowHandleParams` | – |  |
-| `dock.closeWindow` | call (ui→host) | `WindowHandleParams` | – |  |
-| `dock.pin` | call (ui→host) | `DockPinParams` | – | Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps. |
-| `dock.unpin` | call (ui→host) | `DockItemParams` | – |  |
-| `dock.reorder` | call (ui→host) | `DockReorderParams` | – |  |
-| `dock.newWindow` | call (ui→host) | `DockItemParams` | – |  |
-| `dock.quit` | call (ui→host) | `DockItemParams` | – | Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu). |
-| `dock.hide` | call (ui→host) | `DockItemParams` | – | Minimise all windows of the app. itemId may be ANY running app id (used by the app menu). |
-| `dock.revealInExplorer` | call (ui→host) | `DockItemParams` | – |  |
-| `mc.snapshot` | call (ui→host) | `McSnapshotParams` | `McSnapshot` |  |
-| `mc.activateWindow` | call (ui→host) | `WindowHandleParams` | – |  |
-| `mc.closeWindow` | call (ui→host) | `WindowHandleParams` | – |  |
-| `mc.switchDesktop` | call (ui→host) | `DesktopIdParams` | – |  |
-| `mc.moveWindow` | call (ui→host) | `McMoveParams` | – |  |
-| `mc.createDesktop` | call (ui→host) | – | `DesktopInfo` |  |
-| `mc.removeDesktop` | call (ui→host) | `DesktopIdParams` | – |  |
-| `dock.pinPath` | call (ui→host) | `DockPinPathParams` | – | Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>). |
+| message | kind | payload / params | result | allowed from | notes |
+|---|---|---|---|---|---|
+| `activeApp.changed` | state event (host→ui) | `ActiveAppState` |  | initial: menubar, overlay | Foreground app (ignoring BetterWindows' own windows). Drives the menu bar app name. |
+| `dock.state` | state event (host→ui) | `DockState` |  | initial: dock, overlay | Full dock model; pushed on any window/pin/settings change (coalesced to >=50 ms). |
+| `dock.reveal` | event (host→ui) | `DockRevealState` |  |  | Auto-hide: host detected the pointer at the dock edge (true) or leaving (false). |
+| `dock.bounce` | event (host→ui) | `DockBounce` |  |  |  |
+| `mc.thumbnail` | event (host→ui) | `McThumbnail` |  |  | A thumbnail became available after mc.snapshot. |
+| `mc.changed` | event (host→ui) | `McSnapshot` |  |  | Pushed to the overlay while mode=missionControl is shown whenever windows or desktops change (coalesced >= 100 ms). mc.thumbnail still fills in thumbnails. |
+| `dock.activate` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings | Launch if not running; else focus the most recent window (restore if minimised); folders open in Explorer. |
+| `dock.activateWindow` | call (ui→host) | `WindowHandleParams` | – | dock, overlay, settings |  |
+| `dock.closeWindow` | call (ui→host) | `WindowHandleParams` | – | dock, overlay, settings |  |
+| `dock.pin` | call (ui→host) | `DockPinParams` | – | dock, overlay, settings | Pin by app id (from the catalog or a running app). index = position in settings.dock.pins; folders are always appended after apps. |
+| `dock.unpin` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings |  |
+| `dock.reorder` | call (ui→host) | `DockReorderParams` | – | dock, overlay, settings |  |
+| `dock.newWindow` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings |  |
+| `dock.quit` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings | Close all windows of the app (WM_CLOSE). itemId may be ANY running app id, not only a visible dock item (used by the app menu). |
+| `dock.hide` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings | Minimise all windows of the app. itemId may be ANY running app id (used by the app menu). |
+| `dock.revealInExplorer` | call (ui→host) | `DockItemParams` | – | dock, overlay, settings |  |
+| `mc.snapshot` | call (ui→host) | `McSnapshotParams` | `McSnapshot` | overlay |  |
+| `mc.activateWindow` | call (ui→host) | `WindowHandleParams` | – | overlay |  |
+| `mc.closeWindow` | call (ui→host) | `WindowHandleParams` | – | overlay |  |
+| `mc.switchDesktop` | call (ui→host) | `DesktopIdParams` | – | overlay |  |
+| `mc.moveWindow` | call (ui→host) | `McMoveParams` | – | overlay |  |
+| `mc.createDesktop` | call (ui→host) | – | `DesktopInfo` | overlay |  |
+| `mc.removeDesktop` | call (ui→host) | `DesktopIdParams` | – | overlay |  |
+| `dock.pinPath` | call (ui→host) | `DockPinPathParams` | – | dock, overlay, settings | Pin a folder / exe / lnk by path (folders become kind=folder items, exe/lnk become app items with id exe:<path>). |
 
 **enum `DockItemKind`**: `app` · `folder` · `separator`
 
@@ -1140,6 +1139,7 @@ Protocol version **1**. Semantics (envelopes, ordering, coordinates, error codes
 | `desktops` | `DesktopInfo[]` |  |  |
 | `desktopsSupported` | `bool` |  |  |
 | `windows` | `McWindow[]` |  |  |
+| `rev` | `int` |  | Monotonic per overlay show. The UI drops a snapshot or mc.changed whose rev is lower than the last one applied. |
 
 **`McSnapshotParams`**
 

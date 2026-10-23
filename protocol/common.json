@@ -78,7 +78,8 @@
     },
     "SurfaceReadyParams": {
       "surface": "SurfaceKind",
-      "monitorId": "string?"
+      "monitorId": "string?",
+      "$doc": "Informational only: the host IGNORES surface/monitorId for identity (it uses the SurfaceId it assigned when it attached the WebView) and rejects a mismatch with badRequest."
     },
     "SurfaceInit": {
       "$doc": "Everything a surface needs to render its first frame. Returned by surface.ready; the host then also pushes the current state events for the surface.",
@@ -123,7 +124,7 @@
     "SettingsPatchParams": {
       "patch": {
         "type": "any",
-        "doc": "A JSON object deep-merged into the settings (objects merge, arrays/primitives replace)."
+        "doc": "RFC 7386 JSON Merge Patch applied to the serialised current Settings: objects merge recursively (including map<> fields), arrays and primitives replace, null DELETES the key (nullable -> null, non-nullable -> its default, map entry removed). A key that does not exist in Settings -> badRequest naming the path. 'version' is never patchable. Patch <= 256 KB. The host validates/clamps (see docs/IPC.md section 12) and returns the stored value; settings.changed carries the same value."
       }
     },
     "ShapeRect": {
@@ -170,7 +171,10 @@
     "surface.resize": {
       "dir": "ui",
       "payload": "SurfaceResizeParams",
-      "doc": "Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes."
+      "doc": "Dock only: the UI asks for a window of this DIP size (bar + headroom); the host clamps, keeps it centred on its edge, and re-reserves the AppBar for barThickness only. Sent when content/headroom changes.",
+      "surfaces": [
+        "dock"
+      ]
     },
     "surface.log": {
       "dir": "ui",
@@ -185,18 +189,36 @@
     "theme.changed": {
       "dir": "host",
       "payload": "ThemeState",
-      "state": true
+      "state": true,
+      "initial": [
+        "dock",
+        "menubar",
+        "overlay",
+        "desktop",
+        "settings"
+      ]
     },
     "settings.changed": {
       "dir": "host",
       "payload": "Settings",
       "doc": "Full settings after any change (from any surface, file edit, or reset).",
-      "state": true
+      "state": true,
+      "initial": [
+        "dock",
+        "menubar",
+        "overlay",
+        "desktop",
+        "settings"
+      ]
     },
     "surface.shape": {
       "dir": "ui",
       "payload": "SurfaceShapeParams",
-      "doc": "The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces."
+      "doc": "The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces.",
+      "surfaces": [
+        "dock",
+        "menubar"
+      ]
     },
     "settings.navigate": {
       "dir": "host",
@@ -207,7 +229,14 @@
       "dir": "host",
       "payload": "LocaleState",
       "state": true,
-      "doc": "The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value."
+      "doc": "The effective UI locale changed (settings.general.language). SurfaceInit.locale carries the initial value.",
+      "initial": [
+        "dock",
+        "menubar",
+        "overlay",
+        "desktop",
+        "settings"
+      ]
     }
   },
   "calls": {
@@ -223,12 +252,20 @@
     "settings.patch": {
       "params": "SettingsPatchParams",
       "result": "Settings",
-      "doc": "Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result."
+      "doc": "Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result.",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     },
     "settings.openWindow": {
       "params": "SettingsOpenParams",
       "result": null,
-      "doc": "Open (or focus) the settings window, optionally on a page."
+      "doc": "Open (or focus) the settings window, optionally on a page.",
+      "surfaces": [
+        "overlay",
+        "settings"
+      ]
     }
   }
 }

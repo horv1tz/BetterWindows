@@ -43,8 +43,8 @@ Several streams work at the same time, each in its **own git worktree/branch**. 
 
 * Edit only files you own (table below). Need something in a file you don't own? Add it to your final report under
   `contractRequests`, do NOT edit it. The integrator applies requests.
-* **Never change** `protocol/*.json`, generated files, `Core/Platform/Ports.*.cs`, `Core/Services/Contracts.cs`,
-  `Core/Ipc/**`, `Directory.*.props`, the `.sln` or CI. These are frozen contracts. If a contract is wrong or insufficient,
+* **Never change** `protocol/*.json`, generated files, `Core/Platform/Ports.*.cs`, `Core/Services/{Contracts,InputPolicy,AppPaths,AtomicFile}.cs`,
+  `Core/Ipc/**`, `Core/Hosting/**`, `Core/Protocol/*.cs` (hand-written), `tests/**/Support/**`, `Windows/Interop/{MonitorIdentity,SafeEvent}.cs`, `Directory.*.props`, the `.sln` or CI. These are frozen contracts. If a contract is wrong or insufficient,
   work around it and report it.
 * You MAY add new files anywhere inside your own folders, new tests in your own test folders (namespace
   `BetterWindows.Core.Tests.<Area>`), and NuGet/npm dependencies only if listed as allowed for your stream.
@@ -95,8 +95,16 @@ Shared UI helpers (`ui/src/lib/**`, `ui/src/mock/{host,mockBridge,fixtures}.ts`,
   through the reactive `lib/i18n.svelte.ts` (`createT`/`plural`) with a local `strings.ts` holding `en` + `ru`.
 * Tests: every pure-logic class has tests incl. edge cases; controllers are tested through `CoreHarness` (see
   `tests/Core.Tests/Support`) driving the same protocol the UI uses.
-* Security: the UI is untrusted input — validate every call payload (paths, URIs, ids), never execute arbitrary strings.
-  `system.open`/launch targets must be validated (http/https/ms-settings/file paths only).
+* **Security (docs/IPC.md section 14 is normative):** the UI is untrusted. Use `Core/Services/InputPolicy` for every path/URL/id; NEVER pass a UI string to
+  ShellExecute/Process.Start; `system.open` = http(s) URLs and ms-settings URIs only; files/folders open only by id resolved from host data; app ids are resolved through the
+  catalog / tracked windows / paths granted by `system.pickPath`; window handles through `IWindowTracker.Find` (never own windows); no UI-supplied launch arguments; per-surface
+  authorization is the `surfaces` list in the protocol (the router answers `forbidden`).
+* **State events** are published ONLY through `IStatePublisher.Declare(...)` (never hand-write "push on ready", coalescing or dedupe; never compare records with `==`).
+  Transient events use `IEventHub`. Port-event subscribers return in < 1 ms and only `Invalidate()` or `Task.Run` (docs/IPC.md section 13).
+* **Files:** every path comes from `IAppPaths` (never `Environment.GetFolderPath` directly); writes go through `AtomicFile`; tests use `CoreHarness.Paths` (a temp directory).
+* **Time:** use the injected `TimeProvider` (never `DateTime.UtcNow`/`Task.Delay` for logic); tests drive it with `h.Time.Advance(...)` (`ManualTimeProvider`).
+* **Tests:** `CoreHarness` fake surfaces validate every posted event against the protocol catalog and the test FAILS on a violation (wrong payload type, misspelt property, a ui->host
+  event type); use `h.ReadyAsync(surface)` for the real handshake. A port constructor must never throw or do I/O (acquire lazily in Start()/first use).
 * Do not leave TODO stubs in your area. If something cannot be done, implement the safe degraded behaviour and report it.
 
 ## Reporting
@@ -117,7 +125,7 @@ what is verified vs. unverifiable here, known gaps, and `contractRequests`.
 | `status.*`, `audio.*`, `brightness.set`, `theme.setPreference` | StatusController (core-status) |
 | `media.state`, `media.control` | MediaController (core-status) |
 | `tray.state`, `tray.click` | TrayController (core-status) |
-| `overlay.open`, `overlay.close`, `overlay.show/hide` | OverlayController (core-status) |
+| `overlay.open`, `overlay.close` (+ `IOverlayState`) | OverlayController (core-status); `overlay.show/hide` are published by the Host's SurfaceManager |
 | `search.*` | SearchController (core-search) |
 | `mc.*` | MissionControlController (core-desktop) |
 | `desktop.*` | DesktopController (core-desktop) |

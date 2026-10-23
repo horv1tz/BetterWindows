@@ -45,8 +45,14 @@ public interface ISurfaceManager
 
 public interface IAppLifecycle
 {
-    /// <summary>Shut the shell down: restore the taskbar/desktop icons, dispose surfaces, exit the process. Posts the shutdown to the Dispatcher and returns immediately; the in-flight call result is still delivered.</summary>
-    void Exit(bool restoreTaskbar);
+    /// <summary>
+    /// Shut the shell down: ALWAYS restores the taskbar and desktop icons, disposes surfaces, exits the process. Posts the shutdown to the Dispatcher and returns
+    /// immediately (a handler calling it must not deadlock; the in-flight call result is still delivered). Stop never waits for in-flight calls.
+    /// Order: ISurfaceHost.Stop -> ShellRuntime.Stop -> taskbar/desktop-icon Restore -> DI dispose.
+    /// </summary>
+    void Exit();
+    /// <summary>Restore, relaunch a fresh instance, then exit (same ordering as <see cref="Exit"/>).</summary>
+    void Restart();
     string Version { get; }
     string BuildInfo { get; }
     string OsDescription { get; }

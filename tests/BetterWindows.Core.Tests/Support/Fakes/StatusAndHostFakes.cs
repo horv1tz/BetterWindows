@@ -102,8 +102,10 @@ public class FakeSurfaceManager : ISurfaceManager
 
 public class FakeAppLifecycle : IAppLifecycle
 {
-    public List<bool> Exits { get; } = new();
-    public void Exit(bool restoreTaskbar) => Exits.Add(restoreTaskbar);
+    public int Exits { get; private set; }
+    public int Restarts { get; private set; }
+    public void Exit() => Exits++;
+    public void Restart() => Restarts++;
     public string Version => "0.0.0-test";
     public string BuildInfo => "test";
     public string OsDescription => "Test OS";

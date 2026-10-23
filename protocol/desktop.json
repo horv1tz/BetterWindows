@@ -110,7 +110,10 @@
       "updatedAt": "string?"
     },
     "WeatherGetParams": {
-      "force": "bool"
+      "force": {
+        "type": "bool",
+        "default": false
+      }
     },
     "WeatherLocation": {
       "name": "string",
@@ -167,12 +170,19 @@
     "desktop.state": {
       "dir": "host",
       "payload": "DesktopState",
-      "state": true
+      "state": true,
+      "initial": [
+        "desktop"
+      ]
     },
     "reminders.changed": {
       "dir": "host",
       "payload": "ReminderList",
-      "state": true
+      "state": true,
+      "initial": [
+        "overlay",
+        "desktop"
+      ]
     },
     "reminders.due": {
       "dir": "host",
@@ -183,67 +193,139 @@
   "calls": {
     "desktop.moveIcon": {
       "params": "DesktopMoveParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.open": {
       "params": "IdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.addShortcut": {
       "params": "AddShortcutParams",
-      "result": "DesktopIcon"
+      "result": "DesktopIcon",
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.removeShortcut": {
       "params": "IdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.setWallpaper": {
       "params": "SetWallpaperParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.moveWidget": {
       "params": "MoveWidgetParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.addWidget": {
       "params": "AddWidgetParams",
-      "result": "WidgetInstance"
+      "result": "WidgetInstance",
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.removeWidget": {
       "params": "IdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "desktop.updateWidget": {
       "params": "UpdateWidgetParams",
-      "result": "WidgetInstance"
+      "result": "WidgetInstance",
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "weather.get": {
       "params": "WeatherGetParams",
-      "result": "WeatherSnapshot"
+      "result": "WeatherSnapshot",
+      "surfaces": [
+        "desktop",
+        "overlay",
+        "settings"
+      ]
     },
     "weather.search": {
       "params": "WeatherSearchParams",
-      "result": "WeatherLocations"
+      "result": "WeatherLocations",
+      "surfaces": [
+        "settings"
+      ]
     },
     "weather.setLocation": {
       "params": "WeatherLocation",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "settings"
+      ]
     },
     "reminders.list": {
       "params": null,
-      "result": "ReminderList"
+      "result": "ReminderList",
+      "surfaces": [
+        "desktop",
+        "overlay"
+      ]
     },
     "reminders.add": {
       "params": "ReminderAddParams",
-      "result": "Reminder"
+      "result": "Reminder",
+      "surfaces": [
+        "desktop",
+        "overlay"
+      ]
     },
     "reminders.update": {
       "params": "ReminderUpdateParams",
-      "result": "Reminder"
+      "result": "Reminder",
+      "surfaces": [
+        "desktop",
+        "overlay"
+      ]
     },
     "reminders.remove": {
       "params": "IdParams",
-      "result": null
+      "result": null,
+      "surfaces": [
+        "desktop",
+        "overlay"
+      ]
     }
   },
   "enums": {

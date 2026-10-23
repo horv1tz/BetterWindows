@@ -7,7 +7,10 @@ namespace BetterWindows.Core.Platform;
 //  Implementations live in BetterWindows.Windows. Every implementation must:
 //    * be thread-safe; events may fire on ANY thread (Core marshals itself);
 //    * never throw from event handlers' paths; return false/null/empty on failure and log;
-//    * degrade gracefully on unsupported OS builds (IsSupported=false, empty results).
+//    * degrade gracefully on unsupported OS builds (IsSupported=false, empty results);
+//    * have a constructor that never throws and does no I/O: acquire OS resources lazily in Start()/first use and expose IsSupported=false / empty Current on failure;
+//    * raise events through a per-subscriber try/catch (BetterWindows.Native.SafeEvent.Raise): a Core exception must never unwind into a hook/WndProc/WinRT thread;
+//    * the Core subscribers of these events return in < 1 ms and never block: they only Invalidate() a state topic or Task.Run (docs/IPC.md section 13).
 // ======================================================================================
 
 /// <summary>Window enumeration, change notifications and basic window commands.</summary>
@@ -27,7 +30,10 @@ public interface IWindowSystem : IDisposable
     void Start();
     void Stop();
 
-    /// <summary>Bring to foreground (restoring if minimised). Uses every legal trick to defeat the foreground lock.</summary>
+    /// <summary>
+    /// Bring to foreground (restoring if minimised). Uses every legal trick to defeat the foreground lock. Activate/Minimize/Restore/Maximize/Close return FALSE
+    /// for windows of our own process and for shell classes (Progman, WorkerW, Shell_TrayWnd, Shell_SecondaryTrayWnd): the UI must never be able to close them.
+    /// </summary>
     bool Activate(long handle);
     bool Minimize(long handle);
     bool Restore(long handle);
