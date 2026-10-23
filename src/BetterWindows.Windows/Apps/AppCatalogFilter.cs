@@ -48,7 +48,8 @@ internal static partial class AppCatalogFilter
 
         if (IsNoise(displayName, path)) return null;
 
-        var packaged = packagedHint || (cleanAumid != null && AppIdentity.IsPackagedAumid(cleanAumid));
+        // "Packaged" only means something together with the AUMID a packaged app is launched by.
+        var packaged = cleanAumid != null && (packagedHint || AppIdentity.IsPackagedAumid(cleanAumid));
         return new AppEntry
         {
             Id = cleanAumid != null ? AppIdentity.IdFromAumid(cleanAumid) : AppIdentity.IdFromExePath(path!),

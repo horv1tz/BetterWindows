@@ -76,7 +76,7 @@ internal static partial class ShellTargetPolicy
 
     /// <summary>
     /// Parsing name (::{CLSID}) of the two allow-listed shell literals, for APIs that take parsing names (icons): the "shell:" moniker is understood by ShellExecute,
-    /// not by SHCreateItemFromParsingPath. Null for anything else.
+    /// not by SHCreateItemFromParsingName. Null for anything else.
     /// </summary>
     public static string? SpecialParsingName(string? target)
     {

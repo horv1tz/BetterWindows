@@ -187,7 +187,7 @@ internal static class AppsShellNative
     public static extern int SHGetKnownFolderItem(ref Guid rfid, uint flags, IntPtr hToken, ref Guid riid, out IntPtr ppv);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
-    public static extern int SHCreateItemFromParsingPath(string pszPath, IntPtr pbc, ref Guid riid, out IntPtr ppv);
+    public static extern int SHCreateItemFromParsingName(string pszPath, IntPtr pbc, ref Guid riid, out IntPtr ppv);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     public static extern int SHParseDisplayName(string pszName, IntPtr pbc, out IntPtr ppidl, uint sfgaoIn, out uint psfgaoOut);
@@ -244,19 +244,19 @@ internal static class AppsCom
         catch (Exception) { /* already released / apartment gone */ }
     }
 
-    /// <summary>SHCreateItemFromParsingPath(parsingName) as IShellItem2; null when the item does not exist or cannot be bound.</summary>
+    /// <summary>SHCreateItemFromParsingName(parsingName) as IShellItem2; null when the item does not exist or cannot be bound.</summary>
     public static IAppsShellItem2? CreateShellItem(string parsingName, out int hresult)
     {
         var iid = AppsShellIds.IidShellItem2;
-        hresult = AppsShellNative.SHCreateItemFromParsingPath(parsingName, IntPtr.Zero, ref iid, out var pv);
+        hresult = AppsShellNative.SHCreateItemFromParsingName(parsingName, IntPtr.Zero, ref iid, out var pv);
         return hresult >= 0 ? Wrap<IAppsShellItem2>(pv) : null;
     }
 
-    /// <summary>SHCreateItemFromParsingPath(parsingName) as IShellItemImageFactory.</summary>
+    /// <summary>SHCreateItemFromParsingName(parsingName) as IShellItemImageFactory.</summary>
     public static IAppsShellItemImageFactory? CreateImageFactory(string parsingName, out int hresult)
     {
         var iid = AppsShellIds.IidShellItemImageFactory;
-        hresult = AppsShellNative.SHCreateItemFromParsingPath(parsingName, IntPtr.Zero, ref iid, out var pv);
+        hresult = AppsShellNative.SHCreateItemFromParsingName(parsingName, IntPtr.Zero, ref iid, out var pv);
         return hresult >= 0 ? Wrap<IAppsShellItemImageFactory>(pv) : null;
     }
 
