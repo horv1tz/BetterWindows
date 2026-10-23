@@ -233,7 +233,7 @@ const SWITCH_TO: Bi = { en: 'Switch to', ru: 'Перейти' };
 const REVEAL: Bi = { en: 'Show in Explorer', ru: 'Показать в Проводнике' };
 
 function appResults(query: string, limit: number): SearchResult[] {
-  return APPS.map((a) => ({ a, s: scoreText(a.name, query, a.category ?? '') }))
+  return APPS.map((a) => ({ a, s: scoreText(a.name, query) }))
     .filter((x) => x.s > 0)
     .sort((x, y) => y.s - x.s || x.a.name.localeCompare(y.a.name))
     .slice(0, limit)
@@ -339,15 +339,16 @@ export default function register(host: MockHost) {
     const id = p.requestId;
     const q = p.query.trim();
     const cap = maxPerProvider();
+    const on = new Set<string>(host.settings.spotlight.providers); // settings.spotlight.providers switches providers off
     const fast = {
-      calc: calcResult(q),
-      apps: appResults(q, cap),
-      settings: settingsResults(q, Math.min(cap, 4)),
-      commands: commandResults(q, 3),
-      windows: windowResults(q, 3),
-      web: webResult(q),
+      calc: on.has('calc') ? calcResult(q) : [],
+      apps: on.has('apps') ? appResults(q, cap) : [],
+      settings: on.has('settings') ? settingsResults(q, Math.min(cap, 4)) : [],
+      commands: on.has('commands') ? commandResults(q, 3) : [],
+      windows: on.has('windows') ? windowResults(q, 3) : [],
+      web: on.has('web') ? webResult(q) : [],
     };
-    const files = fileResults(q, cap);
+    const files = on.has('files') ? fileResults(q, cap) : [];
     const emit = (results: SearchResult[], complete: boolean) => {
       if (active !== id) return;
       register_(id, results);

@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MockBridge } from '../mockBridge';
-import { resetMockHost } from '../host';
-import { i18n } from '../../lib/i18n.svelte';
-import type { SearchResults } from '../../lib/protocol/generated';
-import { evaluateExpression, formatAnswer, scoreText } from './search';
+import { MockBridge } from '$mock/mockBridge';
+import type { Bridge } from '$lib/ipc/bridge';
+import { resetMockHost } from '$mock/host';
+import { i18n } from '$lib/i18n.svelte';
+import type { SearchResults } from '$lib/protocol/generated';
+import { evaluateExpression, formatAnswer, scoreText } from '$mock/domains/search';
 
-let overlay: MockBridge;
+let overlay: Bridge;
 let events: SearchResults[];
 
 beforeEach(() => {
