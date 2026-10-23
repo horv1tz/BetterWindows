@@ -1,5 +1,63 @@
 // CsWin32 generates only what is listed here. Each stream APPENDS its own block below (keep blocks separate to ease merges).
 // ---- windows/appbar/taskbar/input stream ----
 // ---- apps/icons/files stream ----
+ShellExecuteEx
+SHELLEXECUTEINFOW
+SendMessageTimeout
+GetClassLongPtr
+GetIconInfoEx
+DrawIconEx
+CreateDIBSection
+CreateCompatibleDC
+DeleteDC
+DeleteObject
+SelectObject
+GetDIBits
+GdiFlush
+GetObject
+BITMAP
+BITMAPINFO
+GetDC
+ReleaseDC
+GetWindowThreadProcessId
+OpenProcess
+QueryFullProcessImageName
+CloseHandle
+OpenSCManager
+OpenService
+QueryServiceStatusEx
+CloseServiceHandle
+SERVICE_STATUS_PROCESS
+FindWindow
+FindWindowEx
+EnumWindows
+GetClassName
+ShowWindow
+IsWindow
+IsWindowVisible
+SetParent
+SetWindowPos
+GetWindowLongPtr
+SetWindowLongPtr
+GetWindowRect
+MapWindowPoints
+RegisterWindowMessage
+RegisterClassEx
+UnregisterClass
+CreateWindowEx
+DestroyWindow
+DefWindowProc
+GetMessage
+TranslateMessage
+DispatchMessage
+PostMessage
+PostQuitMessage
+SetTimer
+KillTimer
+GetModuleHandle
+WM_GETICON
+WM_TIMER
+WM_CLOSE
+WM_DESTROY
 // ---- status stream ----
 // ---- desktops/capture/tray stream ----
