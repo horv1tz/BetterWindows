@@ -12,6 +12,12 @@ import type { ItemKey } from './status';
  *     pointer leaves it, and when the overlay closes the pointer is back over the bar: leave -> move therefore means "closed"
  *     (the Surface adds a long timeout for the case that the pointer never returns).
  */
+export interface Pressed {
+  key: ItemKey | null;
+  /** The pointer has left the bar since the panel opened (only then does a pointer move mean the panel closed). */
+  armed: boolean;
+}
+
 /** The parts of an OverlayShow the tracker needs. */
 type ShowLike = Pick<OverlayShow, 'mode' | 'popover'> & { monitorId?: string };
 
