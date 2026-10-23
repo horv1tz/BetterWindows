@@ -62,12 +62,34 @@ jobs:
         run: dotnet test tests/BetterWindows.Core.Tests -c Release --no-build --logger "trx;LogFileName=core-win.trx"
       - name: Windows integration tests
         run: dotnet test tests/BetterWindows.Windows.Tests -c Release --no-build --logger "trx;LogFileName=windows.trx"
+      - name: Publish self-contained win-x64 build
+        run: dotnet publish src/BetterWindows.Host -c Release -r win-x64 --self-contained true -o publish/BetterWindows
       - name: Diagnose (platform self-check on a real Windows)
         continue-on-error: true
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Recurse src/BetterWindows.Host/bin -Filter BetterWindows.exe | Select-Object -First 1
-          if ($exe) { & $exe.FullName --diagnose | Tee-Object diagnose.txt } else { "BetterWindows.exe not found" }
+          $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
+          # WinExe: wait for it and capture the output through files
+          $p = Start-Process -FilePath $exe -ArgumentList '--diagnose','--out','diagnose.txt' -Wait -PassThru -NoNewWindow
+          "exit code: $($p.ExitCode)"
+          if (Test-Path diagnose.txt) { Get-Content diagnose.txt } else { "no diagnose.txt written" }
+      - name: Smoke test (real desktop session)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke','--out','smoke.txt' -Wait -PassThru -NoNewWindow
+          "exit code: $($p.ExitCode)"
+          if (Test-Path smoke.txt) { Get-Content smoke.txt } else { "no smoke.txt written" }
+          $logs = Join-Path $env:LOCALAPPDATA 'BetterWindows\logs'
+          if (Test-Path $logs) { Copy-Item $logs -Destination smoke-logs -Recurse }
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path publish/BetterWindows/* -DestinationPath BetterWindows-win-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BetterWindows-win-x64
+          path: BetterWindows-win-x64.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -75,3 +97,6 @@ jobs:
           path: |
             **/*.trx
             diagnose.txt
+            smoke.txt
+            smoke-logs/**
+            screenshot*.png
