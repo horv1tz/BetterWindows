@@ -16,7 +16,7 @@ internal static class DpiHelper
     public static double GetScaleForWindow(nint hwnd, double fallback = 1.0)
     {
         if (hwnd == 0) return fallback;
-        var dpi = PInvoke.GetDpiForWindow(hwnd.ToHwnd());
+        var dpi = HostPInvoke.GetDpiForWindow(hwnd.ToHwnd());
         return dpi == 0 ? fallback : DpiMath.ScaleFromDpi(dpi);
     }
 
@@ -24,14 +24,14 @@ internal static class DpiHelper
     public static double GetScaleForMonitorOfWindow(nint hwnd, double fallback = 1.0)
     {
         if (hwnd == 0) return fallback;
-        var mon = PInvoke.MonitorFromWindow(hwnd.ToHwnd(), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
+        var mon = HostPInvoke.MonitorFromWindow(hwnd.ToHwnd(), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
         return GetScaleForMonitor(mon, fallback);
     }
 
     public static unsafe double GetScaleForMonitor(HMONITOR monitor, double fallback = 1.0)
     {
         if (monitor.Value == null) return fallback;
-        var hr = PInvoke.GetDpiForMonitor(monitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _);
+        var hr = HostPInvoke.GetDpiForMonitor(monitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _);
         return hr.Failed || dpiX == 0 ? fallback : DpiMath.ScaleFromDpi(dpiX);
     }
 
@@ -40,9 +40,9 @@ internal static class DpiHelper
     {
         bounds = workArea = default;
         if (hwnd == 0) return false;
-        var mon = PInvoke.MonitorFromWindow(hwnd.ToHwnd(), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
+        var mon = HostPInvoke.MonitorFromWindow(hwnd.ToHwnd(), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
         var info = new MONITORINFO { cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFO>() };
-        if (!PInvoke.GetMonitorInfo(mon, ref info)) return false;
+        if (!HostPInvoke.GetMonitorInfo(mon, ref info)) return false;
         bounds = info.rcMonitor.ToNativeRect();
         workArea = info.rcWork.ToNativeRect();
         return true;

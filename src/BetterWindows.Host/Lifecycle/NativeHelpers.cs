@@ -33,11 +33,11 @@ internal static class NativeHelpers
         try
         {
             if (HasUsableStdOut()) return new StreamWriter(Console.OpenStandardOutput(), utf8) { AutoFlush = true };
-            if (!PInvoke.AttachConsole(PInvoke.ATTACH_PARENT_PROCESS)) return TextWriter.Null;
+            if (!HostPInvoke.AttachConsole(HostPInvoke.ATTACH_PARENT_PROCESS)) return TextWriter.Null;
             unsafe
             {
                 // GENERIC_WRITE, share write, OPEN_EXISTING: the console screen buffer of the attached console.
-                var handle = PInvoke.CreateFile("CONOUT$", 0x40000000u, FILE_SHARE_MODE.FILE_SHARE_WRITE | FILE_SHARE_MODE.FILE_SHARE_READ, null,
+                var handle = HostPInvoke.CreateFile("CONOUT$", 0x40000000u, FILE_SHARE_MODE.FILE_SHARE_WRITE | FILE_SHARE_MODE.FILE_SHARE_READ, null,
                     FILE_CREATION_DISPOSITION.OPEN_EXISTING, FILE_FLAGS_AND_ATTRIBUTES.FILE_ATTRIBUTE_NORMAL, null);
                 if (handle.IsInvalid) return TextWriter.Null;
                 return new StreamWriter(new FileStream(handle, FileAccess.Write, 1, false), utf8) { AutoFlush = true };
@@ -50,10 +50,10 @@ internal static class NativeHelpers
     {
         try
         {
-            var h = PInvoke.GetStdHandle(STD_HANDLE.STD_OUTPUT_HANDLE);
+            var h = HostPInvoke.GetStdHandle(STD_HANDLE.STD_OUTPUT_HANDLE);
             if (h == HANDLE.Null || (nint)h.Value == -1) return false;
             // FILE_TYPE_UNKNOWN (0) also covers a stale handle.
-            return PInvoke.GetFileType(h) != FILE_TYPE.FILE_TYPE_UNKNOWN;
+            return HostPInvoke.GetFileType(h) != FILE_TYPE.FILE_TYPE_UNKNOWN;
         }
         catch (Exception) { return false; }
     }
@@ -69,16 +69,16 @@ internal static class NativeHelpers
             unsafe
             {
                 HANDLE token = default;
-                if (!PInvoke.OpenProcessToken(PInvoke.GetCurrentProcess(), TOKEN_ACCESS_MASK.TOKEN_QUERY, &token)) return false;
+                if (!HostPInvoke.OpenProcessToken(HostPInvoke.GetCurrentProcess(), TOKEN_ACCESS_MASK.TOKEN_QUERY, &token)) return false;
                 try
                 {
                     TOKEN_ELEVATION elevation = default;
                     uint returned = 0;
                     // TokenElevation: documented since Vista; TokenIsElevated != 0 means a full (elevated) token.
-                    if (!PInvoke.GetTokenInformation(token, TOKEN_INFORMATION_CLASS.TokenElevation, &elevation, (uint)sizeof(TOKEN_ELEVATION), &returned)) return false;
+                    if (!HostPInvoke.GetTokenInformation(token, TOKEN_INFORMATION_CLASS.TokenElevation, &elevation, (uint)sizeof(TOKEN_ELEVATION), &returned)) return false;
                     return elevation.TokenIsElevated != 0;
                 }
-                finally { PInvoke.CloseHandle(token); }
+                finally { HostPInvoke.CloseHandle(token); }
             }
         }
         catch (Exception) { return false; }
@@ -87,7 +87,7 @@ internal static class NativeHelpers
     /// <summary>The Explorer taskbar window (null/zero when Explorer is not (yet) running).</summary>
     public static nint FindTrayWindow()
     {
-        try { unsafe { return (nint)PInvoke.FindWindow(TrayClass, null).Value; } }
+        try { unsafe { return (nint)HostPInvoke.FindWindow(TrayClass, null).Value; } }
         catch (Exception) { return 0; }
     }
 
@@ -99,7 +99,7 @@ internal static class NativeHelpers
             var hwnd = FindTrayWindow();
             if (hwnd == 0) return 0;
             uint pid = 0;
-            unsafe { _ = PInvoke.GetWindowThreadProcessId(new HWND((void*)hwnd), &pid); }
+            unsafe { _ = HostPInvoke.GetWindowThreadProcessId(new HWND((void*)hwnd), &pid); }
             return (int)pid;
         }
         catch (Exception) { return 0; }
@@ -113,7 +113,7 @@ internal static class NativeHelpers
             var style = (yesNo ? MESSAGEBOX_STYLE.MB_YESNO : MESSAGEBOX_STYLE.MB_OK)
                         | (error ? MESSAGEBOX_STYLE.MB_ICONERROR : MESSAGEBOX_STYLE.MB_ICONINFORMATION)
                         | MESSAGEBOX_STYLE.MB_TOPMOST | MESSAGEBOX_STYLE.MB_SETFOREGROUND;
-            return (int)PInvoke.MessageBox(HWND.Null, text, title, style);
+            return (int)HostPInvoke.MessageBox(HWND.Null, text, title, style);
         }
         catch (Exception) { return 0; }
     }
@@ -152,20 +152,20 @@ internal static class NativeHelpers
         try
         {
             // PROCESS_CREATE_PROCESS is the only right the PARENT_PROCESS attribute needs.
-            parent = PInvoke.OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_CREATE_PROCESS, false, (uint)parentPid);
+            parent = HostPInvoke.OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_CREATE_PROCESS, false, (uint)parentPid);
             if (parent == HANDLE.Null) return 0;
 
             nuint size = 0;
             // The first call only reports the required size (it is documented to fail with ERROR_INSUFFICIENT_BUFFER).
-            PInvoke.InitializeProcThreadAttributeList(default, 1, 0, &size);
+            HostPInvoke.InitializeProcThreadAttributeList(default, 1, 0, &size);
             if (size == 0) return 0;
             attrBuffer = NativeMemory.Alloc(size);
             list = new LPPROC_THREAD_ATTRIBUTE_LIST(attrBuffer);
-            if (!PInvoke.InitializeProcThreadAttributeList(list, 1, 0, &size)) return 0;
+            if (!HostPInvoke.InitializeProcThreadAttributeList(list, 1, 0, &size)) return 0;
             attrInitialized = true;
 
             var parentHandle = parent.Value;
-            if (!PInvoke.UpdateProcThreadAttribute(list, 0, ParentProcessAttribute, &parentHandle, (nuint)sizeof(void*), null, (nuint*)null)) return 0;
+            if (!HostPInvoke.UpdateProcThreadAttribute(list, 0, ParentProcessAttribute, &parentHandle, (nuint)sizeof(void*), null, (nuint*)null)) return 0;
 
             var si = new STARTUPINFOEXW();
             si.StartupInfo.cb = (uint)sizeof(STARTUPINFOEXW);
@@ -179,19 +179,19 @@ internal static class NativeHelpers
             {
                 PROCESS_INFORMATION pi;
                 // A STARTUPINFOEXW is passed as a STARTUPINFOW* (the cb member tells CreateProcess it is the extended structure).
-                if (!PInvoke.CreateProcess(new PCWSTR(pExe), new PWSTR(pCmd), null, null, false, flags, null, default, (STARTUPINFOW*)&si, &pi)) return 0;
+                if (!HostPInvoke.CreateProcess(new PCWSTR(pExe), new PWSTR(pCmd), null, null, false, flags, null, default, (STARTUPINFOW*)&si, &pi)) return 0;
                 var pid = (int)pi.dwProcessId;
-                PInvoke.CloseHandle(pi.hThread);
-                PInvoke.CloseHandle(pi.hProcess);
+                HostPInvoke.CloseHandle(pi.hThread);
+                HostPInvoke.CloseHandle(pi.hProcess);
                 return pid;
             }
         }
         catch (Exception) { return 0; }
         finally
         {
-            if (attrInitialized) PInvoke.DeleteProcThreadAttributeList(list);
+            if (attrInitialized) HostPInvoke.DeleteProcThreadAttributeList(list);
             if (attrBuffer is not null) NativeMemory.Free(attrBuffer);
-            if (parent != HANDLE.Null) PInvoke.CloseHandle(parent);
+            if (parent != HANDLE.Null) HostPInvoke.CloseHandle(parent);
         }
     }
 

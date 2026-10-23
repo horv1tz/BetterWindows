@@ -66,7 +66,7 @@ internal sealed class SettingsWindow : SurfaceWindowBase
         {
             var wp = new WINDOWPLACEMENT { length = (uint)sizeof(WINDOWPLACEMENT) };
             // GetWindowPlacement reports the RESTORED rectangle even while maximised, so a maximised window is remembered at its normal size too.
-            if (!PInvoke.GetWindowPlacement(Hwnd.ToHwnd(), ref wp)) return null;
+            if (!HostPInvoke.GetWindowPlacement(Hwnd.ToHwnd(), ref wp)) return null;
             var r = wp.rcNormalPosition;
             var dpi = (int)Math.Round(Scale * DpiMath.BaseDpi);
             return new SettingsWindowState

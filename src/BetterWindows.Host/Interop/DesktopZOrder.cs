@@ -17,11 +17,11 @@ internal static class DesktopZOrder
     public static unsafe bool PinAboveWallpaper(nint hwnd)
     {
         if (hwnd == 0) return false;
-        var progman = PInvoke.FindWindow("Progman", null);
+        var progman = HostPInvoke.FindWindow("Progman", null);
         nint insertAfter = WindowStyling.HwndBottom;
         if (progman.Value != null)
         {
-            var above = PInvoke.GetWindow(progman, GET_WINDOW_CMD.GW_HWNDPREV);
+            var above = HostPInvoke.GetWindow(progman, GET_WINDOW_CMD.GW_HWNDPREV);
             if (above.Value == null)
             {
                 // Progman is already at the very top of the z-order: nothing normal exists above it, so staying at the top keeps us right above it as well.

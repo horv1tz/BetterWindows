@@ -24,20 +24,20 @@ internal static class WindowStyling
     {
         if (hwnd == 0) return false;
         var h = hwnd.ToHwnd();
-        var current = PInvoke.GetWindowLongPtr(h, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+        var current = HostPInvoke.GetWindowLongPtr(h, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
         var next = (current | add) & ~remove;
         if (next == current) return true;
         // SetWindowLongPtr returns 0 both on failure and when the previous value was 0: clear the last error first to tell them apart.
         System.Runtime.InteropServices.Marshal.SetLastPInvokeError(0);
-        var prev = PInvoke.SetWindowLongPtr(h, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, next);
+        var prev = HostPInvoke.SetWindowLongPtr(h, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE, next);
         if (prev == 0 && System.Runtime.InteropServices.Marshal.GetLastPInvokeError() != 0) return false;
-        return PInvoke.SetWindowPos(h, default, 0, 0, 0, 0,
+        return HostPInvoke.SetWindowPos(h, default, 0, 0, 0, 0,
             SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
     }
 
-    public static nint GetExStyle(nint hwnd) => hwnd == 0 ? 0 : PInvoke.GetWindowLongPtr(hwnd.ToHwnd(), WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+    public static nint GetExStyle(nint hwnd) => hwnd == 0 ? 0 : HostPInvoke.GetWindowLongPtr(hwnd.ToHwnd(), WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
 
-    public static nint GetStyle(nint hwnd) => hwnd == 0 ? 0 : PInvoke.GetWindowLongPtr(hwnd.ToHwnd(), WINDOW_LONG_PTR_INDEX.GWL_STYLE);
+    public static nint GetStyle(nint hwnd) => hwnd == 0 ? 0 : HostPInvoke.GetWindowLongPtr(hwnd.ToHwnd(), WINDOW_LONG_PTR_INDEX.GWL_STYLE);
 
     /// <summary>
     /// The behaviour set of an overlay-class surface window: tool window (no taskbar button, not in Alt+Tab) and optionally no-activate (a click must not steal focus from the
@@ -54,21 +54,21 @@ internal static class WindowStyling
         if (insertAfter is null) flags |= SET_WINDOW_POS_FLAGS.SWP_NOZORDER;
         if (show) flags |= SET_WINDOW_POS_FLAGS.SWP_SHOWWINDOW;
         if (noRedraw) flags |= SET_WINDOW_POS_FLAGS.SWP_NOREDRAW;
-        return PInvoke.SetWindowPos(hwnd.ToHwnd(), new HWND(insertAfter ?? 0), rect.Left, rect.Top, Math.Max(1, rect.Width), Math.Max(1, rect.Height), flags);
+        return HostPInvoke.SetWindowPos(hwnd.ToHwnd(), new HWND(insertAfter ?? 0), rect.Left, rect.Top, Math.Max(1, rect.Width), Math.Max(1, rect.Height), flags);
     }
 
     /// <summary>Z-order only (no move/size/activation): used to re-assert topmost or bottom.</summary>
     public static bool SetZOrder(nint hwnd, nint insertAfter)
     {
         if (hwnd == 0) return false;
-        return PInvoke.SetWindowPos(hwnd.ToHwnd(), new HWND(insertAfter), 0, 0, 0, 0,
+        return HostPInvoke.SetWindowPos(hwnd.ToHwnd(), new HWND(insertAfter), 0, 0, 0, 0,
             SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_NOOWNERZORDER);
     }
 
     public static bool TryGetWindowRect(nint hwnd, out NativeRect rect)
     {
         rect = default;
-        if (hwnd == 0 || !PInvoke.GetWindowRect(hwnd.ToHwnd(), out var r)) return false;
+        if (hwnd == 0 || !HostPInvoke.GetWindowRect(hwnd.ToHwnd(), out var r)) return false;
         rect = r.ToNativeRect();
         return true;
     }
@@ -76,19 +76,19 @@ internal static class WindowStyling
     public static bool TryGetClientSize(nint hwnd, out int width, out int height)
     {
         width = height = 0;
-        if (hwnd == 0 || !PInvoke.GetClientRect(hwnd.ToHwnd(), out var r)) return false;
+        if (hwnd == 0 || !HostPInvoke.GetClientRect(hwnd.ToHwnd(), out var r)) return false;
         width = r.right - r.left;
         height = r.bottom - r.top;
         return true;
     }
 
-    public static bool IsAlive(nint hwnd) => hwnd != 0 && PInvoke.IsWindow(hwnd.ToHwnd());
+    public static bool IsAlive(nint hwnd) => hwnd != 0 && HostPInvoke.IsWindow(hwnd.ToHwnd());
 
     /// <summary>ShowWindow(SW_HIDE). ShowWindow's return value is the PREVIOUS visibility, not success, so only the handle can be validated.</summary>
     public static bool Hide(nint hwnd)
     {
         if (hwnd == 0) return false;
-        PInvoke.ShowWindow(hwnd.ToHwnd(), SHOW_WINDOW_CMD.SW_HIDE);
+        HostPInvoke.ShowWindow(hwnd.ToHwnd(), SHOW_WINDOW_CMD.SW_HIDE);
         return true;
     }
 }

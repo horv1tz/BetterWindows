@@ -10,41 +10,41 @@ namespace BetterWindows.Host.Interop;
 /// </summary>
 internal static class ForegroundHelper
 {
-    public static unsafe nint GetForeground() => (nint)PInvoke.GetForegroundWindow().Value;
+    public static unsafe nint GetForeground() => (nint)HostPInvoke.GetForegroundWindow().Value;
 
     /// <summary>True when <paramref name="hwnd"/> is the foreground window after the attempt. Never throws.</summary>
     public static unsafe bool TryActivate(nint hwnd)
     {
-        if (hwnd == 0 || !PInvoke.IsWindow(hwnd.ToHwnd())) return false;
+        if (hwnd == 0 || !HostPInvoke.IsWindow(hwnd.ToHwnd())) return false;
         var target = hwnd.ToHwnd();
         if (GetForeground() == hwnd) return true;
 
         // 1. The cheap path: works whenever we are allowed to (we got the hotkey / the user just clicked us).
-        if (PInvoke.SetForegroundWindow(target) && GetForeground() == hwnd) return true;
+        if (HostPInvoke.SetForegroundWindow(target) && GetForeground() == hwnd) return true;
 
         // 2. Share the input queue of the current foreground thread, which is what makes SetForegroundWindow legal.
-        var fg = PInvoke.GetForegroundWindow();
+        var fg = HostPInvoke.GetForegroundWindow();
         var attached = false;
         uint fgThread = 0;
-        var me = PInvoke.GetCurrentThreadId();
+        var me = HostPInvoke.GetCurrentThreadId();
         try
         {
             if (fg.Value != null)
             {
-                fgThread = PInvoke.GetWindowThreadProcessId(fg, null);
-                if (fgThread != 0 && fgThread != me) attached = PInvoke.AttachThreadInput(me, fgThread, true);
+                fgThread = HostPInvoke.GetWindowThreadProcessId(fg, null);
+                if (fgThread != 0 && fgThread != me) attached = HostPInvoke.AttachThreadInput(me, fgThread, true);
             }
-            PInvoke.BringWindowToTop(target);
-            PInvoke.SetForegroundWindow(target);
+            HostPInvoke.BringWindowToTop(target);
+            HostPInvoke.SetForegroundWindow(target);
         }
         finally
         {
-            if (attached) PInvoke.AttachThreadInput(me, fgThread, false);
+            if (attached) HostPInvoke.AttachThreadInput(me, fgThread, false);
         }
         if (GetForeground() == hwnd) return true;
 
         // 3. Last resort: undocumented but stable for 20 years (it is what Alt+Tab itself uses).
-        PInvoke.SwitchToThisWindow(target, true);
+        HostPInvoke.SwitchToThisWindow(target, true);
         return GetForeground() == hwnd;
     }
 }

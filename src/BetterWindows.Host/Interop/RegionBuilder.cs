@@ -19,26 +19,26 @@ internal static class RegionBuilder
     /// </summary>
     public static unsafe HRGN Build(RegionPlan plan, NativeRect? clipLocal = null)
     {
-        var combined = PInvoke.CreateRectRgn(0, 0, 0, 0); // an EMPTY region: the union starts from nothing
+        var combined = HostPInvoke.CreateRectRgn(0, 0, 0, 0); // an EMPTY region: the union starts from nothing
         if (combined.Value == null) return default;
         foreach (var r in plan.Rects)
         {
             // CreateRoundRectRgn's right/bottom are inclusive-ish: it needs +1 to cover exactly [left, right) x [top, bottom). CreateRectRgn takes exclusive edges as they are.
             var tmp = r.Radius > 0
-                ? PInvoke.CreateRoundRectRgn(r.Left, r.Top, r.Right + 1, r.Bottom + 1, r.Radius * 2, r.Radius * 2)
-                : PInvoke.CreateRectRgn(r.Left, r.Top, r.Right, r.Bottom);
+                ? HostPInvoke.CreateRoundRectRgn(r.Left, r.Top, r.Right + 1, r.Bottom + 1, r.Radius * 2, r.Radius * 2)
+                : HostPInvoke.CreateRectRgn(r.Left, r.Top, r.Right, r.Bottom);
             if (tmp.Value == null) continue; // GDI quota exhausted: skip this rectangle, keep what we have
-            var rc = PInvoke.CombineRgn(combined, combined, tmp, RGN_COMBINE_MODE.RGN_OR);
-            PInvoke.DeleteObject(tmp);
-            if (rc == GDI_REGION_TYPE.RGN_ERROR) { PInvoke.DeleteObject(combined); return default; }
+            var rc = HostPInvoke.CombineRgn(combined, combined, tmp, RGN_COMBINE_MODE.RGN_OR);
+            HostPInvoke.DeleteObject(tmp);
+            if (rc == GDI_REGION_TYPE.RGN_ERROR) { HostPInvoke.DeleteObject(combined); return default; }
         }
         if (clipLocal is { } clip)
         {
-            var clipRgn = PInvoke.CreateRectRgn(clip.Left, clip.Top, clip.Right, clip.Bottom);
-            if (clipRgn.Value == null) { PInvoke.DeleteObject(combined); return default; }
-            var rc = PInvoke.CombineRgn(combined, combined, clipRgn, RGN_COMBINE_MODE.RGN_AND);
-            PInvoke.DeleteObject(clipRgn);
-            if (rc == GDI_REGION_TYPE.RGN_ERROR) { PInvoke.DeleteObject(combined); return default; }
+            var clipRgn = HostPInvoke.CreateRectRgn(clip.Left, clip.Top, clip.Right, clip.Bottom);
+            if (clipRgn.Value == null) { HostPInvoke.DeleteObject(combined); return default; }
+            var rc = HostPInvoke.CombineRgn(combined, combined, clipRgn, RGN_COMBINE_MODE.RGN_AND);
+            HostPInvoke.DeleteObject(clipRgn);
+            if (rc == GDI_REGION_TYPE.RGN_ERROR) { HostPInvoke.DeleteObject(combined); return default; }
         }
         return combined;
     }
@@ -50,8 +50,8 @@ internal static class RegionBuilder
         var rgn = Build(plan, clipLocal);
         if (rgn.Value == null) return false;
         // SetWindowRgn returns non-zero on success; on success the system owns rgn.
-        if (PInvoke.SetWindowRgn(hwnd.ToHwnd(), rgn, true) != 0) return true;
-        PInvoke.DeleteObject(rgn);
+        if (HostPInvoke.SetWindowRgn(hwnd.ToHwnd(), rgn, true) != 0) return true;
+        HostPInvoke.DeleteObject(rgn);
         return false;
     }
 
@@ -59,6 +59,6 @@ internal static class RegionBuilder
     public static unsafe bool Clear(nint hwnd)
     {
         if (hwnd == 0) return false;
-        return PInvoke.SetWindowRgn(hwnd.ToHwnd(), default(HRGN), true) != 0;
+        return HostPInvoke.SetWindowRgn(hwnd.ToHwnd(), default(HRGN), true) != 0;
     }
 }

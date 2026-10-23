@@ -36,7 +36,7 @@ internal static class DwmHelper
         hresult = 0;
         if (hwnd == 0) { hresult = unchecked((int)0x80070578); return false; } // ERROR_INVALID_WINDOW_HANDLE
         var v = value;
-        var hr = PInvoke.DwmSetWindowAttribute(hwnd.ToHwnd(), attribute, &v, sizeof(int));
+        var hr = HostPInvoke.DwmSetWindowAttribute(hwnd.ToHwnd(), attribute, &v, sizeof(int));
         hresult = hr.Value;
         return hr.Succeeded;
     }
@@ -85,7 +85,7 @@ internal static class DwmHelper
         hresult = 0;
         if (hwnd == 0) { hresult = unchecked((int)0x80070578); return false; }
         var m = enable ? new MARGINS { cxLeftWidth = -1, cxRightWidth = -1, cyTopHeight = -1, cyBottomHeight = -1 } : default;
-        var hr = PInvoke.DwmExtendFrameIntoClientArea(hwnd.ToHwnd(), in m);
+        var hr = HostPInvoke.DwmExtendFrameIntoClientArea(hwnd.ToHwnd(), in m);
         hresult = hr.Value;
         return hr.Succeeded;
     }
