@@ -1,3 +1,27 @@
 // CsWin32 for the Host assembly (window styling, DWM, hit testing, DPI). Each Host stream appends its own block.
 // ---- lifecycle/bridge stream ----
+// console attach for --diagnose / --smoke output from a WinExe
+AttachConsole
+GetStdHandle
+GetFileType
+CreateFile
+ATTACH_PARENT_PROCESS
+// Explorer readiness (--autostart) and Explorer's pid (guardian parent)
+FindWindow
+GetWindowThreadProcessId
+// refuse to run elevated
+GetCurrentProcess
+OpenProcessToken
+GetTokenInformation
+TOKEN_ELEVATION
+// native message boxes before WPF/WebView2 exist (elevated refusal, WebView2 runtime missing)
+MessageBox
+// guardian: CreateProcess with an explicit parent (Explorer) so `taskkill /t` of the owner does not take it
+OpenProcess
+CreateProcess
+InitializeProcThreadAttributeList
+UpdateProcThreadAttribute
+DeleteProcThreadAttributeList
+CloseHandle
+STARTUPINFOEXW
 // ---- surfaces stream ----

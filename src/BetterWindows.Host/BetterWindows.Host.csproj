@@ -26,6 +26,9 @@
     <ProjectReference Include="..\BetterWindows.Core\BetterWindows.Core.csproj" />
     <ProjectReference Include="..\BetterWindows.Windows\BetterWindows.Windows.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BetterWindows.Host.Tests" />
+  </ItemGroup>
   <!-- Built UI bundle (ui/ -> npm run build) is copied next to the exe. -->
   <ItemGroup>
     <Content Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" Condition="Exists('wwwroot')" />
