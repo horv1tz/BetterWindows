@@ -81,11 +81,11 @@ internal static class IconImage
 
     /// <summary>
     /// Area-average (box filter) downscale of a PREMULTIPLIED image; averaging in premultiplied space is what keeps transparent edges free of dark/white fringes.
-    /// Only shrinks: when the target is not smaller in both dimensions the source is returned unchanged.
+    /// Only shrinks: when the target is larger than the source in either dimension, or identical, the source is returned unchanged.
     /// </summary>
     public static byte[] ResizeBoxPremultiplied(byte[] src, int w, int h, int tw, int th, out int outW, out int outH)
     {
-        if (tw >= w || th >= h || tw <= 0 || th <= 0)
+        if (tw > w || th > h || (tw == w && th == h) || tw <= 0 || th <= 0)
         {
             outW = w;
             outH = h;

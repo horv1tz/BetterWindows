@@ -66,7 +66,7 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
                 }
                 if (!File.Exists(path))
                     return Directory.Exists(path) ? RunSta(() => Execute(path, null, null)) : LaunchResult.NotFound;
-                return RunSta(() => Execute(path, args, AppIdentity.DirectoryOf(path)));
+                return RunSta(() => Execute(path, args, WorkingDirectoryFor(path)));
             }
             return LaunchResult.NotFound;
         }
@@ -89,7 +89,7 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
                 return false;
             }
             // Files launch with their own folder as working directory (like double-clicking them); everything else has no meaningful one.
-            string? workDir = kind == OpenTargetKind.File ? AppIdentity.DirectoryOf(canonical) : null;
+            string? workDir = kind == OpenTargetKind.File ? WorkingDirectoryFor(canonical) : null;
             return RunSta(() => Execute(canonical, null, workDir)) == LaunchResult.Started;
         }
         catch (Exception ex)
@@ -121,6 +121,12 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
     }
 
     // ---------------------------------------------------------------- implementation
+
+    /// <summary>
+    /// The folder of the file, for programs. Shortcuts (.lnk/.url) carry their own "Start in" folder, which must win, and documents are opened by their handler, so no override there.
+    /// </summary>
+    internal static string? WorkingDirectoryFor(string path)
+        => AppIdentity.ExtensionOf(path) is ".exe" or ".bat" or ".cmd" or ".com" or ".msc" or ".cpl" ? AppIdentity.DirectoryOf(path) : null;
 
     private LaunchResult LaunchAumid(string aumid, string? args)
     {

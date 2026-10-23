@@ -236,6 +236,8 @@ public sealed class ShellAppCatalogSource : IAppCatalogSource, IDisposable
                 ct.ThrowIfCancellationRequested();
                 try
                 {
+                    // The Start menu shows a shortcut under its file name: when AppsFolder already listed that name, loading the .lnk through COM would only find a duplicate.
+                    if (knownNames.Contains(Path.GetFileNameWithoutExtension(lnk))) continue;
                     var entry = ReadShortcut(lnk);
                     if (entry == null) continue;
                     // Fallback only: skip anything AppsFolder already provided (same exe, same id, or the same display name).
