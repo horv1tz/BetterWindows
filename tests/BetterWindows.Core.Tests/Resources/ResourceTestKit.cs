@@ -109,7 +109,7 @@ public sealed class RouterRig : IDisposable
     /// </summary>
     public string MakeFile(string name, byte[] content)
     {
-        var path = @"C:\" + name;
+        var path = LocalPath(name);
         File.WriteAllBytes(path, content);
         _cleanup.Add(path);
         return path;
@@ -117,7 +117,7 @@ public sealed class RouterRig : IDisposable
 
     public string MakeFolder(string name)
     {
-        var path = @"C:\" + name;
+        var path = LocalPath(name);
         Directory.CreateDirectory(path);
         _cleanup.Add(path);
         return path;
@@ -128,6 +128,9 @@ public sealed class RouterRig : IDisposable
         H.Dispose();
         foreach (var p in _cleanup) { try { if (Directory.Exists(p)) Directory.Delete(p, true); else File.Delete(p); } catch { /* best effort */ } }
     }
+
+    /// <summary>Windows: a file in the temp directory (a real drive path). Linux: "C:\name" is a legal file NAME in the working directory, so the file is created there.</summary>
+    private static string LocalPath(string name) => OperatingSystem.IsWindows() ? Path.Combine(Path.GetTempPath(), name) : @"C:\" + name;
 
     public static string Unique(string ext) => $"bwtest-{Guid.NewGuid():N}{ext}";
     public static byte[] Jpeg(string marker = "x") => new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }.Concat(System.Text.Encoding.ASCII.GetBytes(marker)).ToArray();
