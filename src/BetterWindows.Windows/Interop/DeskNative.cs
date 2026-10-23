@@ -34,7 +34,7 @@ internal static class DeskNative
     /// <summary>
     /// DWMWA_EXTENDED_FRAME_BOUNDS: the visible frame in physical pixels, without the invisible resize borders that GetWindowRect includes on Windows 10/11.
     /// </summary>
-    internal static bool TryGetFrameBounds(nint hwnd, out Rect bounds)
+    internal static bool TryGetFrameBounds(nint hwnd, out DeskRect bounds)
     {
         unsafe
         {
@@ -42,7 +42,7 @@ internal static class DeskNative
             HRESULT hr = PInvoke.DwmGetWindowAttribute(new HWND(hwnd), DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, &rc, (uint)sizeof(RECT));
             if (hr.Succeeded)
             {
-                bounds = new Rect(rc.left, rc.top, rc.right, rc.bottom);
+                bounds = new DeskRect(rc.left, rc.top, rc.right, rc.bottom);
                 return true;
             }
         }
@@ -51,11 +51,11 @@ internal static class DeskNative
     }
 
     /// <summary>GetWindowRect: the full window rectangle (including invisible borders). PrintWindow renders this rectangle, so capture crops from it.</summary>
-    internal static bool TryGetWindowRect(nint hwnd, out Rect rect)
+    internal static bool TryGetWindowRect(nint hwnd, out DeskRect rect)
     {
         if (PInvoke.GetWindowRect(new HWND(hwnd), out RECT rc))
         {
-            rect = new Rect(rc.left, rc.top, rc.right, rc.bottom);
+            rect = new DeskRect(rc.left, rc.top, rc.right, rc.bottom);
             return true;
         }
         rect = default;
@@ -86,7 +86,7 @@ internal static class DeskNative
 }
 
 /// <summary>Plain rectangle in physical pixels (avoids leaking the generated Win32 struct type into the pure logic).</summary>
-internal readonly record struct Rect(int Left, int Top, int Right, int Bottom)
+internal readonly record struct DeskRect(int Left, int Top, int Right, int Bottom)
 {
     public int Width => Right - Left;
     public int Height => Bottom - Top;

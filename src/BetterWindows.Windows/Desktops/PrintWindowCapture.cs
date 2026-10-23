@@ -101,8 +101,8 @@ public sealed class PrintWindowCapture : IWindowCapture
         if (DeskNative.IsMinimised(hwnd)) return null;
         uint? cloaked = DeskNative.CloakedFlags(hwnd);
         if (cloaked is null || cloaked.Value != 0) return null; // unreadable or cloaked: DWM would not compose it
-        if (!DeskNative.TryGetFrameBounds(hwnd, out Rect frame)) return null;
-        if (!DeskNative.TryGetWindowRect(hwnd, out Rect window)) return null;
+        if (!DeskNative.TryGetFrameBounds(hwnd, out DeskRect frame)) return null;
+        if (!DeskNative.TryGetWindowRect(hwnd, out DeskRect window)) return null;
         if (!ImageMath.IsValidSource(frame.Width, frame.Height, MaxSourceEdge, MaxSourcePixels)) return null;
         if (!ImageMath.IsValidSource(window.Width, window.Height, MaxSourceEdge, MaxSourcePixels)) return null;
 
