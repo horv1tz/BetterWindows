@@ -16,7 +16,7 @@ namespace BetterWindows.Host.Bridge;
 public interface IWebViewBridge
 {
     /// <param name="route">"dock" | "menubar" | "overlay" | "desktop".</param>
-    Task AttachAsync(WebView2 webView, SurfaceId id, string route);
+    Task AttachAsync(IWebView2 webView, SurfaceId id, string route);
     void Detach(SurfaceId id);
     /// <summary>Open DevTools for the surface (debug builds / --devtools).</summary>
     void OpenDevTools(SurfaceId id);

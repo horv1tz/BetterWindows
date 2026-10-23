@@ -27,3 +27,6 @@ Thumbs.db
 .build/
 *.trx
 shots/
+
+# agent worktrees and local tooling
+.claude/
