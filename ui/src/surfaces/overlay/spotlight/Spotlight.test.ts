@@ -138,7 +138,7 @@ describe('Spotlight', () => {
     expect(selected()?.textContent).toContain('Restart');
     await key('Enter');
     expect(calls.some((c) => c.type === 'search.perform')).toBe(false);
-    expect(screen.getAllByText('Press Return again to confirm').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Press Enter again to confirm').length).toBeGreaterThan(0);
     await key('Enter');
     expect(calls.find((c) => c.type === 'search.perform')?.params.resultId).toBe('cmd:restart');
     expect(onclose).toHaveBeenCalled();

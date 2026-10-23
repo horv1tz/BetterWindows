@@ -94,7 +94,7 @@
               onpointerdown={(e) => ontiledown(e, id)}
               onclick={() => onactivate(app)}
             >
-              <Tile name={app.name} {app} size={geometry.iconSize} labelWidth={geometry.cellW - 12} {editing} />
+              <Tile name={app.name} {app} size={geometry.iconSize} labelWidth={geometry.cellW - 16} {editing} />
             </button>
             {#if editing}
               <button type="button" class="x" aria-label={t('lp.remove', { name: app.name })} onclick={() => onhide(app)}><X size={13} strokeWidth={3} /></button>
@@ -128,7 +128,7 @@
   .grid { position: relative; }
   .slot { position: absolute; left: 0; top: 0; display: grid; place-items: center; transition: transform 260ms var(--ease-out); }
   .slot.ghosted { visibility: hidden; }
-  .tile { all: unset; box-sizing: border-box; display: grid; place-items: center; width: 100%; height: 100%; cursor: default; border-radius: 16px; touch-action: none; }
+  .tile { all: unset; box-sizing: border-box; display: grid; place-items: center; padding: 5px 4px; cursor: default; border-radius: 16px; touch-action: none; }
   .tile :global(.label) { color: var(--text); text-shadow: none; }
   .tile:focus-visible { outline: 3px solid var(--accent); outline-offset: -6px; }
   .x {

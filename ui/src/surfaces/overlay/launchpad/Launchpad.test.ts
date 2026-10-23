@@ -34,6 +34,8 @@ beforeEach(() => { document.documentElement.dataset.reduceMotion = 'true'; });
 const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 const tiles = () => [...document.querySelectorAll<HTMLElement>('.track .tile')].map((t) => t.getAttribute('aria-label'));
 const key = (k: string, init: KeyboardEventInit = {}) => fireEvent.keyDown(window, { key: k, ...init });
+/** Alt is a tap: down + up. */
+const tapAlt = async () => { await fireEvent.keyDown(window, { key: 'Alt' }); await fireEvent.keyUp(window, { key: 'Alt' }); };
 const search = () => screen.getByRole('textbox') as HTMLInputElement;
 
 describe('Launchpad grid', () => {
@@ -168,7 +170,7 @@ describe('Launchpad edit mode and persistence', () => {
     render(Launchpad, { show, onclose: vi.fn() });
     await advance(50);
     expect(screen.queryByRole('button', { name: /Remove .* from Launchpad/ })).toBeNull();
-    await key('Alt');
+    await tapAlt();
     expect(screen.getAllByRole('button', { name: /Remove .* from Launchpad/ }).length).toBe(APPS.length);
     await fireEvent.click(screen.getByRole('button', { name: 'Remove Slack from Launchpad' }));
     expect(tiles()).not.toContain('Slack');
@@ -181,11 +183,21 @@ describe('Launchpad edit mode and persistence', () => {
     expect(getMockHost().settings.launchpad.hidden).toEqual([id('Slack')]);
   });
 
+  it('Alt+Tab (a chord) does not toggle edit mode', async () => {
+    await boot();
+    render(Launchpad, { show, onclose: vi.fn() });
+    await advance(50);
+    await fireEvent.keyDown(window, { key: 'Alt' });
+    await fireEvent.keyDown(window, { key: 'Tab', altKey: true });
+    await fireEvent.keyUp(window, { key: 'Alt' });
+    expect(document.querySelector('.editbar')).toBeNull();
+  });
+
   it('coalesces several edits into one settings.patch', async () => {
     await boot();
     render(Launchpad, { show, onclose: vi.fn() });
     await advance(50);
-    await key('Alt');
+    await tapAlt();
     await fireEvent.click(screen.getByRole('button', { name: 'Remove Slack from Launchpad' }));
     await advance(200);
     await fireEvent.click(screen.getByRole('button', { name: 'Remove Steam from Launchpad' }));
@@ -200,7 +212,7 @@ describe('Launchpad edit mode and persistence', () => {
     render(Launchpad, { show, onclose: vi.fn() });
     await advance(50);
     expect(tiles()).toHaveLength(APPS.length - 2);
-    await key('Alt');
+    await tapAlt();
     await fireEvent.click(screen.getByRole('button', { name: 'Restore hidden apps (2)' }));
     expect(tiles()).toHaveLength(APPS.length);
     await advance(450);
@@ -212,7 +224,7 @@ describe('Launchpad edit mode and persistence', () => {
     const onclose = vi.fn();
     const view = render(Launchpad, { show, onclose });
     await advance(50);
-    await key('Alt');
+    await tapAlt();
     await fireEvent.click(screen.getByRole('button', { name: 'Remove Slack from Launchpad' }));
     await key('Escape');
     expect(onclose).not.toHaveBeenCalled();
@@ -269,7 +281,7 @@ describe('Launchpad folders', () => {
     await boot({ launchpad: { folders: [{ id: 'folder:aaaa', name: 'Pair', appIds: [id('Excel'), id('Word')] }], order: ['folder:aaaa'], hidden: [] } });
     render(Launchpad, { show, onclose: vi.fn() });
     await advance(50);
-    await key('Alt');
+    await tapAlt();
     await fireEvent.click(screen.getByRole('button', { name: /^Folder Pair/ }));
     await fireEvent.click(screen.getByRole('button', { name: 'Remove Excel from Launchpad' }));
     await advance(450);
@@ -298,7 +310,7 @@ describe('Launchpad Russian', () => {
     render(Launchpad, { show, onclose: vi.fn() });
     await advance(50);
     expect(screen.getByLabelText('Поиск приложений')).toBeTruthy();
-    await key('Alt');
+    await tapAlt();
     expect(screen.getByText('Готово')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /^Убрать «.*» из Launchpad$/ }).length).toBeGreaterThan(0);
   });

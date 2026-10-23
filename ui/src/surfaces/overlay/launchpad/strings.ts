@@ -19,7 +19,6 @@ export const t = createT({
     'lp.done': 'Done',
     'lp.restore': 'Restore hidden apps ({n})',
     'lp.editHint': 'Drag to rearrange. Drop one app onto another to make a folder.',
-    'lp.closeFolder': 'Close folder',
   },
   ru: {
     'lp.dialog': 'Все приложения',
@@ -39,7 +38,6 @@ export const t = createT({
     'lp.done': 'Готово',
     'lp.restore': 'Вернуть скрытые приложения ({n})',
     'lp.editHint': 'Перетаскивайте значки. Бросьте приложение на другое, чтобы создать папку.',
-    'lp.closeFolder': 'Закрыть папку',
   },
 });
 

@@ -81,6 +81,7 @@
   });
   const pages = $derived(pageCount(shown.length, grid.perPage));
   const fgeo = $derived(folderGeometry(folderIds.length, vw, vh));
+  const labelW = $derived(Math.min(grid.cellW - 20, grid.iconSize + 44));
   const hitGrid = $derived<HitGrid>({ cols: grid.cols, rows: grid.rows, cellW: grid.cellW, cellH: grid.cellH, originX: grid.originX, originY: grid.originY, iconSize: grid.iconSize, contentH: grid.contentH, perPage: grid.perPage });
   const folderHit = $derived<HitGrid>({ cols: fgeo.cols, rows: fgeo.rows, cellW: fgeo.cellW, cellH: fgeo.cellH, originX: 0, originY: 0, iconSize: fgeo.iconSize, contentH: fgeo.contentH, perPage: Infinity });
 
@@ -258,6 +259,7 @@
     }
     ps = null;
     removeWindowListeners();
+    setTimeout(() => { suppressClick = false; }, 0); // the click that follows this pointerup has been dispatched by then
   }
 
   function onPointerCancel(e: PointerEvent) {
@@ -271,6 +273,7 @@
 
   /** Window lost focus mid-gesture (Alt+Tab, another monitor): never leave a half-finished drag behind. */
   function cancelGestures() {
+    altArmed = false;
     if (!ps && !drag) return;
     clearTimeout(longPressTimer);
     if (drag) abortDrag();
@@ -373,7 +376,7 @@
       } else {
         commit(moveTop(layout, d.id, d.state.hoverIndex));
         const p = slotXY(d.state.hoverIndex);
-        settleTo = { x: p.x - page * vw + (grid.cellW - grid.cellW) / 2, y: p.y, scale: 1, opacity: 1 };
+        settleTo = { x: p.x - page * vw, y: p.y, scale: 1, opacity: 1 };
       }
     } else if (d.folderId) {
       commit(moveInFolder(layout, d.folderId, d.id, d.state.hoverIndex));
@@ -414,11 +417,12 @@
   // ---------------------------------------------------------------- keyboard + wheel
   function onKeyDown(e: KeyboardEvent) {
     if (e.isComposing) return;
-    if (e.key === 'Alt' && !e.repeat && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+    if (e.key === 'Alt') {
       e.preventDefault();
-      if (!searching && items.length) editing = !editing;
+      if (!e.repeat) altArmed = !e.ctrlKey && !e.shiftKey && !e.metaKey;
       return;
     }
+    altArmed = false; // Alt+<key> is a chord (Alt+Tab, Alt+F4...), not a tap
     // type-to-search: a printable key anywhere (focus may sit on a dot or a pill) goes to the search field
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !folderItem && document.activeElement !== searchInput && !(document.activeElement instanceof HTMLInputElement)) {
       searchInput?.focus({ preventScroll: true });
@@ -433,7 +437,8 @@
       return;
     }
     if (e.key === 'Enter') {
-      if (searching && results[sel]) { e.preventDefault(); launch(results[sel]); }
+      const inField = document.activeElement === searchInput || document.activeElement === document.body;
+      if (searching && results[sel] && inField) { e.preventDefault(); launch(results[sel]); }
       return;
     }
     if (folderItem) return;
@@ -451,7 +456,15 @@
     if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); setPage(page + 1); }
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); setPage(page - 1); }
   }
-  function onKeyUp(e: KeyboardEvent) { if (e.key === 'Alt') e.preventDefault(); }
+  /** Alt pressed and released alone toggles edit mode (long-press on a tile does the same). */
+  let altArmed = false;
+  function onKeyUp(e: KeyboardEvent) {
+    if (e.key !== 'Alt') return;
+    e.preventDefault();
+    const tap = altArmed;
+    altArmed = false;
+    if (tap && !searching && items.length) editing = !editing;
+  }
 
   let wheel = initialWheel();
   function onWheel(e: WheelEvent) {
@@ -541,7 +554,7 @@
               app={s.item.kind === 'app' ? s.item.app : undefined}
               folderApps={s.item.kind === 'folder' ? s.item.apps : undefined}
               size={grid.iconSize}
-              labelWidth={grid.cellW - 20}
+              labelWidth={labelW}
               editing={editing && !searching}
               merge={drag?.state.mergeTarget === s.id}
               selected={searching && i === sel}
@@ -606,6 +619,7 @@
     <div
       class="ghost"
       class:settling={drag.settling}
+      class:in-folder={drag.from === 'folder'}
       style:width="{drag.from === 'folder' ? fgeo.cellW : grid.cellW}px"
       style:height="{drag.from === 'folder' ? fgeo.cellH : grid.cellH}px"
       style:transform="translate3d({ghostX}px, {ghostY}px, 0) scale({ghostScale})"
@@ -613,7 +627,7 @@
       aria-hidden="true"
     >
       {#if item}
-        <Tile name={item.name || t('lp.folder')} app={item.kind === 'app' ? item.app : undefined} folderApps={item.kind === 'folder' ? item.apps : undefined} size={grid.iconSize} labelWidth={grid.cellW - 20} editing={false} />
+        <Tile name={item.name || t('lp.folder')} app={item.kind === 'app' ? item.app : undefined} folderApps={item.kind === 'folder' ? item.apps : undefined} size={grid.iconSize} labelWidth={labelW} editing={false} />
       {:else if gApp}
         <Tile name={gApp.name} app={gApp} size={drag.from === 'folder' ? fgeo.iconSize : grid.iconSize} labelWidth={(drag.from === 'folder' ? fgeo.cellW : grid.cellW) - 12} editing={false} />
       {/if}
@@ -634,6 +648,8 @@
   :global(:root[data-theme='light']) .backdrop { --lp-shade: rgba(0, 0, 0, 0.26); }
   :global(:root[data-reduce-transparency='true']) .backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--glass-bg-strong); }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  :global(:root[data-reduce-transparency='true']) .search { background: rgba(58, 58, 66, 0.94); }
+  :global(:root[data-reduce-transparency='true']) .editbar { background: rgba(40, 40, 46, 0.96); }
 
   .search {
     position: absolute; top: 40px; left: 50%; translate: -50% 0; width: 248px; height: 34px; z-index: 3;
@@ -657,7 +673,7 @@
   .slot { position: absolute; left: 0; top: 0; display: grid; place-items: center; transition: transform 300ms var(--ease-out); }
   .slot.ghosted { visibility: hidden; }
 
-  .tile { all: unset; box-sizing: border-box; display: grid; place-items: center; width: 100%; height: 100%; cursor: default; border-radius: 22px; touch-action: none; }
+  .tile { all: unset; box-sizing: border-box; display: grid; place-items: center; padding: 6px; cursor: default; border-radius: 22px; touch-action: none; }
   .tile:focus-visible { outline: 3px solid var(--accent); outline-offset: -8px; }
   .tile :global(.icon) { transition: transform 140ms var(--ease-out), filter 140ms; }
   .tile:active :global(.icon) { transform: scale(0.94); filter: drop-shadow(0 5px 9px rgba(0, 0, 0, 0.3)) brightness(0.85); }
@@ -702,4 +718,5 @@
   .ghost.settling { transition: transform 200ms var(--ease-out), opacity 200ms; }
   .ghost :global(.icon) { filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.4)); }
   .ghost :global(.label) { color: #fff; }
+  .ghost.in-folder :global(.label) { color: var(--text); text-shadow: none; }
 </style>
