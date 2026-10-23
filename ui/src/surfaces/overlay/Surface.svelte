@@ -18,8 +18,9 @@
   });
 
   function close() {
+    const token = show?.token ?? 0;
     show = null;
-    bridge.call('overlay.close').catch(() => {});
+    bridge.call('overlay.close', { token }).catch(() => {});
   }
 </script>
 

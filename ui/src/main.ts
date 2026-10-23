@@ -1,6 +1,7 @@
 import './styles/tokens.css';
 import { mount } from 'svelte';
 import { getBridge, parseRoute, setInit } from './lib/ipc';
+import { PROTOCOL_VERSION } from './lib/protocol/generated';
 import { applyTheme } from './lib/theme';
 import { i18n, initLocale } from './lib/i18n.svelte';
 
@@ -18,6 +19,9 @@ async function bootstrap() {
 
   const bridge = getBridge(route);
   const init = await bridge.call('surface.ready', { surface: route.surface, monitorId: route.monitorId });
+  if (init.protocolVersion !== PROTOCOL_VERSION) {
+    throw new Error(`protocol mismatch: host ${init.protocolVersion}, ui ${PROTOCOL_VERSION} (the UI bundle and the host must come from the same build)`);
+  }
   setInit(init);
   initLocale();
   applyTheme(init.theme);

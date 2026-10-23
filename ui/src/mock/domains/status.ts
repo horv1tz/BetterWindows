@@ -2,7 +2,7 @@ import type {
   AudioState, BatteryState, BluetoothState, BrightnessState, MediaState, NetworkState, TrayState,
 } from '../../lib/protocol/generated';
 import { art } from '../fixtures';
-import type { MockContext, MockHost } from '../host';
+import type { MockHost } from '../host';
 
 /**
  * FROZEN (scaffold): battery / network / audio / brightness / bluetooth / media / tray state + their control calls.
@@ -36,17 +36,17 @@ export default function register(host: MockHost) {
     tray: { supported: false, icons: [] } as TrayState,
   });
 
-  const pushTo = (ctx: MockContext) => {
-    host.emitTo(ctx, 'status.battery', s.battery);
-    host.emitTo(ctx, 'status.network', s.network);
-    host.emitTo(ctx, 'status.audio', s.audio);
-    host.emitTo(ctx, 'status.brightness', s.brightness);
-    host.emitTo(ctx, 'status.bluetooth', s.bluetooth);
-    host.emitTo(ctx, 'media.state', s.media);
-    host.emitTo(ctx, 'tray.state', s.tray);
+  host.provideState('status.battery', () => s.battery);
+  host.provideState('status.network', () => s.network);
+  host.provideState('status.audio', () => s.audio);
+  host.provideState('status.brightness', () => s.brightness);
+  host.provideState('status.bluetooth', () => s.bluetooth);
+  host.provideState('media.state', () => s.media);
+  host.provideState('tray.state', () => s.tray);
+  (host as any).pushStatus = () => {
+    host.emit('status.battery', s.battery); host.emit('status.network', s.network); host.emit('status.audio', s.audio);
+    host.emit('status.brightness', s.brightness); host.emit('status.bluetooth', s.bluetooth); host.emit('media.state', s.media); host.emit('tray.state', s.tray);
   };
-  (host as any).pushStatus = () => { for (const b of host.bridges) pushTo(b.ctx); };
-  host.onSurfaceReady((ctx) => { if (ctx.surface !== 'dock' && ctx.surface !== 'settings') pushTo(ctx); });
 
   host.handle('audio.setVolume', (p) => { s.audio = { ...s.audio, volume: Math.min(1, Math.max(0, p.volume)), muted: false }; host.emit('status.audio', s.audio); });
   host.handle('audio.setMuted', (p) => { s.audio = { ...s.audio, muted: p.muted }; host.emit('status.audio', s.audio); });

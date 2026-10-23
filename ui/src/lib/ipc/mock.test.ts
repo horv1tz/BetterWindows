@@ -15,11 +15,11 @@ describe('MockBridge', () => {
   });
 
   it('settings.patch deep-merges and broadcasts to every surface', async () => {
-    const dock = new MockBridge({ surface: 'dock' });
+    const settings = new MockBridge({ surface: 'settings' });
     const bar = new MockBridge({ surface: 'menubar', monitorId: '1' });
     const seen: number[] = [];
     bar.on('settings.changed', (s) => seen.push(s.dock.iconSize));
-    const res = await dock.call('settings.patch', { patch: { dock: { iconSize: 72 } } });
+    const res = await settings.call('settings.patch', { patch: { dock: { iconSize: 72 } } });
     await Promise.resolve();
     expect(res.dock.iconSize).toBe(72);
     expect(res.dock.magnification).toBe(true);
@@ -67,5 +67,46 @@ describe('overlay mock', () => {
     expect(seen).toHaveLength(1);
     expect(seen[0].popover.kind).toBe('calendar');
     expect(seen[0].token).toBeGreaterThan(0);
+  });
+});
+
+
+describe('mock host fidelity', () => {
+  it('rejects calls from surfaces that are not allowed (forbidden)', async () => {
+    const desktop = new MockBridge({ surface: 'desktop', monitorId: '1' });
+    await expect(desktop.call('system.power', { action: 'sleep' })).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(desktop.call('settings.patch', { patch: {} })).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('settings.patch follows RFC 7386: null resets, unknown keys and version are rejected, limits clamp', async () => {
+    const s = new MockBridge({ surface: 'settings' });
+    let r = await s.call('settings.patch', { patch: { dock: { iconSize: 999, magnification: false } } });
+    expect(r.dock.iconSize).toBe(128);
+    r = await s.call('settings.patch', { patch: { dock: { iconSize: null } } });
+    expect(r.dock.iconSize).toBe(56);
+    expect(r.dock.magnification).toBe(false);
+    await expect(s.call('settings.patch', { patch: { dock: { nope: 1 } } })).rejects.toMatchObject({ code: 'badRequest' });
+    await expect(s.call('settings.patch', { patch: { version: 7 } })).rejects.toMatchObject({ code: 'badRequest' });
+    r = await s.call('settings.patch', { patch: { appearance: { accent: 'red; background:url(x)' } } });
+    expect(r.appearance.accent).toBe('system'); // goes into a CSS variable: must be a hex colour
+  });
+
+  it('surface.ready identity comes from the host, not the page', async () => {
+    const dock = new MockBridge({ surface: 'dock' });
+    await expect(dock.call('surface.ready', { surface: 'settings' })).rejects.toMatchObject({ code: 'badRequest' });
+  });
+
+  it('state events only reach the surface kinds that consume them', async () => {
+    const dock = new MockBridge({ surface: 'dock' });
+    const bar = new MockBridge({ surface: 'menubar', monitorId: '1' });
+    const dockSeen: string[] = [];
+    const barSeen: string[] = [];
+    dock.on('status.battery', () => dockSeen.push('b'));
+    bar.on('status.battery', () => barSeen.push('b'));
+    await bar.call('surface.ready', { surface: 'menubar', monitorId: '1' });
+    await dock.call('surface.ready', { surface: 'dock' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(barSeen).toEqual(['b']);
+    expect(dockSeen).toEqual([]);
   });
 });

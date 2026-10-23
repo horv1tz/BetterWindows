@@ -20,7 +20,7 @@ export default function register(host: MockHost) {
   };
 
   host.handle('overlay.open', (p, ctx) => { show(p, ctx); });
-  host.handle('overlay.close', () => { host.emit('overlay.hide', undefined as never, (c) => c.surface === 'overlay'); });
+  host.handle('overlay.close', (p) => { if (p.token === token) host.emit('overlay.hide', undefined as never, (c) => c.surface === 'overlay'); });
   (host as any).showOverlay = show;
 
   // ?show=... for a lone overlay page

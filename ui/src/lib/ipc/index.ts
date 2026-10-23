@@ -8,7 +8,10 @@ export { BridgeError } from './bridge';
 
 export interface SurfaceRoute {
   surface: SurfaceKind;
+  /** menubar / desktop only */
   monitorId?: string;
+  /** settings only: '#/settings/dock' opens the Dock page */
+  page?: string;
 }
 
 /** `#/dock`, `#/menubar/2`, `#/overlay`, `#/desktop/1`, `#/settings`, `#/playground` */
@@ -16,7 +19,8 @@ export function parseRoute(hash: string = location.hash): SurfaceRoute | 'playgr
   const parts = hash.replace(/^#\/?/, '').split('?')[0].split('/').filter(Boolean);
   if (parts[0] === 'playground') return 'playground';
   const surface = (['dock', 'menubar', 'overlay', 'desktop', 'settings'] as const).find((s) => s === parts[0]) ?? 'dock';
-  return { surface, monitorId: parts[1] };
+  if (surface === 'settings') return { surface, page: parts[1] };
+  return { surface, monitorId: surface === 'menubar' || surface === 'desktop' ? parts[1] : undefined };
 }
 
 let _bridge: Bridge | null = null;

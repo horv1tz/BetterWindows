@@ -13,5 +13,5 @@ export default function register(host: MockHost) {
   };
   (host as any).setActiveApp = (appId: string | null) => { current = appId; host.emit('activeApp.changed', state()); };
   (host as any).getActiveApp = () => current;
-  host.onSurfaceReady((ctx) => { if (ctx.surface !== 'dock' && ctx.surface !== 'settings') host.emitTo(ctx, 'activeApp.changed', state()); });
+  host.provideState('activeApp.changed', () => state());
 }

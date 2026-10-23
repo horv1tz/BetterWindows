@@ -20,6 +20,8 @@ export function hasWebView2(): boolean {
 export class HostBridge implements Bridge {
   readonly kind = 'host' as const;
   private nextId = 1;
+  /** Unique per page load: after a reload an old in-flight result for 'c3' must never resolve a NEW call 'c3'. */
+  private readonly boot = Math.random().toString(36).slice(2, 8);
   private pending = new Map<string, { resolve: (v: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   private listeners = new Listeners();
   private wv: WebView2Api;
@@ -54,7 +56,7 @@ export class HostBridge implements Bridge {
   }
 
   call<K extends CallType>(type: K, ...args: any[]): Promise<any> {
-    const id = 'c' + this.nextId++;
+    const id = `c${this.boot}.${this.nextId++}`;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);

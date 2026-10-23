@@ -1,5 +1,6 @@
-import { PROTOCOL_VERSION, defaultFeatureFlags, type MonitorInfo, type ThemeMode } from '../../lib/protocol/generated';
-import { deepMerge, type MockHost } from '../host';
+import { BridgeError } from '../../lib/ipc/bridge';
+import { PROTOCOL_VERSION, SETTINGS_LIMITS, defaultFeatureFlags, defaultSettings, type MonitorInfo, type Settings, type ThemeMode } from '../../lib/protocol/generated';
+import { deepMerge, unknownKeys, type MockHost } from '../host';
 
 /** surface.ready, settings.get/patch, theme, logging, system stubs. Owner: scaffold — extend in your own domain file instead. */
 export default function register(host: MockHost) {
@@ -29,8 +30,10 @@ export default function register(host: MockHost) {
   syncTheme();
   let lastLang = host.settings.general.language;
 
-  host.handle('surface.ready', (p, ctx) => ({
-    surface: p.surface,
+  host.handle('surface.ready', (p, ctx) => {
+    if (p.surface !== ctx.surface) throw new BridgeError('badRequest', `surface.ready identity mismatch: page claims '${p.surface}', host attached '${ctx.surface}'`);
+    return {
+    surface: ctx.surface,
     monitor,
     theme: host.theme,
     settings: host.settings,
@@ -40,22 +43,59 @@ export default function register(host: MockHost) {
     features: defaultFeatureFlags(),
     glassOverflow: q.get('glassOverflow') !== '0',
     platform: 'mock',
-  }));
+    };
+  });
 
+  // state producers (pushed after surface.ready exactly like IStatePublisher does)
+  host.provideState('settings.changed', () => host.settings);
+  host.provideState('theme.changed', () => host.theme);
+  host.provideState('locale.changed', () => ({ locale: effectiveLocale() }));
+
+  const effectiveLocale = () => (host.settings.general.language === 'auto' ? (q.get('lang') ?? 'en') : host.settings.general.language);
   host.handle('settings.get', () => host.settings);
   host.handle('settings.patch', (p) => {
-    host.settings = deepMerge(host.settings, p.patch);
+    const bad = unknownKeys(defaultSettings(), p.patch);
+    if (bad.length) throw new BridgeError('badRequest', `unknown settings key(s): ${bad.join(', ')}`);
+    if (p.patch && typeof p.patch === 'object' && 'version' in (p.patch as object)) throw new BridgeError('badRequest', 'version is not patchable');
+    host.settings = sanitize(deepMergeWithDefaults(host.settings, p.patch));
     syncTheme();
     host.emit('settings.changed', host.settings);
     host.emit('theme.changed', host.theme);
     const lang = host.settings.general.language;
-    if (lang !== lastLang) { lastLang = lang; host.emit('locale.changed', { locale: lang === 'auto' ? (q.get('lang') ?? 'en') : lang }); }
+    if (lang !== lastLang) { lastLang = lang; host.emit('locale.changed', { locale: effectiveLocale() }); }
     return host.settings;
   });
 
   host.onUiEvent('surface.log', (p) => console[p.level === 'debug' ? 'debug' : p.level]('[ui]', p.message, p.data ?? ''));
   host.onUiEvent('surface.resize', () => {});
   host.onUiEvent('surface.shape', () => {});
+
+  /** RFC 7386 + 'null resets to the default' (what SettingsValidator does on the real host). */
+  const deepMergeWithDefaults = (cur: Settings, patch: unknown): Settings => {
+    const merged: any = deepMerge(cur, patch);
+    const defaults: any = defaultSettings();
+    const restore = (m: any, d: any, pt: any) => {
+      if (pt === null || typeof pt !== 'object' || Array.isArray(pt)) return;
+      for (const k of Object.keys(pt)) {
+        if (pt[k] === null && d && k in d && Object.keys(d).length > 0) m[k] = d[k];
+        else if (typeof pt[k] === 'object' && pt[k] !== null && !Array.isArray(pt[k]) && m[k] && d) restore(m[k], d[k], pt[k]);
+      }
+    };
+    restore(merged, defaults, patch);
+    return merged;
+  };
+  /** Clamp numeric limits declared in protocol/settings.json (SETTINGS_LIMITS): the same table the C# SettingsValidator uses. */
+  const sanitize = (s: Settings): Settings => {
+    const clamp = (v: number, key: string, fb: number) => { const l = SETTINGS_LIMITS[key]; if (!Number.isFinite(v)) return fb; return Math.min(l?.max ?? v, Math.max(l?.min ?? v, v)); };
+    s.dock.iconSize = clamp(s.dock.iconSize, 'DockSettings.iconSize', 56);
+    s.dock.magnifiedSize = Math.max(s.dock.iconSize, clamp(s.dock.magnifiedSize, 'DockSettings.magnifiedSize', 88));
+    s.spotlight.maxResults = clamp(s.spotlight.maxResults, 'SpotlightSettings.maxResults', 9);
+    s.hotCorners.dwellMs = clamp(s.hotCorners.dwellMs, 'HotCornerSettings.dwellMs', 150);
+    s.desktop.iconSize = clamp(s.desktop.iconSize, 'DesktopSettings.iconSize', 64);
+    if (!new RegExp(SETTINGS_LIMITS['AppearanceSettings.accent'].pattern!).test(s.appearance.accent)) s.appearance.accent = 'system';
+    if (!new RegExp(SETTINGS_LIMITS['GeneralSettings.language'].pattern!).test(s.general.language)) s.general.language = 'auto';
+    return s;
+  };
 
   host.handle('settings.openWindow', (p) => { console.info('[mock] settings.openWindow', p.page ?? ''); host.emit('settings.navigate', { page: p.page }, (c) => c.surface === 'settings'); });
   host.handle('system.pickPath', (p) => {

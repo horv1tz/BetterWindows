@@ -10,6 +10,10 @@ const elements = new Map<HTMLElement, { radius?: number }>();
 const hitElements = new Map<HTMLElement, { radius?: number }>();
 let scheduled = false;
 let lastJson = '';
+// ONE shared poll timer for all registered elements (transforms such as dock magnification do not trigger ResizeObserver). Runs only while something is registered.
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+function ensureTimer() { if (pollTimer === null) pollTimer = setInterval(scheduleShapeReport, 250); }
+function maybeStopTimer() { if (elements.size + hitElements.size === 0 && pollTimer !== null) { clearInterval(pollTimer); pollTimer = null; } }
 
 function radiusOf(el: HTMLElement, o: { radius?: number }): number {
   if (o.radius !== undefined) return o.radius;
@@ -46,12 +50,11 @@ export function glassShape(node: HTMLElement, opts: { radius?: number } = {}) {
   elements.set(node, opts);
   const ro = new ResizeObserver(scheduleShapeReport);
   ro.observe(node);
-  // Transforms (dock magnification) do not trigger ResizeObserver: poll cheaply while connected.
-  const timer = setInterval(scheduleShapeReport, 250);
+  ensureTimer();
   scheduleShapeReport();
   return {
     update(o: { radius?: number }) { elements.set(node, o ?? {}); scheduleShapeReport(); },
-    destroy() { elements.delete(node); ro.disconnect(); clearInterval(timer); scheduleShapeReport(); },
+    destroy() { elements.delete(node); ro.disconnect(); maybeStopTimer(); scheduleShapeReport(); },
   };
 }
 
@@ -64,10 +67,10 @@ export function hitShape(node: HTMLElement, opts: { radius?: number } = {}) {
   hitElements.set(node, opts);
   const ro = new ResizeObserver(scheduleShapeReport);
   ro.observe(node);
-  const timer = setInterval(scheduleShapeReport, 250);
+  ensureTimer();
   scheduleShapeReport();
   return {
     update(o: { radius?: number }) { hitElements.set(node, o ?? {}); scheduleShapeReport(); },
-    destroy() { hitElements.delete(node); ro.disconnect(); clearInterval(timer); scheduleShapeReport(); },
+    destroy() { hitElements.delete(node); ro.disconnect(); maybeStopTimer(); scheduleShapeReport(); },
   };
 }
