@@ -32,7 +32,7 @@ public sealed class ShellIconSource : IIconSource, IDisposable
     };
 
     private readonly ILogger _log;
-    private readonly StaPool _pool = new("BW.Icon.STA", MaxConcurrency);
+    private readonly AppsStaPool _pool = new("BW.Icon.STA", MaxConcurrency);
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.Ordinal);
 
     private sealed record CacheEntry(byte[] Png, DateTime StoredUtc);
@@ -188,11 +188,11 @@ public sealed class ShellIconSource : IIconSource, IDisposable
         if (w <= 0 || h <= 0 || bgra.Length < w * h * 4) return null;
 
         if (alreadyPremultiplied != true)
-            IconImage.NormalizeToPremultiplied(bgra, IconImage.DetectAlpha(bgra));
+            AppsIconImage.NormalizeToPremultiplied(bgra, AppsIconImage.DetectAlpha(bgra));
 
-        if (trimPlate && IconImage.TryFindFlatPlate(bgra, w, h, out int cx, out int cy, out int cw, out int ch))
+        if (trimPlate && AppsIconImage.TryFindFlatPlate(bgra, w, h, out int cx, out int cy, out int cw, out int ch))
         {
-            bgra = IconImage.Crop(bgra, w, cx, cy, cw, ch);
+            bgra = AppsIconImage.Crop(bgra, w, cx, cy, cw, ch);
             w = cw;
             h = ch;
         }
@@ -202,11 +202,11 @@ public sealed class ShellIconSource : IIconSource, IDisposable
         {
             int tw = Math.Max(1, (int)Math.Round((double)w * targetSize / longest));
             int th = Math.Max(1, (int)Math.Round((double)h * targetSize / longest));
-            bgra = IconImage.ResizeBoxPremultiplied(bgra, w, h, tw, th, out w, out h);
+            bgra = AppsIconImage.ResizeBoxPremultiplied(bgra, w, h, tw, th, out w, out h);
         }
 
-        IconImage.Unpremultiply(bgra);
-        return PngEncoder.EncodeBgra(bgra, w, h);
+        AppsIconImage.Unpremultiply(bgra);
+        return AppsPngEncoder.EncodeBgra(bgra, w, h);
     }
 
     // ---------------------------------------------------------------- windows

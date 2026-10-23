@@ -194,7 +194,7 @@ public sealed unsafe class Win32DesktopIconsController : IDesktopIconsController
         }
     }
 
-    private static IEnumerable<nint> CandidateParents(DesktopLayout layout)
+    private static IEnumerable<nint> CandidateParents(AppsDesktopLayout layout)
     {
         yield return layout.DefViewParent;
         if (layout.FollowingWorkerW != 0 && layout.FollowingWorkerW != layout.DefViewParent) yield return layout.FollowingWorkerW;
@@ -228,7 +228,7 @@ public sealed unsafe class Win32DesktopIconsController : IDesktopIconsController
     }
 
     /// <summary>Moves/sizes a child of the desktop host to <paramref name="boundsPx"/> (virtual-screen px -> parent client px) and orders it against the icon view.</summary>
-    private bool PlaceLayer(HWND window, DesktopLayout layout, NativeRect boundsPx, bool hiding, bool moveAndSize)
+    private bool PlaceLayer(HWND window, AppsDesktopLayout layout, NativeRect boundsPx, bool hiding, bool moveAndSize)
     {
         HWND parent = PInvoke.GetParent(window);
         if (parent.IsNull) return false;
@@ -249,7 +249,7 @@ public sealed unsafe class Win32DesktopIconsController : IDesktopIconsController
     /// The sibling to insert after. Icons hidden: on top of the icon view (HWND_TOP = null), so the layer gets the mouse. Icons visible: directly below the icon view (icons stay
     /// clickable, we are still above the wallpaper). The icon view is only a sibling when the layer lives in its own parent; under the fallback WorkerW we can only use TOP.
     /// </summary>
-    private static HWND InsertAfterFor(nint layerParent, DesktopLayout layout, bool hiding)
+    private static HWND InsertAfterFor(nint layerParent, AppsDesktopLayout layout, bool hiding)
         => hiding || layerParent != layout.DefViewParent ? HWND.Null : AppsDesktopWindows.H(layout.DefView);
 
     /// <inheritdoc />
@@ -452,7 +452,7 @@ public sealed unsafe class Win32DesktopIconsController : IDesktopIconsController
     {
         if (_layers.Count == 0) return false;
         bool lost = false;
-        DesktopLayout layout = default;
+        AppsDesktopLayout layout = default;
         bool haveLayout = AppsDesktopWindows.TryFind(out layout);
         foreach (var layer in _layers.Values.ToList())
         {

@@ -32,7 +32,7 @@ public sealed class ShellDesktopFolderSource : IDesktopFolderSource, IDisposable
     private Action? _changed;
     private string? _thisPcName;
     private string? _recycleBinName;
-    private StaWorker? _sta;
+    private AppsStaWorker? _sta;
 
     /// <summary>Creates the source for the current user's desktop and the Public desktop.</summary>
     public ShellDesktopFolderSource(ILogger<ShellDesktopFolderSource>? logger = null)
@@ -125,7 +125,7 @@ public sealed class ShellDesktopFolderSource : IDesktopFolderSource, IDisposable
         // Folders first, then files; natural name order inside each group; the path breaks ties between the user and the public desktop.
         return items
             .OrderBy(e => e.IsFolder ? 0 : 1)
-            .ThenBy(e => e.Name, NaturalStringComparer.Instance)
+            .ThenBy(e => e.Name, AppsNaturalStringComparer.Instance)
             .ThenBy(e => e.Target, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -175,11 +175,11 @@ public sealed class ShellDesktopFolderSource : IDesktopFolderSource, IDisposable
     /// <summary>The shell's own (localised) display name of a namespace item, resolved on an STA thread with a deadline.</summary>
     private string? ResolveShellName(string parsingName)
     {
-        StaWorker sta;
+        AppsStaWorker sta;
         lock (_gate)
         {
             if (_disposed) return null;
-            sta = _sta ??= new StaWorker("BW.DesktopFolder.STA");
+            sta = _sta ??= new AppsStaWorker("BW.DesktopFolder.STA");
         }
         var task = sta.RunAsync(() =>
         {

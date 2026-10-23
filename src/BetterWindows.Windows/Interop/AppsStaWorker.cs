@@ -8,7 +8,7 @@ namespace BetterWindows.Native.Interop;
 /// created by an item may safely be used by later items. The thread is a background thread (never keeps the process alive) and blocks on a managed wait,
 /// which the CLR pumps for COM calls on STA threads, so cross-apartment shell calls cannot deadlock against it.
 /// </summary>
-internal sealed class StaWorker : IDisposable
+internal sealed class AppsStaWorker : IDisposable
 {
     private readonly BlockingCollection<Action> _queue = new();
     private readonly Thread _thread;
@@ -16,7 +16,7 @@ internal sealed class StaWorker : IDisposable
 
     /// <param name="name">Thread name (diagnostics).</param>
     /// <param name="sta">Always true in production. False exists only so the queue/timeout logic can be unit tested on operating systems without apartments.</param>
-    public StaWorker(string name, bool sta = true)
+    public AppsStaWorker(string name, bool sta = true)
     {
         _thread = new Thread(Loop) { IsBackground = true, Name = name };
         // Must be set before Start: the CLR then calls CoInitializeEx(COINIT_APARTMENTTHREADED) when the thread starts and CoUninitialize when it ends.
@@ -38,7 +38,7 @@ internal sealed class StaWorker : IDisposable
         }
         catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
         {
-            tcs.TrySetException(new ObjectDisposedException(nameof(StaWorker)));
+            tcs.TrySetException(new ObjectDisposedException(nameof(AppsStaWorker)));
         }
         return tcs.Task;
     }
@@ -73,20 +73,20 @@ internal sealed class StaWorker : IDisposable
 }
 
 /// <summary>
-/// A bounded pool of <see cref="StaWorker"/>s: at most <c>size</c> items run concurrently, each with an execution timeout. A worker whose item times out is
+/// A bounded pool of <see cref="AppsStaWorker"/>s: at most <c>size</c> items run concurrently, each with an execution timeout. A worker whose item times out is
 /// considered hung (a misbehaving thumbnail/icon handler): it is retired, a fresh worker takes its place, and the caller gets a <see cref="TimeoutException"/>.
 /// Time spent waiting for a free slot does NOT count towards the timeout (a Launchpad burst of 200 icon requests must not time out in the queue).
 /// </summary>
-internal sealed class StaPool : IDisposable
+internal sealed class AppsStaPool : IDisposable
 {
     private readonly string _name;
     private readonly bool _sta;
     private readonly SemaphoreSlim _gate;
-    private readonly ConcurrentStack<StaWorker> _idle = new();
+    private readonly ConcurrentStack<AppsStaWorker> _idle = new();
     private int _counter;
     private int _disposed;
 
-    public StaPool(string name, int size, bool sta = true)
+    public AppsStaPool(string name, int size, bool sta = true)
     {
         if (size < 1) throw new ArgumentOutOfRangeException(nameof(size));
         _name = name;
@@ -101,12 +101,12 @@ internal sealed class StaPool : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
 
-        StaWorker worker;
+        AppsStaWorker worker;
         Task<T> work;
         try
         {
             if (!_idle.TryPop(out worker!))
-                worker = new StaWorker($"{_name}-{Interlocked.Increment(ref _counter)}", _sta);
+                worker = new AppsStaWorker($"{_name}-{Interlocked.Increment(ref _counter)}", _sta);
             work = worker.RunAsync(func);
         }
         catch

@@ -4,9 +4,9 @@ namespace BetterWindows.Native;
 /// "Natural" file-name order like Explorer's (StrCmpLogicalW): case-insensitive, and runs of digits compare by numeric value, so "file2" sorts before "file10".
 /// Pure managed code so the order is identical in tests on any OS.
 /// </summary>
-internal sealed class NaturalStringComparer : IComparer<string>
+internal sealed class AppsNaturalStringComparer : IComparer<string>
 {
-    public static readonly NaturalStringComparer Instance = new();
+    public static readonly AppsNaturalStringComparer Instance = new();
 
     public int Compare(string? x, string? y)
     {

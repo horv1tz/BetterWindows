@@ -28,7 +28,7 @@ public class IconPipelineTests
         var raw = new byte[256 * 128 * 4];
         for (int i = 0; i < raw.Length; i += 4) { raw[i] = 100; raw[i + 1] = 100; raw[i + 2] = 100; raw[i + 3] = 255; }
         var png = ShellIconSource.Finish(raw, 256, 128, 64, null, false);
-        PngEncoder.TryReadSize(png!, out var w, out var h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(png!, out var w, out var h).Should().BeTrue();
         (w, h).Should().Be((64, 32));
     }
 
@@ -37,7 +37,7 @@ public class IconPipelineTests
     {
         var raw = new byte[32 * 32 * 4];
         Array.Fill(raw, (byte)255);
-        PngEncoder.TryReadSize(ShellIconSource.Finish(raw, 32, 32, 256, null, false)!, out var w, out var h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(ShellIconSource.Finish(raw, 32, 32, 256, null, false)!, out var w, out var h).Should().BeTrue();
         (w, h).Should().Be((32, 32));
     }
 
@@ -51,9 +51,9 @@ public class IconPipelineTests
                 int i = (y * 64 + x) * 4;
                 raw[i] = 200; raw[i + 1] = 100; raw[i + 2] = 20; raw[i + 3] = 255;
             }
-        PngEncoder.TryReadSize(ShellIconSource.Finish((byte[])raw.Clone(), 64, 64, 256, null, trimPlate: true)!, out var w, out var h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(ShellIconSource.Finish((byte[])raw.Clone(), 64, 64, 256, null, trimPlate: true)!, out var w, out var h).Should().BeTrue();
         (w, h).Should().Be((48, 48));
-        PngEncoder.TryReadSize(ShellIconSource.Finish((byte[])raw.Clone(), 64, 64, 256, null, trimPlate: false)!, out w, out h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(ShellIconSource.Finish((byte[])raw.Clone(), 64, 64, 256, null, trimPlate: false)!, out w, out h).Should().BeTrue();
         (w, h).Should().Be((64, 64));
     }
 

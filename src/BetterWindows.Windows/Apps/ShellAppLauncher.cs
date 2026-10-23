@@ -25,7 +25,7 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
 
     private readonly ILogger _log;
     private readonly object _gate = new();
-    private StaWorker? _sta;
+    private AppsStaWorker? _sta;
     private bool _disposed;
 
     /// <summary>Creates the launcher.</summary>
@@ -46,17 +46,23 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
             }
             var args = string.IsNullOrWhiteSpace(arguments) ? null : arguments;
 
+            bool hasPath = !string.IsNullOrWhiteSpace(target.Path);
             if (!string.IsNullOrWhiteSpace(target.Aumid))
             {
                 if (!AppIdentity.IsValidAumid(target.Aumid))
                 {
                     _log.LogWarning("Refusing launch: invalid AUMID");
-                    return LaunchResult.Failed;
+                    if (!hasPath) return LaunchResult.Failed;
                 }
-                return RunSta(() => LaunchAumid(target.Aumid!.Trim(), args));
+                else
+                {
+                    var byAumid = RunSta(() => LaunchAumid(target.Aumid!.Trim(), args));
+                    // A pin may carry both identities: when the Apps-folder item is gone (or its synthetic AUMID changed) the exe path still works.
+                    if (byAumid != LaunchResult.NotFound || !hasPath) return byAumid;
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(target.Path))
+            if (hasPath)
             {
                 var path = AppIdentity.NormalizeWindowsPath(target.Path);
                 if (path == null)
@@ -217,11 +223,11 @@ public sealed class ShellAppLauncher : IAppLauncher, IDisposable
 
     private T RunSta<T>(Func<T> work)
     {
-        StaWorker sta;
+        AppsStaWorker sta;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            sta = _sta ??= new StaWorker("BW.Launcher.STA");
+            sta = _sta ??= new AppsStaWorker("BW.Launcher.STA");
         }
         var task = sta.RunAsync(work);
         if (!task.Wait(CallTimeout))

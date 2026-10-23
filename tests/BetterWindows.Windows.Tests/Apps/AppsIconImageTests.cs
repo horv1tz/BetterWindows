@@ -1,6 +1,6 @@
 namespace BetterWindows.Native.Tests.Apps;
 
-public class IconImageTests
+public class AppsIconImageTests
 {
     private static byte[] Solid(int w, int h, byte b, byte g, byte r, byte a)
     {
@@ -21,29 +21,29 @@ public class IconImageTests
 
     [Fact]
     public void All_zero_alpha_means_no_alpha_channel()
-        => IconImage.DetectAlpha(Solid(2, 2, 10, 20, 30, 0)).Should().Be(AlphaKind.None);
+        => AppsIconImage.DetectAlpha(Solid(2, 2, 10, 20, 30, 0)).Should().Be(AppsAlphaKind.None);
 
     [Fact]
     public void Colours_within_alpha_are_premultiplied()
-        => IconImage.DetectAlpha(Solid(2, 2, 50, 60, 70, 128)).Should().Be(AlphaKind.Premultiplied);
+        => AppsIconImage.DetectAlpha(Solid(2, 2, 50, 60, 70, 128)).Should().Be(AppsAlphaKind.Premultiplied);
 
     [Fact]
     public void A_colour_far_above_alpha_means_straight_alpha()
-        => IconImage.DetectAlpha(Solid(2, 2, 250, 250, 250, 100)).Should().Be(AlphaKind.Straight);
+        => AppsIconImage.DetectAlpha(Solid(2, 2, 250, 250, 250, 100)).Should().Be(AppsAlphaKind.Straight);
 
     [Fact]
     public void Rounding_noise_does_not_flip_the_detection()
-        => IconImage.DetectAlpha(Solid(2, 2, 102, 101, 100, 100)).Should().Be(AlphaKind.Premultiplied);
+        => AppsIconImage.DetectAlpha(Solid(2, 2, 102, 101, 100, 100)).Should().Be(AppsAlphaKind.Premultiplied);
 
     [Fact]
     public void Fully_opaque_images_are_premultiplied_by_definition()
-        => IconImage.DetectAlpha(Solid(2, 2, 255, 255, 255, 255)).Should().Be(AlphaKind.Premultiplied);
+        => AppsIconImage.DetectAlpha(Solid(2, 2, 255, 255, 255, 255)).Should().Be(AppsAlphaKind.Premultiplied);
 
     [Fact]
     public void No_alpha_bitmaps_become_opaque()
     {
         var px = Solid(2, 1, 10, 20, 30, 0);
-        IconImage.NormalizeToPremultiplied(px, AlphaKind.None);
+        AppsIconImage.NormalizeToPremultiplied(px, AppsAlphaKind.None);
         px.Where((_, i) => i % 4 == 3).Should().OnlyContain(a => a == 255);
         px[0].Should().Be(10);
     }
@@ -52,7 +52,7 @@ public class IconImageTests
     public void Straight_alpha_is_converted_to_premultiplied()
     {
         var px = Solid(1, 1, 200, 100, 50, 128);
-        IconImage.NormalizeToPremultiplied(px, AlphaKind.Straight);
+        AppsIconImage.NormalizeToPremultiplied(px, AppsAlphaKind.Straight);
         px.Should().Equal((byte)((200 * 128 + 127) / 255), (byte)((100 * 128 + 127) / 255), (byte)((50 * 128 + 127) / 255), 128);
     }
 
@@ -61,8 +61,8 @@ public class IconImageTests
     {
         var original = Solid(1, 1, 200, 100, 50, 200);
         var px = (byte[])original.Clone();
-        IconImage.Premultiply(px);
-        IconImage.Unpremultiply(px);
+        AppsIconImage.Premultiply(px);
+        AppsIconImage.Unpremultiply(px);
         for (int i = 0; i < 3; i++) Math.Abs(px[i] - original[i]).Should().BeLessThanOrEqualTo(2);
         px[3].Should().Be(200);
     }
@@ -71,7 +71,7 @@ public class IconImageTests
     public void Unpremultiply_clears_colour_of_fully_transparent_pixels_and_keeps_opaque_ones()
     {
         byte[] px = [9, 9, 9, 0, 1, 2, 3, 255];
-        IconImage.Unpremultiply(px);
+        AppsIconImage.Unpremultiply(px);
         px.Should().Equal(0, 0, 0, 0, 1, 2, 3, 255);
     }
 
@@ -82,7 +82,7 @@ public class IconImageTests
         var px = new byte[4 * 4 * 4];
         Fill(px, 4, 0, 0, 2, 4, 0, 0, 0, 255);
         Fill(px, 4, 2, 0, 4, 4, 255, 255, 255, 255);
-        var small = IconImage.ResizeBoxPremultiplied(px, 4, 4, 2, 2, out var w, out var h);
+        var small = AppsIconImage.ResizeBoxPremultiplied(px, 4, 4, 2, 2, out var w, out var h);
         (w, h).Should().Be((2, 2));
         small.Should().Equal(0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255);
     }
@@ -95,7 +95,7 @@ public class IconImageTests
         Fill(px, 2, 1, 1, 2, 2, 255, 255, 255, 255);
         Fill(px, 2, 1, 0, 2, 1, 0, 0, 0, 255);
         Fill(px, 2, 0, 1, 1, 2, 0, 0, 0, 255);
-        var small = IconImage.ResizeBoxPremultiplied(px, 2, 2, 1, 1, out _, out _);
+        var small = AppsIconImage.ResizeBoxPremultiplied(px, 2, 2, 1, 1, out _, out _);
         small[0].Should().BeInRange(127, 128);
         small[3].Should().Be(255);
     }
@@ -104,7 +104,7 @@ public class IconImageTests
     public void Box_downscale_with_non_integer_ratio_keeps_flat_colour_flat()
     {
         var px = Solid(10, 10, 40, 80, 120, 255);
-        var small = IconImage.ResizeBoxPremultiplied(px, 10, 10, 3, 3, out var w, out var h);
+        var small = AppsIconImage.ResizeBoxPremultiplied(px, 10, 10, 3, 3, out var w, out var h);
         (w, h).Should().Be((3, 3));
         for (int i = 0; i < small.Length; i += 4)
         {
@@ -120,9 +120,9 @@ public class IconImageTests
     {
         // left pixel: opaque white; right pixel: fully transparent (premultiplied 0,0,0,0)
         byte[] px = [255, 255, 255, 255, 0, 0, 0, 0];
-        var small = IconImage.ResizeBoxPremultiplied(px, 2, 1, 1, 1, out _, out _);
+        var small = AppsIconImage.ResizeBoxPremultiplied(px, 2, 1, 1, 1, out _, out _);
         small.Should().Equal(128, 128, 128, 128); // premultiplied half-transparent white
-        IconImage.Unpremultiply(small);
+        AppsIconImage.Unpremultiply(small);
         small.Should().Equal(255, 255, 255, 128);
     }
 
@@ -130,12 +130,12 @@ public class IconImageTests
     public void Resize_never_enlarges()
     {
         var px = Solid(4, 4, 1, 2, 3, 255);
-        IconImage.ResizeBoxPremultiplied(px, 4, 4, 8, 8, out var w, out var h).Should().BeSameAs(px);
+        AppsIconImage.ResizeBoxPremultiplied(px, 4, 4, 8, 8, out var w, out var h).Should().BeSameAs(px);
         (w, h).Should().Be((4, 4));
-        IconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 8, out w, out h).Should().BeSameAs(px, "a taller target is an enlargement");
-        IconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 4, out w, out h).Should().BeSameAs(px);
+        AppsIconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 8, out w, out h).Should().BeSameAs(px, "a taller target is an enlargement");
+        AppsIconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 4, out w, out h).Should().BeSameAs(px);
         (w, h).Should().Be((4, 4));
-        IconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 2, out w, out h).Should().NotBeSameAs(px, "shrinking along one axis is allowed");
+        AppsIconImage.ResizeBoxPremultiplied(px, 4, 4, 4, 2, out w, out h).Should().NotBeSameAs(px, "shrinking along one axis is allowed");
         (w, h).Should().Be((4, 2));
     }
 
@@ -144,7 +144,7 @@ public class IconImageTests
     {
         var px = new byte[4 * 4 * 4];
         Fill(px, 4, 1, 1, 3, 3, 9, 8, 7, 255);
-        var c = IconImage.Crop(px, 4, 1, 1, 2, 2);
+        var c = AppsIconImage.Crop(px, 4, 1, 1, 2, 2);
         c.Should().Equal(Enumerable.Repeat<byte>(0, 0).Concat(new byte[] { 9, 8, 7, 255, 9, 8, 7, 255, 9, 8, 7, 255, 9, 8, 7, 255 }));
     }
 
@@ -167,7 +167,7 @@ public class IconImageTests
     public void A_flat_plate_with_transparent_padding_is_found()
     {
         var px = PlateOnTransparent(64, 8);
-        IconImage.TryFindFlatPlate(px, 64, 64, out var x, out var y, out var w, out var h).Should().BeTrue();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out var x, out var y, out var w, out var h).Should().BeTrue();
         (x, y, w, h).Should().Be((8, 8, 48, 48));
     }
 
@@ -175,7 +175,7 @@ public class IconImageTests
     public void A_plate_with_rounded_corners_is_still_a_plate()
     {
         var px = PlateOnTransparent(64, 8, roundedCorners: true);
-        IconImage.TryFindFlatPlate(px, 64, 64, out var x, out var y, out var w, out var h).Should().BeTrue();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out var x, out var y, out var w, out var h).Should().BeTrue();
         (x, y, w, h).Should().Be((8, 8, 48, 48));
     }
 
@@ -183,7 +183,7 @@ public class IconImageTests
     public void An_image_that_fills_its_canvas_is_not_trimmed()
     {
         var px = Solid(64, 64, 200, 100, 20, 255);
-        IconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class IconImageTests
                 bool circle = (x - 32) * (x - 32) + (y - 32) * (y - 32) < 15 * 15;
                 if (circle) Fill(px, 64, x, y, x + 1, y + 1, (byte)(x * 5), (byte)(y * 5), 40, 255);
             }
-        IconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class IconImageTests
     {
         var px = new byte[64 * 64 * 4];
         Fill(px, 64, 4, 20, 60, 44, 200, 100, 20, 255);
-        IconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
     }
 
     [Fact]
@@ -215,13 +215,13 @@ public class IconImageTests
         for (int y = 8; y < 56; y++)
             for (int x = 8; x < 56; x++)
                 Fill(px, 64, x, y, x + 1, y + 1, (byte)(x * 4), 50, 50, 255);
-        IconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(px, 64, 64, out _, out _, out _, out _).Should().BeFalse();
     }
 
     [Fact]
     public void Empty_and_tiny_images_are_not_plates()
     {
-        IconImage.TryFindFlatPlate(new byte[64 * 64 * 4], 64, 64, out _, out _, out _, out _).Should().BeFalse();
-        IconImage.TryFindFlatPlate(Solid(8, 8, 1, 1, 1, 255), 8, 8, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(new byte[64 * 64 * 4], 64, 64, out _, out _, out _, out _).Should().BeFalse();
+        AppsIconImage.TryFindFlatPlate(Solid(8, 8, 1, 1, 1, 255), 8, 8, out _, out _, out _, out _).Should().BeFalse();
     }
 }

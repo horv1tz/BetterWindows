@@ -1,7 +1,7 @@
 namespace BetterWindows.Native;
 
 /// <summary>How the alpha channel of a raw 32bpp shell bitmap must be read.</summary>
-internal enum AlphaKind
+internal enum AppsAlphaKind
 {
     /// <summary>Every alpha byte is 0: the bitmap carries no alpha channel (pre-Vista style 32bpp); treat it as fully opaque.</summary>
     None,
@@ -15,10 +15,10 @@ internal enum AlphaKind
 /// Pure pixel operations on top-down BGRA buffers used by the icon pipeline (alpha detection, un/premultiply, box downscale, plate trimming).
 /// All buffers are 4 bytes per pixel in B,G,R,A order. Everything here is OS independent and unit tested.
 /// </summary>
-internal static class IconImage
+internal static class AppsIconImage
 {
-    /// <summary>Classifies the alpha channel of a raw shell bitmap (see <see cref="AlphaKind"/>).</summary>
-    public static AlphaKind DetectAlpha(ReadOnlySpan<byte> bgra)
+    /// <summary>Classifies the alpha channel of a raw shell bitmap (see <see cref="AppsAlphaKind"/>).</summary>
+    public static AppsAlphaKind DetectAlpha(ReadOnlySpan<byte> bgra)
     {
         bool anyAlpha = false;
         for (int i = 0; i + 3 < bgra.Length; i += 4)
@@ -30,21 +30,21 @@ internal static class IconImage
             {
                 // A pixel with a=0 but colour set also lands here; that is a bitmap that never wrote alpha but did write colour. Only call it
                 // "straight" when at least one pixel has a non-zero alpha, otherwise it is the no-alpha case.
-                if (a != 0) return AlphaKind.Straight;
+                if (a != 0) return AppsAlphaKind.Straight;
             }
         }
-        return anyAlpha ? AlphaKind.Premultiplied : AlphaKind.None;
+        return anyAlpha ? AppsAlphaKind.Premultiplied : AppsAlphaKind.None;
     }
 
     /// <summary>Brings any shell bitmap into premultiplied BGRA in place (None -> opaque, Straight -> premultiplied).</summary>
-    public static void NormalizeToPremultiplied(Span<byte> bgra, AlphaKind kind)
+    public static void NormalizeToPremultiplied(Span<byte> bgra, AppsAlphaKind kind)
     {
         switch (kind)
         {
-            case AlphaKind.None:
+            case AppsAlphaKind.None:
                 for (int i = 3; i < bgra.Length; i += 4) bgra[i] = 255;
                 break;
-            case AlphaKind.Straight:
+            case AppsAlphaKind.Straight:
                 Premultiply(bgra);
                 break;
         }

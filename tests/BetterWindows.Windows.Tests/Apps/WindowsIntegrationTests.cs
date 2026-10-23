@@ -20,7 +20,7 @@ public class WindowsIntegrationTests
     {
         png.Should().NotBeNull();
         png!.AsSpan(0, 8).ToArray().Should().Equal(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
-        PngEncoder.TryReadSize(png, out var w, out var h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(png, out var w, out var h).Should().BeTrue();
         w.Should().BeInRange(8, maxEdge);
         h.Should().BeInRange(8, maxEdge);
         var (dw, dh, rgba) = PngTestDecoder.Decode(png!);
@@ -169,12 +169,12 @@ public class WindowsIntegrationTests
             var bgra = new byte[300 * 100 * 4];
             for (int i = 0; i < bgra.Length; i += 4) { bgra[i + 2] = 255; bgra[i + 3] = 255; }
             var file = Path.Combine(dir, "wide.png");
-            await File.WriteAllBytesAsync(file, PngEncoder.EncodeBgra(bgra, 300, 100));
+            await File.WriteAllBytesAsync(file, AppsPngEncoder.EncodeBgra(bgra, 300, 100));
 
             using var icons = new ShellIconSource();
             var png = await icons.GetIconPngAsync(new IconKey { Path = file }, 256);
             png.Should().NotBeNull();
-            PngEncoder.TryReadSize(png!, out var w, out var h).Should().BeTrue();
+            AppsPngEncoder.TryReadSize(png!, out var w, out var h).Should().BeTrue();
             // A thumbnail keeps the aspect ratio of the picture (3:1); a generic icon would be square.
             if (w != h) ((double)w / h).Should().BeApproximately(3.0, 0.3);
         }
@@ -442,7 +442,7 @@ public class WindowsIntegrationTests
         wallpaper.GetWallpaperPath("mdeadbeef").Should().BeNull("unknown monitor id");
         wallpaper.GetWallpaperPath("").Should().BeNull();
 
-        using var sta = new StaWorker("test-wallpaper-ids");
+        using var sta = new AppsStaWorker("test-wallpaper-ids");
         var ids = await sta.RunAsync(() =>
         {
             var result = new List<string>();
@@ -576,7 +576,7 @@ public class WindowsIntegrationTests
     public async Task Sta_worker_runs_items_in_order_on_one_sta_thread()
     {
         RequireWindows();
-        using var worker = new StaWorker("test-sta");
+        using var worker = new AppsStaWorker("test-sta");
         var a = await worker.RunAsync(() => (Environment.CurrentManagedThreadId, Thread.CurrentThread.GetApartmentState()));
         var b = await worker.RunAsync(() => (Environment.CurrentManagedThreadId, Thread.CurrentThread.GetApartmentState()));
         a.Item2.Should().Be(ApartmentState.STA);
@@ -590,7 +590,7 @@ public class WindowsIntegrationTests
     public async Task Sta_pool_bounds_concurrency_and_retires_hung_workers()
     {
         RequireWindows();
-        using var pool = new StaPool("test-pool", 2);
+        using var pool = new AppsStaPool("test-pool", 2);
         int running = 0, maxRunning = 0;
         Func<int> work = () =>
         {

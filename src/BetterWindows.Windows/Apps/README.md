@@ -8,7 +8,7 @@ Everything here implements a port from `Core/Platform/Ports.Apps.cs`; the logic 
 | port | class | notes |
 |---|---|---|
 | `IAppCatalogSource` | `ShellAppCatalogSource` | `shell:AppsFolder` via `SHGetKnownFolderItem` -> `BHID_EnumItems` on a dedicated STA thread; `.lnk` fallback through `IShellLinkW`; `AppCatalogFilter` builds entries and drops noise |
-| `IIconSource` | `ShellIconSource` | `IShellItemImageFactory.GetImage` (apps, paths, image thumbnails >= 192 px) or `WM_GETICON` -> class icon -> exe icon (windows); pure pixel pipeline in `IconImage`, own `PngEncoder` |
+| `IIconSource` | `ShellIconSource` | `IShellItemImageFactory.GetImage` (apps, paths, image thumbnails >= 192 px) or `WM_GETICON` -> class icon -> exe icon (windows); pure pixel pipeline in `AppsIconImage`, own `AppsPngEncoder` |
 | `IAppLauncher` | `ShellAppLauncher` | `ShellExecuteEx` (verb NULL, never elevates); every target re-validated by `ShellTargetPolicy` |
 | `IFileSearch` | `WindowsSearchFileSearch` | OLE DB `Search.CollatorDSO` / `SYSTEMINDEX`; SQL built by `FileSearchQuery` (escaping tested) |
 | `IAutostartService` | `RegistryAutostartService` | `HKCU\...\Run\BetterWindows` + `StartupApproved\Run`; command line logic in `AutostartCommand` |
@@ -18,7 +18,7 @@ Everything here implements a port from `Core/Platform/Ports.Apps.cs`; the logic 
 
 ## Threading
 
-* Shell COM (`IShellItem*`, `IShellLink`, `IDesktopWallpaper`, `ShellExecuteEx`) only ever runs on STA threads owned by `StaWorker` / `StaPool`
+* Shell COM (`IShellItem*`, `IShellLink`, `IDesktopWallpaper`, `ShellExecuteEx`) only ever runs on STA threads owned by `AppsStaWorker` / `AppsStaPool`
   (`Interop/AppsStaWorker.cs`). The catalog, launcher, wallpaper and desktop-folder source have one worker each; icons use a pool of 2 with a 3 s execution timeout
   (a hung handler retires its thread and a fresh one takes over).
 * Port methods that are synchronous (`Launch`, `Open`, `RevealInExplorer`, wallpaper, `Enumerate`) block the caller until the STA thread is done, with a deadline.

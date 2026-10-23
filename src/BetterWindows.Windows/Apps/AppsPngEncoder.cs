@@ -7,7 +7,7 @@ namespace BetterWindows.Native;
 /// Minimal, dependency-free PNG writer (8-bit RGBA, no interlace). We encode ourselves instead of pulling in System.Drawing.Common or the WinRT BitmapEncoder:
 /// it keeps the Windows layer free of extra packages, works on any thread without COM, and is unit-testable on Linux.
 /// </summary>
-internal static class PngEncoder
+internal static class AppsPngEncoder
 {
     private static readonly byte[] Signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     private static readonly uint[] CrcTable = BuildCrcTable();

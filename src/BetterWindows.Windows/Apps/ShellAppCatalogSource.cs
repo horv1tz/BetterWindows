@@ -23,7 +23,7 @@ public sealed class ShellAppCatalogSource : IAppCatalogSource, IDisposable
     private readonly ILogger _log;
     private readonly IReadOnlyList<string> _startMenuRoots;
     private readonly object _gate = new();
-    private StaWorker? _sta;
+    private AppsStaWorker? _sta;
     private readonly List<FileSystemWatcher> _watchers = new();
     private Timer? _debounceTimer;
     private Timer? _periodicTimer;
@@ -92,12 +92,12 @@ public sealed class ShellAppCatalogSource : IAppCatalogSource, IDisposable
         lock (_gate) return _lastGood ?? Array.Empty<AppEntry>();
     }
 
-    private StaWorker GetWorker()
+    private AppsStaWorker GetWorker()
     {
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _sta ??= new StaWorker("BW.AppCatalog.STA");
+            return _sta ??= new AppsStaWorker("BW.AppCatalog.STA");
         }
     }
 

@@ -1,6 +1,6 @@
 namespace BetterWindows.Native.Tests.Apps;
 
-public class PngEncoderTests
+public class AppsPngEncoderTests
 {
     private static byte[] Gradient(int w, int h)
     {
@@ -20,9 +20,9 @@ public class PngEncoderTests
     [Fact]
     public void Starts_with_the_png_signature_and_reports_its_size()
     {
-        var png = PngEncoder.EncodeBgra(Gradient(5, 3), 5, 3);
+        var png = AppsPngEncoder.EncodeBgra(Gradient(5, 3), 5, 3);
         png.AsSpan(0, 8).ToArray().Should().Equal(0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A);
-        PngEncoder.TryReadSize(png, out var w, out var h).Should().BeTrue();
+        AppsPngEncoder.TryReadSize(png, out var w, out var h).Should().BeTrue();
         (w, h).Should().Be((5, 3));
     }
 
@@ -36,7 +36,7 @@ public class PngEncoderTests
     public void Round_trips_pixels_exactly(int w, int h)
     {
         var bgra = Gradient(w, h);
-        var png = PngEncoder.EncodeBgra(bgra, w, h);
+        var png = AppsPngEncoder.EncodeBgra(bgra, w, h);
         var (dw, dh, rgba) = PngTestDecoder.Decode(png);
         (dw, dh).Should().Be((w, h));
         rgba.Should().Equal(PngTestDecoder.ToRgba(bgra));
@@ -48,7 +48,7 @@ public class PngEncoderTests
         var rng = new Random(1234);
         var bgra = new byte[40 * 40 * 4];
         rng.NextBytes(bgra);
-        var (_, _, rgba) = PngTestDecoder.Decode(PngEncoder.EncodeBgra(bgra, 40, 40));
+        var (_, _, rgba) = PngTestDecoder.Decode(AppsPngEncoder.EncodeBgra(bgra, 40, 40));
         rgba.Should().Equal(PngTestDecoder.ToRgba(bgra));
     }
 
@@ -57,7 +57,7 @@ public class PngEncoderTests
     {
         // one red opaque pixel (B=0,G=0,R=255,A=255) and one fully transparent pixel
         byte[] bgra = [0, 0, 255, 255, 0, 0, 0, 0];
-        var (_, _, rgba) = PngTestDecoder.Decode(PngEncoder.EncodeBgra(bgra, 2, 1));
+        var (_, _, rgba) = PngTestDecoder.Decode(AppsPngEncoder.EncodeBgra(bgra, 2, 1));
         rgba.Should().Equal(255, 0, 0, 255, 0, 0, 0, 0);
     }
 
@@ -66,7 +66,7 @@ public class PngEncoderTests
     {
         var bgra = new byte[256 * 256 * 4];
         Array.Fill(bgra, (byte)0x80);
-        PngEncoder.EncodeBgra(bgra, 256, 256).Length.Should().BeLessThan(2000);
+        AppsPngEncoder.EncodeBgra(bgra, 256, 256).Length.Should().BeLessThan(2000);
     }
 
     [Theory]
@@ -75,25 +75,25 @@ public class PngEncoderTests
     [InlineData(-1, 1)]
     public void Invalid_dimensions_throw(int w, int h)
     {
-        var act = () => PngEncoder.EncodeBgra(new byte[16], w, h);
+        var act = () => AppsPngEncoder.EncodeBgra(new byte[16], w, h);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Too_small_buffer_throws()
     {
-        var act = () => PngEncoder.EncodeBgra(new byte[15], 2, 2);
+        var act = () => AppsPngEncoder.EncodeBgra(new byte[15], 2, 2);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void TryReadSize_rejects_garbage()
     {
-        PngEncoder.TryReadSize(new byte[] { 1, 2, 3 }, out _, out _).Should().BeFalse();
-        PngEncoder.TryReadSize(new byte[40], out _, out _).Should().BeFalse();
+        AppsPngEncoder.TryReadSize(new byte[] { 1, 2, 3 }, out _, out _).Should().BeFalse();
+        AppsPngEncoder.TryReadSize(new byte[40], out _, out _).Should().BeFalse();
         var jpegish = new byte[40];
         jpegish[0] = 0xFF;
         jpegish[1] = 0xD8;
-        PngEncoder.TryReadSize(jpegish, out _, out _).Should().BeFalse();
+        AppsPngEncoder.TryReadSize(jpegish, out _, out _).Should().BeFalse();
     }
 }

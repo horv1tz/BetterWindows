@@ -5,7 +5,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 namespace BetterWindows.Native.Interop;
 
 /// <summary>Where Explorer keeps the desktop, as found by <see cref="AppsDesktopWindows.TryFind"/>. Zero = not present.</summary>
-internal readonly record struct DesktopLayout(nint Progman, nint DefView, nint DefViewParent, nint ListView, nint FollowingWorkerW)
+internal readonly record struct AppsDesktopLayout(nint Progman, nint DefView, nint DefViewParent, nint ListView, nint FollowingWorkerW)
 {
     /// <summary>Windows 11 24H2 style: SHELLDLL_DefView is a direct child of Progman (no WorkerW hosts it).</summary>
     public bool DefViewUnderProgman => DefView != 0 && DefViewParent == Progman;
@@ -27,7 +27,7 @@ internal static unsafe class AppsDesktopWindows
     public static nint N(HWND h) => (nint)h.Value;
     public static HWND H(nint h) => new(h);
 
-    public static bool TryFind(out DesktopLayout layout)
+    public static bool TryFind(out AppsDesktopLayout layout)
     {
         layout = default;
         HWND progman = PInvoke.FindWindow("Progman", null!);
@@ -61,7 +61,7 @@ internal static unsafe class AppsDesktopWindows
         HWND list = PInvoke.FindWindowEx(defView, HWND.Null, "SysListView32", "FolderView");
         if (list.IsNull) list = PInvoke.FindWindowEx(defView, HWND.Null, "SysListView32", null!);
 
-        layout = new DesktopLayout(N(progman), N(defView), N(parent), N(list), N(following));
+        layout = new AppsDesktopLayout(N(progman), N(defView), N(parent), N(list), N(following));
         return true;
     }
 

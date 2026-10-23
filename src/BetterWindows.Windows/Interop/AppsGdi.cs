@@ -28,7 +28,7 @@ internal static unsafe class AppsGdi
 
     /// <summary>
     /// Copies a bitmap handle's pixels into a top-down BGRA array via GetDIBits (works for DIB sections and device-dependent bitmaps alike; for 32bpp DIB sections the
-    /// alpha byte is preserved verbatim). The handle is NOT deleted here. Interpretation of the alpha channel is up to the caller (see <see cref="IconImage.DetectAlpha"/>).
+    /// alpha byte is preserved verbatim). The handle is NOT deleted here. Interpretation of the alpha channel is up to the caller (see <see cref="AppsIconImage.DetectAlpha"/>).
     /// </summary>
     public static bool TryReadBitmap(nint hbitmap, out int width, out int height, out byte[] bgra)
     {

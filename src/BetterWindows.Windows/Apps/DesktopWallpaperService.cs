@@ -21,7 +21,7 @@ public sealed class DesktopWallpaperService : IWallpaperService, IDisposable
 
     private readonly ILogger _log;
     private readonly object _gate = new();
-    private StaWorker? _sta;
+    private AppsStaWorker? _sta;
     private bool _disposed;
 
     /// <summary>Creates the service.</summary>
@@ -146,11 +146,11 @@ public sealed class DesktopWallpaperService : IWallpaperService, IDisposable
 
     private T Run<T>(Func<T> work)
     {
-        StaWorker sta;
+        AppsStaWorker sta;
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            sta = _sta ??= new StaWorker("BW.Wallpaper.STA");
+            sta = _sta ??= new AppsStaWorker("BW.Wallpaper.STA");
         }
         var task = sta.RunAsync(work);
         if (!task.Wait(CallTimeout))
