@@ -15,6 +15,8 @@ public sealed class ReminderScheduler : IDisposable
 {
     public static readonly TimeSpan CatchUpWindow = TimeSpan.FromHours(24);
     public static readonly TimeSpan MaxWait = TimeSpan.FromMinutes(10);
+    /// <summary>After a failed pass (the flag could not be persisted, or the store threw) the next pass waits this long: a read-only file must not spin the timer.</summary>
+    public static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
 
     private readonly ReminderStore _store;
     private readonly TimeProvider _time;
@@ -23,6 +25,7 @@ public sealed class ReminderScheduler : IDisposable
     private readonly object _gate = new();
     private ITimer? _timer;
     private bool _disposed;
+    private DateTimeOffset? _retryAt;
 
     public ReminderScheduler(ReminderStore store, TimeProvider time, Action<Reminder> onDue, ILogger? log = null)
     {
@@ -52,6 +55,8 @@ public sealed class ReminderScheduler : IDisposable
             lock (_gate)
             {
                 if (_disposed || _timer is null) return;
+                // A failed pass waits for its retry time even when reminders are already overdue (they would otherwise re-run immediately).
+                if (_retryAt is { } retry && retry > now) next = retry;
                 if (next is null) { _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan); return; }
                 var wait = next.Value - now;
                 if (wait < TimeSpan.Zero) wait = TimeSpan.Zero;
@@ -69,7 +74,11 @@ public sealed class ReminderScheduler : IDisposable
             lock (_gate) if (_disposed) return;
             Process();
         }
-        catch (Exception ex) { _log.LogError(ex, "Reminder pass failed"); }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Reminder pass failed; retrying in {Delay}", RetryDelay);
+            lock (_gate) _retryAt = _time.GetUtcNow() + RetryDelay;
+        }
         finally { Rearm(); }
     }
 
@@ -85,10 +94,12 @@ public sealed class ReminderScheduler : IDisposable
         try { flipped = _store.MarkNotified(overdue.Select(r => r.Id).ToHashSet(StringComparer.Ordinal)); }
         catch (IOException ex)
         {
-            // Cannot persist the flag: firing now would fire again after a restart. Retry on the next pass instead.
-            _log.LogWarning(ex, "Could not persist reminder state; will retry");
+            // Cannot persist the flag: firing now would fire again after a restart. Retry later instead (Rearm honours _retryAt).
+            _log.LogWarning(ex, "Could not persist reminder state; will retry in {Delay}", RetryDelay);
+            lock (_gate) _retryAt = now + RetryDelay;
             return;
         }
+        lock (_gate) _retryAt = null;
 
         foreach (var r in flipped)
         {

@@ -33,6 +33,12 @@ public static class ReminderRules
         try
         {
             if (zone.IsInvalidTime(unspecified)) unspecified = unspecified.AddHours(1);
+            if (zone.IsAmbiguousTime(unspecified))
+            {
+                // Fall-back: the wall-clock time occurs twice. The first occurrence is the one before the clocks went back, i.e. the larger offset.
+                var first = zone.GetAmbiguousTimeOffsets(unspecified).Max();
+                return new DateTimeOffset(unspecified, first).ToUniversalTime();
+            }
             return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(unspecified, zone), TimeSpan.Zero);
         }
         catch (ArgumentException) { return new DateTimeOffset(DateTime.SpecifyKind(unspecified, DateTimeKind.Utc)); }
