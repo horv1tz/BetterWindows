@@ -30,11 +30,8 @@ CloseServiceHandle
 SERVICE_STATUS_PROCESS
 FindWindow
 FindWindowEx
-EnumWindows
-GetClassName
 ShowWindow
 IsWindow
-IsWindowVisible
 SetParent
 SetWindowPos
 GetWindowLongPtr
@@ -43,7 +40,6 @@ GetWindowRect
 GetParent
 GetWindow
 IsHungAppWindow
-GetAncestor
 MapWindowPoints
 RegisterWindowMessage
 RegisterClassEx
@@ -63,13 +59,5 @@ WM_GETICON
 WM_TIMER
 WM_CLOSE
 WM_DESTROY
-// (used by the apps integration tests: a window with an icon on its own message-loop thread)
-LoadIcon
-SendMessage
-WM_SETICON
-WM_QUIT
-PostThreadMessage
-GetCurrentThreadId
-IDI_APPLICATION
 // ---- status stream ----
 // ---- desktops/capture/tray stream ----
