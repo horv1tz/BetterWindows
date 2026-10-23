@@ -28,6 +28,8 @@ public sealed class SettingsService : ISettingsService, IDisposable
     /// <summary>Quiet period after a file-system event before the file is re-read.</summary>
     public static readonly TimeSpan ReloadDebounce = TimeSpan.FromMilliseconds(250);
     private static readonly TimeSpan WriteRetryDelay = TimeSpan.FromSeconds(5);
+    /// <summary>config.json is for humans too: indented, and non-ASCII text (city names, pin names) stays readable instead of \uXXXX escapes. Never served to a web page.</summary>
+    private static readonly JsonSerializerOptions FileJson = new(ProtocolJson.IndentedOptions) { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
     private readonly IAppPaths _paths;
     private readonly TimeProvider _time;
@@ -163,7 +165,7 @@ public sealed class SettingsService : ISettingsService, IDisposable
         }
 
         byte[] bytes;
-        try { bytes = new UTF8Encoding(false).GetBytes(doc.ToJsonString(ProtocolJson.IndentedOptions)); }
+        try { bytes = new UTF8Encoding(false).GetBytes(doc.ToJsonString(FileJson)); }
         catch (Exception ex) { _log.LogError(ex, "Settings could not be serialised; nothing was written"); return; }
         if (bytes.Length > Limits.MaxConfigBytes)
         {
@@ -392,8 +394,9 @@ public sealed class SettingsService : ISettingsService, IDisposable
 
     private void MarkDirtyLocked()
     {
-        if (_disposed) { _dirty = true; return; }
+        _version++; // a re-creation of the file from unchanged memory must also be newer than the last write
         _dirty = true;
+        if (_disposed) return;
         _dirtySince ??= _time.GetUtcNow();
         var age = _time.GetUtcNow() - _dirtySince.Value;
         // Debounce: every change restarts the quiet period, but never beyond MaxSaveDelay since the first unsaved change (then the armed timer is left alone).
