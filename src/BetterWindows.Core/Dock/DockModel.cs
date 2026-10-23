@@ -121,7 +121,9 @@ public static class DockModel
         DockItem FolderItem(PinnedItem f)
         {
             var path = f.Target;
+            // A drive root ("D:\") has no leaf name: show the root itself.
             var name = !string.IsNullOrWhiteSpace(f.Name) ? f.Name!
+                : path.TrimEnd('\\', '/').Length <= 2 ? path
                 : AppNames.FileName(path) is { Length: > 0 } leaf ? leaf : path;
             return new DockItem
             {

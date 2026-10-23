@@ -68,7 +68,7 @@ public sealed class DockHarness : IDisposable
     public IPathGrants Grants => H.Get<IPathGrants>();
     public IWindowTracker Tracker => H.Get<IWindowTracker>();
     public ManualTimeProvider Time => H.Time;
-    public FakeSurface Dock { get; private set; } = null!;
+    public FakeSurface Dock { get; set; } = null!;
 
     public DockHarness(Action<IServiceCollection>? configure = null)
     {
