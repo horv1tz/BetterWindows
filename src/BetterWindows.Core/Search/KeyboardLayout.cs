@@ -33,7 +33,8 @@ public static class KeyboardLayout
         for (int i = 0; i < Latin.Length; i++)
         {
             Add(map, Latin[i], Russian[i]);
-            Add(map, char.ToUpperInvariant(Latin[i]), char.ToUpperInvariant(Russian[i]));
+            // Only letters have an uppercase form; ',' '.' etc. must keep their single mapping.
+            if (char.IsLetter(Latin[i])) Add(map, char.ToUpperInvariant(Latin[i]), char.ToUpperInvariant(Russian[i]));
         }
         return map;
     }

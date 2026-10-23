@@ -34,7 +34,7 @@ public sealed partial class WebProvider : ISearchProvider
         {
             hits.Add(new SearchHit(
                 Id,
-                Title: Loc.Pick(query.Locale, "Open ", "Открыть ") + InputPolicy.Truncate(address.Host + address.PathAndQuery, 180),
+                Title: Loc.Pick(query.Locale, "Open ", "Открыть ") + InputPolicy.Truncate(DisplayAddress(address), 180),
                 Subtitle: Loc.Pick(query.Locale, "Website", "Веб-сайт"),
                 IconUrl: null,
                 Score: 0.9,
@@ -58,6 +58,10 @@ public sealed partial class WebProvider : ISearchProvider
         }
         return Task.FromResult<IReadOnlyList<SearchHit>>(hits);
     }
+
+    /// <summary>Host and path without the scheme; a bare root shows as the host only.</summary>
+    internal static string DisplayAddress(Uri address) =>
+        address.PathAndQuery == "/" ? address.Host : address.Host + address.PathAndQuery;
 
     /// <summary>A typed address: an explicit http(s) URL, or a bare host such as "example.com/docs" (which gets https://).</summary>
     internal static bool TryAddress(string text, out Uri address)
