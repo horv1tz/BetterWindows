@@ -33,7 +33,8 @@ public sealed class TrayController : IShellController
     private IStateTopic? _topic;
     private Action? _onTrayChanged;
     private Action<Settings>? _onSettings;
-    private bool _started, _hostRunning;
+    private volatile bool _started, _stopped;
+    private bool _hostRunning;
     private int _revCounter;
 
     public TrayController(IMessageRouter router, IStatePublisher state, ITrayHost tray, ISettingsService settings, ICursorProvider cursor, ILogger<TrayController>? log = null)
@@ -65,6 +66,7 @@ public sealed class TrayController : IShellController
 
     public void Stop()
     {
+        _stopped = true;
         if (_onTrayChanged is not null) _tray.Changed -= _onTrayChanged;
         if (_onSettings is not null) _settings.Changed -= _onSettings;
         _onTrayChanged = null;
@@ -95,6 +97,7 @@ public sealed class TrayController : IShellController
             else if (stop) _tray.Stop();
         }
         catch (Exception ex) { _log.LogWarning(ex, "Tray host {Operation} failed", start ? "start" : "stop"); }
+        if (_stopped) StopHost(); // the controller was stopped while this pass was starting the host: do not leave it running
         _topic?.Invalidate();
     }
 
