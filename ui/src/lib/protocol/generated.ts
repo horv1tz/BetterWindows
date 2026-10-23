@@ -1680,7 +1680,7 @@ export function defaultSurfaceVisibility(): SurfaceVisibility {
 
 export function defaultTaskbarSettings(): TaskbarSettings {
   return {
-    mode: "hidden",
+    mode: "visible",
   };
 }
 

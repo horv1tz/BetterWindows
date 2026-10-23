@@ -307,7 +307,16 @@ public sealed class ShellHost : IDisposable
         lines.AddRange(bridge.RecentFailures.Select(f => $"failure: {f.Surface} {f.Kind} {f.Detail}"));
         CliCommands.WriteOutput(string.Join(Environment.NewLine, lines), _cli.OutputFile);
         _log.LogInformation("Smoke check {Result}", dockOk && barOk ? "passed" : "failed");
-        shutdown.RequestExit(restart: false, exitCode: dockOk && barOk ? ExitCodes.Ok : ExitCodes.SmokeFailed);
+        var exitCode = dockOk && barOk ? ExitCodes.Ok : ExitCodes.SmokeFailed;
+        // CI can keep the shell on screen a little longer (BETTERWINDOWS_SMOKE_HOLD_SECONDS) to take a screenshot of what is really visible.
+        if (int.TryParse(Environment.GetEnvironmentVariable("BETTERWINDOWS_SMOKE_HOLD_SECONDS"), out var holdSeconds) && holdSeconds is > 0 and <= 120)
+        {
+            _smokeTimer?.Dispose();
+            _smokeTimer = TimeProvider.System.CreateTimer(_ => _dispatcher.BeginInvoke(() => SafeInvoke(() => shutdown.RequestExit(restart: false, exitCode: exitCode))),
+                null, TimeSpan.FromSeconds(holdSeconds), Timeout.InfiniteTimeSpan);
+            return;
+        }
+        shutdown.RequestExit(restart: false, exitCode: exitCode);
     }
 
     /// <summary>Static, WebView2-free check used by --diagnose and startup. Null when the Evergreen runtime is not installed.</summary>

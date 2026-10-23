@@ -352,7 +352,7 @@ public class HotkeyControllerTests
         await Kit.Eventually(() => taskbar.Current == TaskbarMode.Visible);
 
         taskbar.Calls.Should().Equal("apply:Hidden", "apply:Visible");
-        h.Settings().Current.Taskbar.Mode.Should().Be(TaskbarMode.Hidden, "the toggle is temporary and never writes settings");
+        h.Settings().Current.Taskbar.Mode.Should().Be(TaskbarMode.Visible, "the toggle is temporary and never writes settings");
         h.Settings().Patches.Should().BeEmpty();
     }
 

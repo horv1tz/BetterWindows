@@ -256,7 +256,7 @@
     "TaskbarSettings": {
       "mode": {
         "type": "TaskbarMode",
-        "default": "hidden"
+        "default": "visible"
       }
     },
     "DesktopShortcut": {

@@ -13,7 +13,7 @@ public class SettingsLoadTests
     {
         using var f = new SettingsFixture();
         f.Service.Current.Dock.IconSize.Should().Be(56);
-        f.Service.Current.Taskbar.Mode.Should().Be(TaskbarMode.Hidden);
+        f.Service.Current.Taskbar.Mode.Should().Be(TaskbarMode.Visible);
         File.Exists(f.ConfigFile).Should().BeFalse();
         f.Service.Status.PersistenceBlocked.Should().BeFalse();
     }

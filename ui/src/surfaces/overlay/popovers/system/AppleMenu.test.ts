@@ -215,18 +215,18 @@ describe('AppleMenu: confirmation sheet', () => {
 describe('AppleMenu: Show Windows Taskbar', () => {
   const taskbarRow = () => row('Show Windows Taskbar');
 
-  it('starts from settings.taskbar.mode, flips on click and remembers the state when reopened', async () => {
+  it('starts from settings.taskbar.mode (visible by default), flips on click and remembers the state when reopened', async () => {
     await open();
-    expect(taskbarRow().getAttribute('aria-checked')).toBe('false');
+    expect(taskbarRow().getAttribute('aria-checked')).toBe('true');
     await click(taskbarRow());
-    await vi.waitFor(() => expect(called('system.showTaskbar')).toEqual([{ type: 'system.showTaskbar', params: { show: true } }]));
+    await vi.waitFor(() => expect(called('system.showTaskbar')).toEqual([{ type: 'system.showTaskbar', params: { show: false } }]));
     await vi.waitFor(() => expect(onclose).toHaveBeenCalled());
     mounted.unmount();
     mounted = mountComponent(AppleMenu, { request, onclose });
     await tick();
-    expect(taskbarRow().getAttribute('aria-checked')).toBe('true');
+    expect(taskbarRow().getAttribute('aria-checked')).toBe('false');
     await click(taskbarRow());
-    await vi.waitFor(() => expect(called('system.showTaskbar').at(-1)).toEqual({ type: 'system.showTaskbar', params: { show: false } }));
+    await vi.waitFor(() => expect(called('system.showTaskbar').at(-1)).toEqual({ type: 'system.showTaskbar', params: { show: true } }));
   });
 
   it('rolls the check back and shows an error when the host refuses', async () => {
@@ -234,7 +234,7 @@ describe('AppleMenu: Show Windows Taskbar', () => {
     await open();
     await click(taskbarRow());
     await vi.waitFor(() => expect(document.querySelector('[role="alert"]')).not.toBeNull());
-    expect(taskbarRow().getAttribute('aria-checked')).toBe('false');
+    expect(taskbarRow().getAttribute('aria-checked')).toBe('true');
     expect(onclose).not.toHaveBeenCalled();
   });
 });

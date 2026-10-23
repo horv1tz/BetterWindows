@@ -72,7 +72,7 @@ jobs:
         run: |
           $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
           # WinExe: wait for it and capture the output through files
-          $p = Start-Process -FilePath $exe -ArgumentList '--diagnose','--out','diagnose.txt' -Wait -PassThru -NoNewWindow
+          $p = Start-Process -FilePath $exe -ArgumentList '--diagnose','--out',"$PWD\diagnose.txt" -Wait -PassThru -NoNewWindow
           "exit code: $($p.ExitCode)"
           if (Test-Path diagnose.txt) { Get-Content diagnose.txt } else { "no diagnose.txt written" }
       - name: Smoke test (real desktop session)
@@ -81,11 +81,30 @@ jobs:
         shell: pwsh
         run: |
           $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
-          $p = Start-Process -FilePath $exe -ArgumentList '--smoke','--out','smoke.txt' -Wait -PassThru -NoNewWindow
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke','--out',"$PWD\smoke.txt" -Wait -PassThru -NoNewWindow
           "exit code: $($p.ExitCode)"
           if (Test-Path smoke.txt) { Get-Content smoke.txt } else { "no smoke.txt written" }
           $logs = Join-Path $env:LOCALAPPDATA 'BetterWindows\logs'
           if (Test-Path $logs) { Copy-Item $logs -Destination smoke-logs -Recurse }
+      - name: Visual smoke (screenshot of the running shell)
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
+          $env:BETTERWINDOWS_SMOKE_HOLD_SECONDS = '14'
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke','--out',"$PWD\smoke-visual.txt" -PassThru
+          Start-Sleep -Seconds 10
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+          $bmp.Save("$PWD\screenshot-shell.png")
+          "screen: $($b.Width)x$($b.Height)"
+          $p.WaitForExit(30000) | Out-Null
+          "exit code: $($p.ExitCode)"
+          if (Test-Path smoke-visual.txt) { Get-Content smoke-visual.txt }
       - name: Package
         if: always()
         shell: pwsh
@@ -102,5 +121,6 @@ jobs:
             **/*.trx
             diagnose.txt
             smoke.txt
+            smoke-visual.txt
             smoke-logs/**
             screenshot*.png
