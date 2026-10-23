@@ -23,6 +23,7 @@ public sealed unsafe partial class Win32WindowSystem
     private bool _throttleTimerArmed;
     private long _lastForegroundEmitted;
     private volatile bool _hasLoop;
+    private MessageLoopThread? _hookLoop; // the loop as seen from its own thread (set before any hook can fire; _loop is only assigned after Start returns)
 
     // ---- FullscreenChanged subscription accounting (any thread) ----
     private readonly object _fullscreenGate = new();
@@ -76,6 +77,7 @@ public sealed unsafe partial class Win32WindowSystem
     private bool OnLoopStart(MessageLoopThread loop)
     {
         t_current = this;
+        _hookLoop = loop;
         _hasLoop = true;
         _desktop = PInvoke.GetDesktopWindow();
         _foreground = PInvoke.GetForegroundWindow().ToLong();
@@ -86,7 +88,7 @@ public sealed unsafe partial class Win32WindowSystem
         _shellHooked = _shellHookMsg != 0 && PInvoke.RegisterShellHookWindow(loop.WindowHandle.ToHwnd());
         if (!_shellHooked)
         {
-            _log.LogWarning("RegisterShellHookWindow failed (error {Error}); taskbar flash notifications are unavailable", System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+            _log.LogWarning("RegisterShellHookWindow failed (error {Error}); taskbar flash notifications are unavailable", Marshal.GetLastSystemError());
         }
 
         foreach (var range in WindowEventMapper.HookRanges)
@@ -148,6 +150,7 @@ public sealed unsafe partial class Win32WindowSystem
         _throttleTimerArmed = false;
         _fullscreenTimerArmed = false;
         _hasLoop = false;
+        _hookLoop = null;
         t_current = null;
     }
 
@@ -164,7 +167,7 @@ public sealed unsafe partial class Win32WindowSystem
             Win32Consts.WINEVENT_OUTOFCONTEXT | Win32Consts.WINEVENT_SKIPOWNPROCESS);
         if (hook.IsNull)
         {
-            _log.LogWarning("SetWinEventHook({Name}) failed (error {Error})", range.Name, System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+            _log.LogWarning("SetWinEventHook({Name}) failed (error {Error})", range.Name, Marshal.GetLastSystemError());
             return 0;
         }
 
@@ -308,7 +311,7 @@ public sealed unsafe partial class Win32WindowSystem
                     return true;
                 case TimerFullscreen:
                     _fullscreenTimerArmed = false;
-                    var loop = _loop;
+                    var loop = _hookLoop;
                     if (loop != null)
                     {
                         PInvoke.KillTimer(loop.WindowHandle.ToHwnd(), TimerFullscreen);
@@ -361,7 +364,7 @@ public sealed unsafe partial class Win32WindowSystem
 
     private void ArmTimer(int id, uint ms)
     {
-        var loop = _loop;
+        var loop = _hookLoop;
         if (loop == null || !loop.IsOnLoopThread)
         {
             return;
@@ -382,7 +385,7 @@ public sealed unsafe partial class Win32WindowSystem
 
     private void FlushThrottle()
     {
-        var loop = _loop;
+        var loop = _hookLoop;
         if (loop != null)
         {
             PInvoke.KillTimer(loop.WindowHandle.ToHwnd(), TimerThrottleFlush);
@@ -404,7 +407,7 @@ public sealed unsafe partial class Win32WindowSystem
             anyone = _fullscreenSubscribers > 0;
         }
 
-        var loop = _loop;
+        var loop = _hookLoop;
         if (!anyone || _fullscreenTimerArmed || loop == null || !loop.IsOnLoopThread)
         {
             return;

@@ -230,7 +230,7 @@ public sealed unsafe class Win32TaskbarController : ITaskbarController
             Win32Consts.WINEVENT_OUTOFCONTEXT);
         if (hook.IsNull)
         {
-            _log.LogWarning("SetWinEventHook(EVENT_OBJECT_SHOW) on Explorer failed (error {Error})", Marshal.GetLastPInvokeError());
+            _log.LogWarning("SetWinEventHook(EVENT_OBJECT_SHOW) on Explorer failed (error {Error})", Marshal.GetLastSystemError());
             return;
         }
 

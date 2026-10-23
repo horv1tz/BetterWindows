@@ -52,10 +52,9 @@ public sealed unsafe partial class Win32WindowSystem
                 return true;
             }
 
-            // Only ask the shell when it could change the answer (the frame is within a few pixels of covering the monitor).
-            return FullscreenRules.IsNearMiss(facts, bounds)
-                && QueryNotificationHint() == FullscreenHint.FullscreenApp
-                && FullscreenRules.Evaluate(facts, bounds, FullscreenHint.FullscreenApp);
+            // Only ask the shell when its answer could change ours (frame within a few pixels of the monitor, or a captioned frame such as a UWP app).
+            return FullscreenRules.HintCouldChangeVerdict(facts, bounds)
+                && QueryNotificationHint() == FullscreenHint.FullscreenApp;
         }
         catch (Exception ex)
         {

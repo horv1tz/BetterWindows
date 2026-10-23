@@ -37,7 +37,7 @@ public sealed unsafe partial class Win32WindowSystem
         if (!PInvoke.PostMessage(hwnd, Win32Consts.WM_CLOSE, 0, 0))
         {
             // ERROR_ACCESS_DENIED here is UIPI: the target is elevated and we are not.
-            _log.LogDebug("PostMessage(WM_CLOSE) to {Handle} failed (error {Error})", handle, System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+            _log.LogDebug("PostMessage(WM_CLOSE) to {Handle} failed (error {Error})", handle, System.Runtime.InteropServices.Marshal.GetLastSystemError());
             return false;
         }
 
@@ -58,7 +58,7 @@ public sealed unsafe partial class Win32WindowSystem
 
         if (!PInvoke.ShowWindowAsync(hwnd, command))
         {
-            _log.LogDebug("ShowWindowAsync({Handle}, {Cmd}) failed (error {Error})", handle, command, System.Runtime.InteropServices.Marshal.GetLastPInvokeError());
+            _log.LogDebug("ShowWindowAsync({Handle}, {Cmd}) failed (error {Error})", handle, command, System.Runtime.InteropServices.Marshal.GetLastSystemError());
             return false;
         }
 

@@ -28,7 +28,8 @@ internal enum FullscreenHint
 /// The NORMATIVE full-screen rules of <c>IWindowSystem.IsFullscreenWindowActive</c> as a pure function: the foreground window of ANOTHER
 /// process, visible, not minimised, not cloaked, not a shell window class, not a tool window, whose DWMWA_EXTENDED_FRAME_BOUNDS cover the
 /// monitor within 1 px - and which is not an ordinary maximised window with a caption / sizing frame (maximised windows cover the work area,
-/// and only touch the monitor edges when no appbar is reserved; they must never hide the dock and menu bar).
+/// and only touch the monitor edges when no appbar is reserved; they must never hide the dock and menu bar). A positive shell hint
+/// (SHQueryUserNotificationState) widens the tolerance to 8 px and also admits captioned frames (UWP full screen).
 /// </summary>
 internal static class FullscreenRules
 {
@@ -88,13 +89,20 @@ internal static class FullscreenRules
             return false;
         }
 
+        // The shell itself says a full-screen app is running (UWP full-screen, borderless game, presentation mode) and this window covers the
+        // monitor: trust it even if the window keeps a caption / sizing frame style (UWP frames do).
+        if (hint == FullscreenHint.FullscreenApp)
+        {
+            return true;
+        }
+
         return !IsOrdinaryMaximized(f);
     }
 
     /// <summary>
-    /// True when the window nearly covers the monitor (within the hint tolerance) but not strictly, i.e. when asking the shell for a hint
-    /// could change the verdict. Lets the caller skip the SHQueryUserNotificationState call in the common case.
+    /// True when asking the shell for a hint could change the verdict (the rules say "no" but would say "yes" with a positive hint).
+    /// Lets the caller skip the SHQueryUserNotificationState call in the common case.
     /// </summary>
-    public static bool IsNearMiss(in FullscreenFacts f, NativeRect monitorBounds) =>
-        !RectMath.Covers(f.FrameBounds, monitorBounds, ToleranceStrictPx) && RectMath.Covers(f.FrameBounds, monitorBounds, ToleranceHintPx);
+    public static bool HintCouldChangeVerdict(in FullscreenFacts f, NativeRect monitorBounds) =>
+        !Evaluate(f, monitorBounds, FullscreenHint.None) && Evaluate(f, monitorBounds, FullscreenHint.FullscreenApp);
 }

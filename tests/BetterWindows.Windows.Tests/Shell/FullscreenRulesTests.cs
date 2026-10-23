@@ -90,6 +90,32 @@ public class FullscreenRulesTests
     }
 
     [Fact]
+    public void Captioned_maximised_frame_counts_only_with_a_positive_shell_hint()
+    {
+        var uwp = Game(f => f with
+        {
+            ClassName = "ApplicationFrameWindow",
+            IsMaximized = true,
+            Style = Win32Consts.WS_CAPTION | Win32Consts.WS_THICKFRAME | Win32Consts.WS_MAXIMIZE,
+        });
+        FullscreenRules.Evaluate(uwp, Monitor, FullscreenHint.None).Should().BeFalse();
+        FullscreenRules.HintCouldChangeVerdict(uwp, Monitor).Should().BeTrue();
+        FullscreenRules.Evaluate(uwp, Monitor, FullscreenHint.FullscreenApp).Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_clearly_fullscreen_window_does_not_need_the_hint() =>
+        FullscreenRules.HintCouldChangeVerdict(Game(), Monitor).Should().BeFalse();
+
+    [Fact]
+    public void The_hint_never_overrides_the_exclusions()
+    {
+        FullscreenRules.Evaluate(Game(f => f with { ClassName = "Progman" }), Monitor, FullscreenHint.FullscreenApp).Should().BeFalse();
+        FullscreenRules.Evaluate(Game(f => f with { IsOwnProcess = true }), Monitor, FullscreenHint.FullscreenApp).Should().BeFalse();
+        FullscreenRules.Evaluate(Game(f => f with { IsMinimized = true }), Monitor, FullscreenHint.FullscreenApp).Should().BeFalse();
+    }
+
+    [Fact]
     public void Window_covering_only_the_work_area_is_not_fullscreen()
     {
         var workArea = new NativeRect(0, 28, 1920, 1080);
@@ -109,7 +135,7 @@ public class FullscreenRulesTests
     {
         var slightlyOff = Game(f => f with { FrameBounds = new NativeRect(0, 0, 1916, 1078) });
         FullscreenRules.Evaluate(slightlyOff, Monitor, FullscreenHint.None).Should().BeFalse();
-        FullscreenRules.IsNearMiss(slightlyOff, Monitor).Should().BeTrue();
+        FullscreenRules.HintCouldChangeVerdict(slightlyOff, Monitor).Should().BeTrue();
         FullscreenRules.Evaluate(slightlyOff, Monitor, FullscreenHint.FullscreenApp).Should().BeTrue();
     }
 
@@ -117,7 +143,7 @@ public class FullscreenRulesTests
     public void Hint_never_turns_a_small_window_into_a_fullscreen_one()
     {
         var small = Game(f => f with { FrameBounds = new NativeRect(100, 100, 900, 700) });
-        FullscreenRules.IsNearMiss(small, Monitor).Should().BeFalse();
+        FullscreenRules.HintCouldChangeVerdict(small, Monitor).Should().BeFalse();
         FullscreenRules.Evaluate(small, Monitor, FullscreenHint.FullscreenApp).Should().BeFalse();
     }
 }

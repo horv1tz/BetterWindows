@@ -38,6 +38,7 @@ public sealed unsafe partial class Win32WindowSystem : IWindowSystem
     private BlockingCollection<WindowEvent>? _outbox;
     private Thread? _deliveryThread;
     private bool _disposed;
+    private long _nextProcessPruneMs;
 
     /// <summary>Creates the window system. Nothing runs until <see cref="Start"/>.</summary>
     /// <param name="logger">Optional logger (warnings for failed hooks and OS calls).</param>
@@ -82,6 +83,17 @@ public sealed unsafe partial class Win32WindowSystem : IWindowSystem
             }
 
             _loop = loop;
+
+            // A FullscreenChanged subscriber that arrived while the thread was starting saw _loop == null and could not ask for the
+            // location hook: do it now (idempotent).
+            lock (_fullscreenGate)
+            {
+                if (_fullscreenSubscribers > 0)
+                {
+                    loop.Post(InstallLocationHook);
+                }
+            }
+
             _log.LogInformation("Window system started");
         }
     }

@@ -83,6 +83,7 @@ public sealed unsafe partial class Win32WindowSystem
             return null;
         }
 
+        MaybePruneProcesses();
         long handle = hwnd.ToLong();
         string className = WindowNative.GetClassName(hwnd);
         uint style = WindowNative.GetStyle(hwnd);
@@ -215,6 +216,20 @@ public sealed unsafe partial class Win32WindowSystem
         }
 
         return fallback;
+    }
+
+    /// <summary>
+    /// Releases the process handles of exited processes at most every 30 s, so a long-running shell that mostly uses TryDescribe (no full
+    /// enumerations) does not keep thousands of dead process objects alive.
+    /// </summary>
+    private void MaybePruneProcesses()
+    {
+        long now = Environment.TickCount64;
+        long next = Interlocked.Read(ref _nextProcessPruneMs);
+        if (now >= next && Interlocked.CompareExchange(ref _nextProcessPruneMs, now + 30_000, next) == next)
+        {
+            _processes.Prune();
+        }
     }
 
     /// <summary>Drops cache entries of windows that no longer exist and closes handles of exited processes.</summary>

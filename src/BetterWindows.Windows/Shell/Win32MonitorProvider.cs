@@ -148,7 +148,7 @@ public sealed unsafe class Win32MonitorProvider : IMonitorProvider, IDisposable
         mi.monitorInfo.cbSize = (uint)sizeof(MONITORINFOEXW);
         if (!PInvoke.GetMonitorInfo(new HMONITOR((IntPtr)hmonitor), (MONITORINFO*)&mi))
         {
-            _log.LogDebug("GetMonitorInfo failed for {Monitor} (error {Error})", hmonitor, Marshal.GetLastPInvokeError());
+            _log.LogDebug("GetMonitorInfo failed for {Monitor} (error {Error})", hmonitor, Marshal.GetLastSystemError());
             device = "";
             devicePath = null;
             friendlyName = null;
