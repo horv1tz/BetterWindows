@@ -232,7 +232,7 @@ public class McSnapshotTests
     }
 
     [Fact]
-    public async Task The_controller_registers_every_mc_call()
+    public void The_controller_registers_every_mc_call()
     {
         using var rig = McRig.Start();
         rig.H.Router.RegisteredTypes.Where(t => t.StartsWith("mc.")).Should().BeEquivalentTo(
