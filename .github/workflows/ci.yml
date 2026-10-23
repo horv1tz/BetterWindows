@@ -93,6 +93,7 @@ jobs:
         run: |
           $exe = (Resolve-Path publish/BetterWindows/BetterWindows.exe).Path
           $env:BETTERWINDOWS_SMOKE_HOLD_SECONDS = '14'
+          $env:BETTERWINDOWS_SMOKE_SHOW = '1'
           $p = Start-Process -FilePath $exe -ArgumentList '--smoke','--out',"$PWD\smoke-visual.txt" -PassThru
           Start-Sleep -Seconds 10
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing

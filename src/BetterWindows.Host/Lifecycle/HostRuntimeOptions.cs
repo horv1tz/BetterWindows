@@ -34,8 +34,8 @@ public sealed class HostRuntimeOptions
     public string? SafeModeReason { get; }
     /// <summary>True when the native taskbar must stay visible (--no-hide-taskbar, safe mode, smoke).</summary>
     public bool NoHideTaskbar { get; }
-    /// <summary>The surface windows must be created but not shown (smoke).</summary>
-    public bool HideSurfaces => Smoke;
+    /// <summary>The surface windows must be created but not shown (smoke). BETTERWINDOWS_SMOKE_SHOW=1 shows them so CI can take a screenshot of what is rendered.</summary>
+    public bool HideSurfaces => Smoke && Environment.GetEnvironmentVariable("BETTERWINDOWS_SMOKE_SHOW") != "1";
     /// <summary>No desktop layer in safe mode.</summary>
     public bool DesktopLayerDisabled => SafeMode;
     /// <summary>No global hotkeys in safe mode.</summary>
