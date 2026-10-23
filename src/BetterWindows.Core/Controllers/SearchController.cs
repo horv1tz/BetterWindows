@@ -114,10 +114,10 @@ public sealed class SearchController : IShellController
             previous = _active;
             _active = run;
         }
-        previous?.Cancellation.Cancel();
+        if (previous is not null) CancelRun(previous);
 
         // The surface closing cancels the run through the call's token; the run itself stops at the next checkpoint.
-        var surfaceClosed = ctx.Cancellation.Register(() => run.Cancellation.Cancel());
+        var surfaceClosed = ctx.Cancellation.Register(() => CancelRun(run));
         var surface = ctx.Surface;
         _ = Task.Run(async () =>
         {
@@ -151,7 +151,7 @@ public sealed class SearchController : IShellController
         if (string.IsNullOrEmpty(requestId)) return;
         lock (_gate)
         {
-            if (_active is { } run && run.RequestId == requestId) run.Cancellation.Cancel();
+            if (_active is { } run && run.RequestId == requestId) CancelRun(run);
         }
     }
 
@@ -165,7 +165,7 @@ public sealed class SearchController : IShellController
             if (only is not null && !ReferenceEquals(only, run)) return;
             _active = null;
         }
-        run?.Cancellation.Cancel();
+        if (run is not null) CancelRun(run);
     }
 
     private void OnOverlayChanged(OverlayState state)
@@ -174,11 +174,23 @@ public sealed class SearchController : IShellController
         if (!state.Visible) CancelActive(null);
     }
 
+    /// <summary>Serialises publishing against cancellation: once CancelRun returns, no result of that run is in flight any more.</summary>
+    private readonly object _publishGate = new();
+
+    private void CancelRun(ActiveRun run)
+    {
+        run.Cancellation.Cancel();
+        lock (_publishGate) { } // wait for a publish that already passed its check
+    }
+
     private void Publish(SurfaceId surface, string requestId, IReadOnlyList<SearchResult> results, bool complete, ActiveRun? run = null)
     {
-        // A run superseded in the meantime must not overwrite the newer list (the UI ignores it too, but do not send it).
-        if (run is not null && run.Cancellation.IsCancellationRequested) return;
-        _hub.PublishTo(surface, Msg.SearchResults, new SearchResults { RequestId = requestId, Results = results, Complete = complete });
+        lock (_publishGate)
+        {
+            // A run superseded in the meantime must not overwrite the newer list (the UI ignores it too, but do not send it).
+            if (run is not null && run.Cancellation.IsCancellationRequested) return;
+            _hub.PublishTo(surface, Msg.SearchResults, new SearchResults { RequestId = requestId, Results = results, Complete = complete });
+        }
     }
 
     private async Task Perform(CallContext ctx, SearchPerformParams p)

@@ -140,7 +140,9 @@ public class SearchEngineTests
         await PumpAsync(_time, task);
 
         Assert.Equal(2, stamps.Count);
-        Assert.True(stamps[1] - stamps[0] >= SearchEngine.MinEmitInterval, $"gap was {stamps[1] - stamps[0]}");
+        // The engine spaces emissions by the time it records BEFORE calling emit; the pump thread may advance the clock by one step (5 ms)
+        // between that record and this stamp, so allow exactly one pump step of slack on the stamps.
+        Assert.True(stamps[1] - stamps[0] >= SearchEngine.MinEmitInterval - TimeSpan.FromMilliseconds(5), $"gap was {stamps[1] - stamps[0]}");
         Assert.True(_emitted[^1].Complete);
     }
 
