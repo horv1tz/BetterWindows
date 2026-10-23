@@ -56,6 +56,7 @@
   let searching = $state(false);
   let results: WeatherLocation[] = $state([]);
   let searched = $state(false);
+  let inputEl: HTMLInputElement | undefined = $state();
 
   async function search(q: string) {
     const text = q.trim();
@@ -152,8 +153,9 @@
         maxlength={256}
         width="100%"
         oncommit={(v) => search(v)}
+        bind:inputEl
       >
-        {#snippet trailing()}<Button size="sm" disabled={searching} onclick={() => search(query)}>{t('widgets.weather.search')}</Button>{/snippet}
+        {#snippet trailing()}<Button size="sm" disabled={searching} onclick={() => search(inputEl?.value ?? query)}>{t('widgets.weather.search')}</Button>{/snippet}
       </TextField>
       {#if searching}<p class="hint" role="status">{t('widgets.weather.searching')}</p>{/if}
       {#if searched && results.length === 0 && !searching}<p class="hint" role="status">{t('widgets.weather.none')}</p>{/if}
