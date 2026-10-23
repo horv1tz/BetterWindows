@@ -54,13 +54,13 @@ export function searchCities(queryText: string, limit = 8): WeatherLocation[] {
 /** Weather code for a slot: persists for 3-hour blocks; snow instead of rain when it is freezing. */
 function pickCode(seed: string, block: number, tempC: number): number {
   const r = hash(`${seed}:${block}`) % 100;
-  if (r < 22) return 0;
-  if (r < 40) return 1;
-  if (r < 60) return 2;
-  if (r < 76) return 3;
-  if (r < 86) return tempC < 0.5 ? 71 : 61;
-  if (r < 92) return tempC < 0.5 ? 85 : 80;
-  if (r < 96) return 45;
+  if (r < 15) return 0;
+  if (r < 30) return 1;
+  if (r < 52) return 2;
+  if (r < 70) return 3;
+  if (r < 82) return tempC < 0.5 ? 71 : 61;
+  if (r < 90) return tempC < 0.5 ? 85 : 80;
+  if (r < 95) return 45;
   return tempC > 8 ? 95 : 73;
 }
 

@@ -1,9 +1,21 @@
 // Shared pieces of the ui-desktop mock domains (desktop.ts, weather.ts, reminders.ts): host taps, seed data and original artwork.
 // Owner: ui-desktop. The default export is a no-op (domain files are auto-loaded by the MockHost); everything else is imported by the siblings.
-import type { DesktopSettings, HostEventType, WidgetInstance, WidgetType } from '../../lib/protocol/generated';
+import type { DesktopSettings, HostEventType, OverlayRequest, WidgetInstance, WidgetType } from '../../lib/protocol/generated';
 import type { MockContext, MockHost } from '../host';
 
-export default function register(host: MockHost) { taps(host); }
+export default function register(host: MockHost) {
+  const t = taps(host);
+  // A surface that starts after the user switched the language (playground, settings window) is told about it: SurfaceInit.locale only knows ?lang=.
+  host.onSurfaceReady((ctx) => {
+    const lang = host.settings.general.language;
+    if (lang && lang !== 'auto') host.emitTo(ctx, 'locale.changed', { locale: lang });
+  });
+  // overlay.open from a surface of monitor N opens the overlay on monitor N (the real host does the same).
+  t.onCall('overlay.open', (p, ctx) => {
+    const req = p as OverlayRequest;
+    return !req.monitorId && ctx.monitorId ? { ...req, monitorId: ctx.monitorId } : undefined;
+  });
+}
 
 // ------------------------------------------------------------------------------------------------ host taps
 
@@ -66,24 +78,35 @@ export const DEFAULT_WIDGET_CONFIG: Record<WidgetType, () => Record<string, unkn
   notes: () => ({ text: '' }),
 };
 
-/** Seed layout of the desktop for a monitor of the given DIP width: primary = widgets stacked in the right half, secondary = left. */
+/**
+ * Seed layout of the desktop for a monitor of the given DIP width. Wide monitors: two columns of widgets in the right half; narrow ones
+ * (playground with two monitors): one column. The secondary monitor gets its own, different set on the left.
+ */
 export function seedWidgets(width: number, mode: string): WidgetInstance[] {
   if (mode === '0' || mode === 'none') return [];
   const rightX = Math.max(260, width - 380 - 40);
   const leftX = Math.max(60, rightX - 12 - 184);
   const w = (id: string, type: WidgetType, size: WidgetInstance['size'], x: number, y: number, config?: Record<string, unknown>, monitorId?: string): WidgetInstance =>
     ({ id, type, size, x, y, config: config ?? DEFAULT_WIDGET_CONFIG[type](), ...(monitorId ? { monitorId } : {}) });
-  const primary: WidgetInstance[] = [
-    w('w-weather', 'weather', 'medium', rightX, 48),
-    w('w-reminders', 'reminders', 'medium', rightX, 244),
-    w('w-clock', 'clock', 'small', leftX, 48, { style: 'analog', seconds: true }),
-    w('w-calendar', 'calendar', 'small', leftX, 244),
-    w('w-notes', 'notes', 'small', leftX, 440, { text: 'Ideas for the weekend:\n- finish the dock polish\n- try the new wallpaper\n- call mum' }),
-  ];
+  const wide = width >= 1100;
+  const primary: WidgetInstance[] = wide
+    ? [
+        w('w-weather', 'weather', 'medium', rightX, 48),
+        w('w-reminders', 'reminders', 'medium', rightX, 244),
+        w('w-clock', 'clock', 'small', leftX, 48, { style: 'analog', seconds: true }),
+        w('w-calendar', 'calendar', 'small', leftX, 244),
+        w('w-notes', 'notes', 'small', leftX, 440, { text: 'Ideas for the weekend:\n- finish the dock polish\n- try the new wallpaper\n- call mum' }),
+      ]
+    : [
+        w('w-weather', 'weather', 'medium', rightX, 48),
+        w('w-reminders', 'reminders', 'medium', rightX, 244),
+        w('w-clock', 'clock', 'small', rightX, 440, { style: 'analog', seconds: true }),
+        w('w-calendar', 'calendar', 'small', rightX + 196, 440),
+      ];
   if (mode === 'all') {
     primary.push(
-      w('w-media', 'media', 'medium', rightX, 440),
-      w('w-battery', 'battery', 'medium', rightX, 636),
+      w('w-media', 'media', 'medium', wide ? rightX : Math.max(40, rightX - 396), wide ? 440 : 636),
+      w('w-battery', 'battery', 'medium', wide ? rightX : Math.max(40, rightX - 396), wide ? 636 : 440),
     );
   }
   const secondary: WidgetInstance[] = [
@@ -104,9 +127,11 @@ export function seedDesktopSettings(d: DesktopSettings, width: number, mode: str
 const svgUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
 export function hash(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+  // FNV-1a + a murmur-style finaliser: neighbouring inputs ("…-10-23" / "…-10-24") must produce unrelated outputs.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return h >>> 0;
 }
 
 /** "This PC": a monitor on a stand. */

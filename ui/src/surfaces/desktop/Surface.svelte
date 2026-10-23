@@ -7,7 +7,8 @@
   import Wallpaper from './Wallpaper.svelte';
   import IconLayer from './IconLayer.svelte';
   import WidgetFrame from './WidgetFrame.svelte';
-  import ContextMenu, { type MenuItem } from './ContextMenu.svelte';
+  import ContextMenu from './ContextMenu.svelte';
+  import type { MenuItem } from './menu';
   import { gridMetrics, surfaceInsets, type Point } from './layout';
   import { applyOverrides, dropOverride, pruneOverrides, type Overrides } from './optimistic';
   import { widgetMenu, type MenuAction } from './widgetMenu';

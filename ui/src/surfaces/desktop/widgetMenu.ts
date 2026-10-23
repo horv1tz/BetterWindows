@@ -1,6 +1,6 @@
 // Pure model of the widget context menu: which entries a widget has and what choosing one means.
 import type { WidgetInstance, WidgetSize } from '$lib/protocol/generated';
-import type { MenuItem } from './ContextMenu.svelte';
+import type { MenuItem } from './menu';
 
 export type MenuAction =
   | { kind: 'size'; size: WidgetSize }

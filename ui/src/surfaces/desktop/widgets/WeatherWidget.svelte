@@ -159,6 +159,8 @@
   .wx.fog { --g1: #98a3af; --g2: #707d8a; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .now { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+  .wx.small .top, .wx.small .now { flex: 1; align-self: stretch; }
+  .wx.small .cond { margin-top: auto; }
   .right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; }
   .place { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .temp { font-size: 50px; font-weight: 300; line-height: 1.02; letter-spacing: -0.03em; margin: 2px 0 0 -2px; }

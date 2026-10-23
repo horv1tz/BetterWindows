@@ -1,20 +1,9 @@
-<script lang="ts" module>
-  export interface MenuItem {
-    id: string;
-    label: string;
-    /** radio-style check mark (size choices etc.) */
-    checked?: boolean;
-    danger?: boolean;
-    disabled?: boolean;
-    separator?: boolean;
-  }
-</script>
-
 <script lang="ts">
   // Compact in-surface context menu (icons, widgets). Desktop-menu popovers for the empty desktop live in the overlay instead.
   import { onMount } from 'svelte';
   import { Check } from '@lucide/svelte';
   import { clamp } from './layout';
+  import type { MenuItem } from './menu';
 
   let { x, y, items, label = '', onselect, onclose }: {
     x: number; y: number; items: MenuItem[]; label?: string; onselect: (id: string) => void; onclose: () => void;

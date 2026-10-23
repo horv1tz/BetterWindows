@@ -148,7 +148,7 @@ export const dictionaries: Dictionaries = {
 
     'rem.title': 'Напоминания',
     'rem.open': 'Открыто: {n}',
-    'rem.add': 'Новое напоминание',
+    'rem.add': 'Добавить',
     'rem.addLabel': 'Новое напоминание',
     'rem.empty': 'Всё сделано',
     'rem.emptyHint': 'Больше нет дел.',

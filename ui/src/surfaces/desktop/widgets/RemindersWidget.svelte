@@ -11,7 +11,7 @@
   let { config, size }: WidgetProps = $props();
 
   const rems = useHostState('reminders.changed', { items: [] as Reminder[] });
-  const rows = $derived({ small: 2, medium: 3, large: 8 }[size]);
+  const rows = $derived({ small: 2, medium: 3, large: 7 }[size]);
   let now = $state(new Date());
   $effect(() => { const id = setInterval(() => (now = new Date()), 30_000); return () => clearInterval(id); });
 
@@ -113,6 +113,10 @@
   .body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
   .title { font-size: 13px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.done .title { color: var(--text-3); text-decoration: line-through; }
+  .rem.medium .body { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .rem.medium .due { flex: none; }
+  .rem.medium li { align-items: baseline; }
+  .rem.medium .check { align-self: center; margin-top: 0; }
   .due { font-size: 11px; color: var(--text-2); font-variant-numeric: tabular-nums; }
   li.overdue .due { color: #ff453a; font-weight: 600; }
   li.flash { background: color-mix(in oklab, var(--accent) 20%, transparent); }

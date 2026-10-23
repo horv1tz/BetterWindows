@@ -58,7 +58,8 @@ export default function register(host: MockHost) {
   let seeded = false;
   const iconCache = new Map<string, string>();
 
-  const monitorWidth = () => Number(q.get('w') ?? 1920) || 1920;
+  /** Width of ONE monitor: the playground splits the viewport when ?monitors=2. */
+  const monitorWidth = () => (Number(q.get('w') ?? 1920) || 1920) / (q.get('monitors') === '2' ? 2 : 1);
 
   /** One-time seed on the first desktop surface: enable the layer, add shortcuts and widgets, give the weather widget a location. */
   function ensureSeeded(): boolean {
