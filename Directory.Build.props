@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Deterministic>true</Deterministic>
+    <!-- x64 projects must not move output to bin/x64/...: CI and tooling expect bin/<Configuration>/<tfm>/ -->
+    <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
     <Version>0.1.0</Version>
     <Company>BetterWindows</Company>
     <Product>BetterWindows</Product>
