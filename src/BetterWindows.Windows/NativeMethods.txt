@@ -2,4 +2,30 @@
 // ---- windows/appbar/taskbar/input stream ----
 // ---- apps/icons/files stream ----
 // ---- status stream ----
+// power source / battery cross-check
+GetSystemPowerStatus
+SYSTEM_POWER_STATUS
+// power actions (lock/sleep/hibernate/restart/shutdown/logout)
+LockWorkStation
+ExitWindowsEx
+SetSuspendState
+GetPwrCapabilities
+SYSTEM_POWER_CAPABILITIES
+GetCurrentProcess
+OpenProcessToken
+LookupPrivilegeValue
+AdjustTokenPrivileges
+TOKEN_PRIVILEGES
+LUID_AND_ATTRIBUTES
+TOKEN_PRIVILEGES_ATTRIBUTES
+// theme: SPI queries, WM_SETTINGCHANGE broadcast, registry change notification thread
+SystemParametersInfo
+HIGHCONTRASTW
+SendMessageTimeout
+WM_SETTINGCHANGE
+RegNotifyChangeKeyValue
+CreateEvent
+SetEvent
+WaitForMultipleObjects
+CloseHandle
 // ---- desktops/capture/tray stream ----
