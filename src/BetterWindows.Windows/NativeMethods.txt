@@ -40,6 +40,10 @@ SetWindowPos
 GetWindowLongPtr
 SetWindowLongPtr
 GetWindowRect
+GetParent
+GetWindow
+IsHungAppWindow
+GetAncestor
 MapWindowPoints
 RegisterWindowMessage
 RegisterClassEx
