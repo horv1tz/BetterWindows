@@ -186,12 +186,26 @@ public sealed class ShellHost : IDisposable
     public void OnFatal(Exception ex)
     {
         _log.LogCritical(ex, "Unhandled exception; restoring the shell and exiting");
+        // The composition WebView (see-through glass) can fail inside WPF events after it was created, where no try/catch of ours can see it. Rather than
+        // closing, start once more with the classic control, which works everywhere (only without see-through glass).
+        if (!_smoke && _shutdown is { } healing && IsCompositionControlFailure(ex)
+            && !string.Equals(Environment.GetEnvironmentVariable(WebViewFactory.EnvVar), "classic", StringComparison.OrdinalIgnoreCase))
+        {
+            _log.LogWarning("The composition WebView failed; restarting with the classic WebView2 control");
+            Environment.SetEnvironmentVariable(WebViewFactory.EnvVar, "classic"); // inherited by the relaunched process
+            healing.RequestExit(restart: true);
+            return;
+        }
         if (!_smoke)
             NativeHelpers.ShowMessageBox("BetterWindows", $"BetterWindows hit an unexpected error and is closing.\n\n{ex.GetType().Name}: {ex.Message}\n\nLog folder:\n{_paths.LogsDir}", false, true);
         var shutdown = _shutdown;
         if (shutdown is null) { RestoreStaticShell(); return; }
         shutdown.RequestExit(restart: false, exitCode: ExitCodes.Failed);
     }
+
+    /// <summary>True when the exception came out of the WebView2 composition control (any frame of its type).</summary>
+    internal static bool IsCompositionControlFailure(Exception ex)
+        => ex.StackTrace?.Contains("WebView2CompositionControl", StringComparison.Ordinal) == true;
 
     /// <summary>The Host's own steps of the ordered shutdown (docs/IPC.md section 13, rule 7). Built lazily, so the list reflects what exists at shutdown time.</summary>
     private IReadOnlyList<ShutdownStep> BuildShutdownSteps(bool restart)
