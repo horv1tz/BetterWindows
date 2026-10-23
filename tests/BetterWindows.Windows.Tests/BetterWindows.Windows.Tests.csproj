@@ -18,6 +18,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BetterWindows.Core\BetterWindows.Core.csproj" />
     <ProjectReference Include="..\..\src\BetterWindows.Windows\BetterWindows.Windows.csproj" />
+    <!-- Host-surfaces pure logic (geometry, planning, auto-hide, settings placement) is internal to the Host and tested here through InternalsVisibleTo. -->
+    <ProjectReference Include="..\..\src\BetterWindows.Host\BetterWindows.Host.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
