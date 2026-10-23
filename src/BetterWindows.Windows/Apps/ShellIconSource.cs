@@ -86,7 +86,8 @@ public sealed class ShellIconSource : IIconSource, IDisposable
     internal static string? CacheKey(IconKey key, int size)
     {
         if (!string.IsNullOrWhiteSpace(key.Aumid)) return $"a|{key.Aumid!.Trim()}|{size}";
-        if (!string.IsNullOrWhiteSpace(key.Path)) return $"p|{key.Path!.Trim().ToLowerInvariant()}|{size}";
+        if (!string.IsNullOrWhiteSpace(key.Path))
+            return ShellTargetPolicy.SpecialParsingName(key.Path) != null ? null : $"p|{key.Path!.Trim().ToLowerInvariant()}|{size}"; // the Recycle Bin icon changes with its content
         return null;
     }
 
@@ -125,6 +126,10 @@ public sealed class ShellIconSource : IIconSource, IDisposable
         }
         if (!string.IsNullOrWhiteSpace(key.Path))
         {
+            // "This PC" / "Recycle Bin" desktop items: their icon (the bin's changes with its content) comes from the namespace item.
+            var special = ShellTargetPolicy.SpecialParsingName(key.Path);
+            if (special != null) return RenderShellItem(special, size, IconFlags(size, isImage: false), trimPlate: false);
+
             // Absolute local paths only: UNC paths would make the shell touch the network (slow, and an NTLM leak when the UI is compromised).
             var path = AppIdentity.NormalizeWindowsPath(key.Path);
             if (path == null) return null;

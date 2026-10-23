@@ -96,6 +96,7 @@ public class IconPipelineTests
         ShellIconSource.CacheKey(new Core.Platform.IconKey { Aumid = "A!B" }, 64).Should().NotBe(ShellIconSource.CacheKey(new Core.Platform.IconKey { Aumid = "A!B" }, 128));
         ShellIconSource.CacheKey(new Core.Platform.IconKey { Path = @"C:\A.exe" }, 64).Should().Be(ShellIconSource.CacheKey(new Core.Platform.IconKey { Path = @"c:\a.EXE" }, 64));
         ShellIconSource.CacheKey(new Core.Platform.IconKey { WindowHandle = 42 }, 64).Should().BeNull();
+        ShellIconSource.CacheKey(new Core.Platform.IconKey { Path = "shell:RecycleBinFolder" }, 64).Should().BeNull("the bin icon follows its content");
         ShellIconSource.CacheKey(new Core.Platform.IconKey(), 64).Should().BeNull();
     }
 }

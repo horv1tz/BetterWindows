@@ -110,6 +110,16 @@ public class WindowsIntegrationTests
     }
 
     [SkippableFact]
+    public async Task Desktop_special_items_have_icons()
+    {
+        RequireWindows();
+        using var icons = new ShellIconSource();
+        foreach (var target in new[] { "shell:MyComputerFolder", "shell:RecycleBinFolder" })
+            await AssertValidPngAsync(await icons.GetIconPngAsync(new IconKey { Path = target }, 64), 64);
+        (await icons.GetIconPngAsync(new IconKey { Path = "shell:Desktop" }, 64)).Should().BeNull("only the two allow-listed literals");
+    }
+
+    [SkippableFact]
     public async Task Icons_for_bad_keys_are_null_not_exceptions()
     {
         RequireWindows();

@@ -74,6 +74,18 @@ internal static partial class ShellTargetPolicy
         return OpenTargetKind.Rejected;
     }
 
+    /// <summary>
+    /// Parsing name (::{CLSID}) of the two allow-listed shell literals, for APIs that take parsing names (icons): the "shell:" moniker is understood by ShellExecute,
+    /// not by SHCreateItemFromParsingPath. Null for anything else.
+    /// </summary>
+    public static string? SpecialParsingName(string? target)
+    {
+        var s = target?.Trim();
+        if (string.Equals(s, ThisPc, StringComparison.Ordinal)) return "::{20D04FE0-3AEA-1069-A2D8-08002B30309D}";
+        if (string.Equals(s, RecycleBin, StringComparison.Ordinal)) return "::{645FF040-5081-101B-9F08-00AA002F954E}";
+        return null;
+    }
+
     /// <summary>Arguments for an app launch: bounded, single line, no control characters.</summary>
     public static bool AreArgumentsSafe(string? arguments)
     {

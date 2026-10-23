@@ -110,4 +110,14 @@ public class ShellTargetPolicyTests
     [Fact]
     public void Overlong_arguments_are_rejected()
         => ShellTargetPolicy.AreArgumentsSafe(new string('x', ShellTargetPolicy.MaxArgumentsLength + 1)).Should().BeFalse();
+
+    [Fact]
+    public void Special_parsing_names_exist_only_for_the_two_literals()
+    {
+        ShellTargetPolicy.SpecialParsingName("shell:MyComputerFolder").Should().Be("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}");
+        ShellTargetPolicy.SpecialParsingName("shell:RecycleBinFolder").Should().Be("::{645FF040-5081-101B-9F08-00AA002F954E}");
+        ShellTargetPolicy.SpecialParsingName("shell:Desktop").Should().BeNull();
+        ShellTargetPolicy.SpecialParsingName("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}").Should().BeNull("only the allow-listed literals, not arbitrary parsing names");
+        ShellTargetPolicy.SpecialParsingName(null).Should().BeNull();
+    }
 }
