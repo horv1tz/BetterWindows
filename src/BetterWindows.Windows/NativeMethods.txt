@@ -1,5 +1,86 @@
 // CsWin32 generates only what is listed here. Each stream APPENDS its own block below (keep blocks separate to ease merges).
 // ---- windows/appbar/taskbar/input stream ----
+// window enumeration / description
+EnumWindows
+EnumChildWindows
+IsIconic
+GetWindowThreadProcessId
+GetClassName
+IsWindow
+IsWindowVisible
+IsHungAppWindow
+GetWindow
+GetAncestor
+GetWindowLongPtr
+SetWindowLongPtr
+GetWindowRect
+GetWindowPlacement
+GetDesktopWindow
+DwmGetWindowAttribute
+SendMessageTimeout
+PostMessage
+FindWindow
+FindWindowEx
+// process identity
+OpenProcess
+QueryFullProcessImageName
+GetApplicationUserModelId
+GetProcessTimes
+OpenProcessToken
+GetTokenInformation
+GetCurrentProcess
+GetCurrentProcessId
+GetCurrentThreadId
+GetExitCodeProcess
+CloseHandle
+// window commands
+ShowWindow
+ShowWindowAsync
+SetForegroundWindow
+GetForegroundWindow
+BringWindowToTop
+AllowSetForegroundWindow
+AttachThreadInput
+SwitchToThisWindow
+SHQueryUserNotificationState
+// hooks / message loop / hidden windows
+SetWinEventHook
+UnhookWinEvent
+RegisterShellHookWindow
+DeregisterShellHookWindow
+RegisterWindowMessage
+RegisterClassEx
+UnregisterClass
+CreateWindowEx
+DestroyWindow
+DefWindowProc
+GetMessage
+TranslateMessage
+DispatchMessage
+PostQuitMessage
+GetModuleHandle
+SetTimer
+KillTimer
+SetThreadDpiAwarenessContext
+// monitors
+EnumDisplayMonitors
+GetMonitorInfo
+MONITORINFOEXW
+GetDpiForMonitor
+MonitorFromPoint
+MonitorFromWindow
+EnumDisplayDevices
+// appbar / hotkeys / input / cursor
+SHAppBarMessage
+RegisterHotKey
+UnregisterHotKey
+SendInput
+MapVirtualKey
+GetAsyncKeyState
+GetCursorPos
+GetSystemMetrics
+OpenInputDesktop
+CloseDesktop
 // ---- apps/icons/files stream ----
 // ---- status stream ----
 // ---- desktops/capture/tray stream ----
