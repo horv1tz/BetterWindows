@@ -76,6 +76,9 @@ GetCursorPos
 GetSystemMetrics
 OpenInputDesktop
 CloseDesktop
+SetParent
+ScreenToClient
+SetWindowPos
 // ---- apps/icons/files stream ----
 ShellExecuteEx
 SHELLEXECUTEINFOW
