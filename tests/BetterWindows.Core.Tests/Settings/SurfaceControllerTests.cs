@@ -150,8 +150,12 @@ public class SurfaceControllerTests
         h.Time.Advance(TimeSpan.FromMilliseconds(200));
         Assert.Equal("ru", overlay.LastEvent<LocaleState>(Msg.LocaleChanged)!.Locale);
 
+        // ThemeService recomputes on the thread pool (never on the OS source's thread), so wait for its Changed before advancing the clock.
+        var themeRaised = false;
+        h.Get<IThemeService>().Changed += _ => themeRaised = true;
         var before = overlay.Events(Msg.ThemeChanged).Count;
         h.Get<FakeThemeSource>().SetAppsUseLightTheme(false);
+        await WaitUntilAsync(() => themeRaised);
         h.Time.Advance(TimeSpan.FromMilliseconds(200));
         Assert.True(overlay.Events(Msg.ThemeChanged).Count > before);
         Assert.Equal(ThemeMode.Dark, overlay.LastEvent<ThemeState>(Msg.ThemeChanged)!.Mode);

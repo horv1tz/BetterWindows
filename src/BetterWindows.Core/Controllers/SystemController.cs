@@ -37,7 +37,7 @@ public sealed class SystemController : IShellController
     private TaskbarMode? _applied;           // what the port was last told (null = never)
     private TaskbarMode _requested = TaskbarMode.Visible;
     private string _reason = "not evaluated yet";
-    private bool _started;
+    private bool _started, _stopped; // _stopped is read under _taskbarGate: a reconcile queued before Stop must never hide the taskbar after the host restored it
 
     public SystemController(
         IMessageRouter router, ISystemPower power, IAppLauncher launcher, IAppLifecycle app, IMonitorProvider monitors, IFilePicker picker, IPathGrants grants,
@@ -66,6 +66,7 @@ public sealed class SystemController : IShellController
     {
         if (_started) return;
         _started = true;
+        lock (_taskbarGate) _stopped = false;
 
         _router.Handle<PowerParams>(Msg.SystemPower, (_, p) => { _power.Perform(p.Action); return Task.CompletedTask; });
         _router.Handle<OpenParams>(Msg.SystemOpen, (_, p) =>
@@ -101,6 +102,7 @@ public sealed class SystemController : IShellController
     {
         if (!_started) return;
         _started = false;
+        lock (_taskbarGate) _stopped = true;
         _settings.Changed -= OnSettingsChanged;
         _registry.SurfaceReady -= OnSurfaceChanged;
         _registry.SurfaceClosed -= OnSurfaceChanged;
@@ -227,6 +229,7 @@ public sealed class SystemController : IShellController
     /// <summary>Caller holds <see cref="_taskbarGate"/>.</summary>
     private void ApplyTaskbarLocked()
     {
+        if (_stopped) return; // Stop has run: the host owns the taskbar restore now
         var requested = _override ?? _settings.Current.Taskbar.Mode;
         var decision = TaskbarSafety.Decide(requested, IsReady(SurfaceKind.Dock), IsReady(SurfaceKind.Menubar), _hotkeys.EscapeHotkeyRegistered);
         _requested = requested;
@@ -239,6 +242,7 @@ public sealed class SystemController : IShellController
 
     internal void ReconcileAutostart()
     {
+        if (!_started) return;
         try
         {
             var wanted = _settings.Current.General.Autostart;

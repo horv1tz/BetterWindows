@@ -303,6 +303,19 @@ public class SystemControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task A_reconcile_that_runs_after_stop_never_hides_the_taskbar()
+    {
+        Controller.Stop();
+        await PatchSettings("{\"taskbar\":{\"mode\":\"hidden\"}}");
+        BarsRunning();
+        EscapeHotkey(registered: true);
+
+        Controller.ReconcileTaskbar();
+        Assert.Equal(TaskbarMode.Visible, Taskbar.Current);
+        Assert.DoesNotContain("apply:Hidden", Taskbar.Calls);
+    }
+
+    [Fact]
     public void Start_is_idempotent_and_stop_unsubscribes()
     {
         Controller.Start();

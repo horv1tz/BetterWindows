@@ -93,6 +93,8 @@ public sealed class RouterRig : IDisposable
             sc.AddSingleton<IWindowCapture>(Capture);
             configure?.Invoke(sc);
         });
+        // The router subscribes to overlay changes when it is constructed; in the app that happens at startup, so construct it before the first show/hide.
+        _ = Router;
         if (overlayVisible) ShowOverlay();
     }
 
