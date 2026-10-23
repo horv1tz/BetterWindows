@@ -26,7 +26,7 @@ public sealed class PrintWindowCapture : IWindowCapture
 
     /// <summary>Sanity caps for the source window. Larger windows are refused rather than allocated.</summary>
     internal const int MaxSourceEdge = 8192;
-    internal const long MaxSourcePixels = 16_000_000;
+    internal const long MaxSourcePixels = 9_000_000; // a 4K window (3840x2160 = 8.3 M px) fits; 3 captures in flight stay near 100 MB
 
     private const int GateWaitMs = 500;
     private readonly SemaphoreSlim _gate = new(MaxConcurrentCaptures, MaxConcurrentCaptures);

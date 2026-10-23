@@ -175,24 +175,29 @@ public sealed class VirtualDesktopService : IVirtualDesktopService, IDisposable
         }
         remove
         {
+            // The watcher is stopped outside the lock: its thread may be inside a callback that unsubscribes and needs this lock.
+            DeskRegistryWatcher? watcher = null;
             lock (_eventLock)
             {
                 _changed -= value;
-                if (_changed is null) StopWatcher();
+                if (_changed is null) watcher = TakeWatcher();
             }
+            watcher?.Dispose();
         }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
+        DeskRegistryWatcher? watcher;
         lock (_eventLock)
         {
             if (_disposed) return;
             _disposed = true;
             _changed = null;
-            StopWatcher();
+            watcher = TakeWatcher();
         }
+        watcher?.Dispose();
         _vdm.Dispose();
     }
 
@@ -254,11 +259,12 @@ public sealed class VirtualDesktopService : IVirtualDesktopService, IDisposable
         else watcher.Dispose();
     }
 
-    private void StopWatcher()
+    /// <summary>Detaches the watcher under the event lock; the caller disposes it after releasing the lock.</summary>
+    private DeskRegistryWatcher? TakeWatcher()
     {
         var watcher = _watcher;
         _watcher = null;
-        watcher?.Dispose();
+        return watcher;
     }
 
     private void OnRegistryChanged()
