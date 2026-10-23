@@ -181,7 +181,8 @@ describe('WeatherWidget', () => {
     await settingsBridge().call('settings.patch', { patch: { weather: { unit: 'f' } } });
     await settle();
     const f = Number(document.querySelector('.temp')!.textContent!.replace('°', ''));
-    expect(f).toBe(Math.round((celsius * 9) / 5 + 32));
+    // The fixture temperature is not whole-degree (it follows the clock), so the displayed Celsius is rounded independently of the Fahrenheit: allow one degree.
+    expect(Math.abs(f - (celsius * 9) / 5 - 32)).toBeLessThanOrEqual(1);
     expect(calls.filter((c) => c.type === 'weather.get')).toHaveLength(1);
   });
 

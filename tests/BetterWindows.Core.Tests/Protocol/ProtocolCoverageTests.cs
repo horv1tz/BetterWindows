@@ -25,7 +25,7 @@ public class ProtocolCoverageTests
         runtime.Stop();
     }
 
-    [Fact(Skip = "Enabled during integration: controllers are still stubs.")]
+    [Fact]
     public void Every_call_and_ui_event_has_a_handler()
     {
         using var h = new CoreHarness(addAllControllers: true);

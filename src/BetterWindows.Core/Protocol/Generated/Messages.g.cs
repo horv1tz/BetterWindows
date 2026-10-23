@@ -54,7 +54,7 @@ public static class Msg
     /// </summary>
     public const string SettingsChanged = "settings.changed";
     /// <summary>
-    /// Event (ui -&gt; host). The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces.
+    /// Event (ui -&gt; host). The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. The overlay may send it (its popovers reuse the glass helper); the host and Core ignore shapes from surfaces that have no region (overlay, settings, desktop).
     /// </summary>
     public const string SurfaceShape = "surface.shape";
     /// <summary>
@@ -397,7 +397,7 @@ public static class MessageCatalog
         new("surface.visibility", MessageKind.HostEvent, "common", typeof(SurfaceVisibility), null, null, false, null),
         new("theme.changed", MessageKind.HostEvent, "common", typeof(ThemeState), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
         new("settings.changed", MessageKind.HostEvent, "common", typeof(Settings), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
-        new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Menubar }, false, null),
+        new("surface.shape", MessageKind.UiEvent, "common", typeof(SurfaceShapeParams), null, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay }, false, null),
         new("settings.navigate", MessageKind.HostEvent, "common", typeof(SettingsOpenParams), null, null, false, null),
         new("locale.changed", MessageKind.HostEvent, "common", typeof(LocaleState), null, null, true, new[] { SurfaceKind.Dock, SurfaceKind.Menubar, SurfaceKind.Overlay, SurfaceKind.Desktop, SurfaceKind.Settings }),
         new("surface.ready", MessageKind.Call, "common", typeof(SurfaceReadyParams), typeof(SurfaceInit), null, false, null),

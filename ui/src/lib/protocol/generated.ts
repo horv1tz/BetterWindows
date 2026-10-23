@@ -1876,7 +1876,7 @@ export interface UiEvents {
   'surface.resize': SurfaceResizeParams;
   /** UI log line, forwarded to the host log. */
   'surface.log': LogParams;
-  /** The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. */
+  /** The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. The overlay may send it (its popovers reuse the glass helper); the host and Core ignore shapes from surfaces that have no region (overlay, settings, desktop). */
   'surface.shape': SurfaceShapeParams;
 }
 
@@ -2031,7 +2031,7 @@ export const CALL_SURFACES: Partial<Record<CallType | UiEventType, readonly Surf
   'apps.launch': ['dock', 'overlay'],
   'apps.reveal': ['dock', 'overlay', 'settings'],
   'surface.resize': ['dock'],
-  'surface.shape': ['dock', 'menubar'],
+  'surface.shape': ['dock', 'menubar', 'overlay'],
   'settings.patch': ['overlay', 'settings'],
   'settings.openWindow': ['overlay', 'settings'],
   'desktop.moveIcon': ['desktop', 'overlay', 'settings'],

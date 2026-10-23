@@ -11,6 +11,11 @@ export class Listeners {
   private map = new Map<string, Set<(p: any) => void>>();
   private cache = new Map<string, unknown>();
 
+  /** True if at least one subscriber is registered for `type`. */
+  has(type: string): boolean {
+    return (this.map.get(type)?.size ?? 0) > 0;
+  }
+
   deliver(type: string, payload: unknown) {
     if (STATE.has(type)) this.cache.set(type, payload);
     const set = this.map.get(type);

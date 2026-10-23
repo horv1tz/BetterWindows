@@ -14,6 +14,11 @@ export class MockBridge implements Bridge {
     getMockHost().bridges.add(this);
   }
 
+  /** True once the page has subscribed to `type` (transient events are not replayed, so a dev deep link waits for this). */
+  hasListener(type: string): boolean {
+    return this.listeners.has(type);
+  }
+
   call<K extends CallType>(type: K, ...args: any[]): Promise<any> {
     return getMockHost().dispatchCall(this.ctx, type, args[0]);
   }

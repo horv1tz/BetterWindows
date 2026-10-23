@@ -214,10 +214,11 @@
     "surface.shape": {
       "dir": "ui",
       "payload": "SurfaceShapeParams",
-      "doc": "The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces.",
+      "doc": "The UI reports its glass panels. Host contract (normative): window region = union(rects, hitRects) in physical px (DIP x scale) via SetWindowRgn for dock/menubar only (never overlay/settings; desktop has no region); backdrop = DWMWA_SYSTEMBACKDROP_TYPE (acrylic/transient) on Windows 11 22H2+ (undocumented accent only behind a feature flag on older builds); DwmEnableBlurBehindWindow MUST NOT be used (it does not blur since Windows 8). Re-send whenever panels move/resize; the host debounces. The overlay may send it (its popovers reuse the glass helper); the host and Core ignore shapes from surfaces that have no region (overlay, settings, desktop).",
       "surfaces": [
         "dock",
-        "menubar"
+        "menubar",
+        "overlay"
       ]
     },
     "settings.navigate": {

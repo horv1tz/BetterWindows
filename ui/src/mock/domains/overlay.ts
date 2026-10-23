@@ -31,9 +31,13 @@ export default function register(host: MockHost) {
     const [kindPart, anchorPart] = spec.split('@');
     const anchor: Rect = anchorPart ? (([x, y, width, height]) => ({ x, y, width, height }))(anchorPart.split(',').map(Number) as [number, number, number, number])
       : { x: Math.round(innerWidth - 120), y: 0, width: 40, height: 28 };
-    setTimeout(() => {
+    // overlay.show is transient (not replayed): wait until the lazily mounted overlay page has subscribed, then show. Gives up after ~5 s.
+    let tries = 0;
+    const attempt = () => {
+      if (!ctx.bridge.hasListener('overlay.show') && tries++ < 100) { setTimeout(attempt, 50); return; }
       if (kindPart.startsWith('popover:')) show({ mode: 'popover', popover: { kind: kindPart.slice(8) as PopoverKind, anchor } });
       else show({ mode: kindPart as OverlayRequest['mode'] });
-    }, 60);
+    };
+    attempt();
   });
 }
