@@ -40,9 +40,10 @@ public class ShellCompositionTests
         sp.GetRequiredService<ITaskbarController>().Should().BeOfType<Win32TaskbarController>();
     }
 
-    [Fact]
+    [SkippableFact]
     public void Controller_starts_in_Visible_mode_and_does_not_touch_anything_on_construction()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         var surface = new FakeTaskbarSurface(new List<string>());
         var store = new FakeSnapshotStore(new List<string>());
         using var controller = new Win32TaskbarController(NullLogger.Instance, surface, store);
@@ -52,9 +53,10 @@ public class ShellCompositionTests
         surface.Log.Should().BeEmpty();
     }
 
-    [Fact]
+    [SkippableFact]
     public void AppBar_stub_signature_is_kept_public_constructor_takes_only_the_window_handle()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         var bar = new AppBar(0x1234);
         bar.IsRegistered.Should().BeFalse();
         bar.ProcessWindowMessage(0x0006, 0, 0).Should().BeFalse("not registered: every message passes through");
@@ -62,9 +64,10 @@ public class ShellCompositionTests
         bar.Dispose();
     }
 
-    [Fact]
+    [SkippableFact]
     public void Restorer_is_static_and_parameterless()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         typeof(TaskbarRestorer).IsAbstract.Should().BeTrue();
         typeof(TaskbarRestorer).IsSealed.Should().BeTrue();
         typeof(TaskbarRestorer).GetMethod(nameof(TaskbarRestorer.RestoreNow), Type.EmptyTypes).Should().NotBeNull();

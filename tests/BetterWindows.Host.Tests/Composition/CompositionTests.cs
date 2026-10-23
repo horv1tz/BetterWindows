@@ -21,18 +21,20 @@ public class CompositionTests
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
 
-    [Fact]
+    [SkippableFact]
     public void Every_registration_resolves_at_build_time()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         // ValidateOnBuild walks the whole graph (Core services, controllers, Host ports, decorators) without starting anything.
         using var dir = new TempDir();
         var act = () => Build(dir).Dispose();
         act.Should().NotThrow();
     }
 
-    [Fact]
+    [SkippableFact]
     public void Shell_safety_decorators_wrap_the_platform_ports()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         using var dir = new TempDir();
         using var provider = Build(dir, new[] { "--smoke" });
         provider.GetRequiredService<ITaskbarController>().Should().BeOfType<GuardedTaskbarController>();
@@ -40,9 +42,10 @@ public class CompositionTests
         provider.GetRequiredService<IHotkeyRegistrar>().Should().BeOfType<GuardedHotkeyRegistrar>();
     }
 
-    [Fact]
+    [SkippableFact]
     public void Lifecycle_and_bridge_are_single_instances()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         using var dir = new TempDir();
         using var provider = Build(dir);
         var bridge = provider.GetRequiredService<WebViewBridge>();
@@ -52,9 +55,10 @@ public class CompositionTests
         provider.GetRequiredService<IAppPaths>().Root.Should().Be(dir.Path);
     }
 
-    [Fact]
+    [SkippableFact]
     public void Smoke_composition_keeps_the_native_taskbar_visible()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "resolves native Win32 ports");
         using var dir = new TempDir();
         using var provider = Build(dir, new[] { "--smoke" });
         provider.GetRequiredService<ShellSafetyGate>().HidingBlocked.Should().BeTrue();
