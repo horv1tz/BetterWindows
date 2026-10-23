@@ -126,6 +126,32 @@ public interface IAppPaths
     string WebView2Dir { get; }
 }
 
+/// <summary>
+/// Paths the user explicitly chose in a native dialog this session (<c>system.pickPath</c>). The ONLY way a UI-supplied path may become a pin, shortcut, wallpaper or launch target
+/// besides catalog/tracked-window resolution. Check with <see cref="IsGranted"/> (normalised, case-insensitive; a granted folder also grants its children).
+/// </summary>
+public interface IPathGrants
+{
+    void Grant(string path);
+    bool IsGranted(string path);
+}
+
+/// <summary>One registration attempt of a global hotkey.</summary>
+public sealed record HotkeyRegistration(string Id, string Gesture, bool Registered, string? Error);
+
+/// <summary>
+/// Escape-hatch safety net: the native taskbar may only be hidden while at least one of the "exit" / "toggleTaskbar" hotkeys is registered (otherwise a user could be left
+/// with no way back). HotkeyController reports every (un)registration here; SystemController reads <see cref="EscapeHotkeyRegistered"/> before applying Hidden/AutoHide.
+/// </summary>
+public interface IHotkeyStatus
+{
+    IReadOnlyList<HotkeyRegistration> Items { get; }
+    bool EscapeHotkeyRegistered { get; }
+    event Action? Changed;
+    void Report(HotkeyRegistration registration);
+    void Clear(string id);
+}
+
 /// <summary>Who owns the overlay right now. Implemented by OverlayController (wraps ISurfaceManager + OverlayHidden); every show and hide, whoever initiated it.</summary>
 public sealed record OverlayState(bool Visible, OverlayMode? Mode, string? MonitorId, int Token, PopoverKind? Popover, string? PopoverItemId)
 {

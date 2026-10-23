@@ -86,13 +86,14 @@ public class FakeSurfaceManager : ISurfaceManager
     public int HideCount { get; private set; }
     public bool IsOverlayVisible { get; private set; }
     public OverlayMode? CurrentOverlayMode { get; private set; }
+    public int OverlayToken { get; private set; }
     public bool SupportsGlassOverflow { get; set; }
     public event Action? OverlayHidden;
     /// <summary>Simulate the HOST hiding the overlay by itself (deactivation).</summary>
     public void SimulateHostHide() { IsOverlayVisible = false; CurrentOverlayMode = null; OverlayHidden?.Invoke(); }
 
     public void ResizeSurface(SurfaceId surface, double widthDip, double heightDip, double? barThicknessDip) => Resizes.Add((surface, widthDip, heightDip, barThicknessDip));
-    public void ShowOverlay(OverlayRequest request, SurfaceId? source) { Shown.Add((request, source)); IsOverlayVisible = true; CurrentOverlayMode = request.Mode; }
+    public void ShowOverlay(OverlayRequest request, SurfaceId? source) { Shown.Add((request, source)); IsOverlayVisible = true; CurrentOverlayMode = request.Mode; OverlayToken++; }
     public void HideOverlay() { HideCount++; IsOverlayVisible = false; CurrentOverlayMode = null; }
     public void SetDockRevealed(SurfaceId dock, bool revealed) => DockReveals.Add((dock, revealed));
     public void SetSurfaceShape(SurfaceId surface, SurfaceShapeParams shape) => Shapes.Add((surface, shape));

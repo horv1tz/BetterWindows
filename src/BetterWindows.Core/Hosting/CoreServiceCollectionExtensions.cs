@@ -22,6 +22,10 @@ public static class CoreServiceCollectionExtensions
         services.AddSingleton<IStatePublisher, StatePublisher>();
         services.AddSingleton<IMessageRouter, MessageRouter>();
 
+        services.AddSingleton<IPathGrants, PathGrants>();
+        services.AddSingleton<IHotkeyStatus, HotkeyStatusService>();
+        services.AddSingleton<OverlayStateService>();
+        services.AddSingleton<IOverlayState>(sp => sp.GetRequiredService<OverlayStateService>());
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IAppCatalog, AppCatalog>();
