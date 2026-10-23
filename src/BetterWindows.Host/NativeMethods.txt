@@ -1,3 +1,46 @@
 // CsWin32 for the Host assembly (window styling, DWM, hit testing, DPI). Each Host stream appends its own block.
 // ---- lifecycle/bridge stream ----
 // ---- surfaces stream ----
+// window styling / z-order / geometry
+SetWindowPos
+GetWindowRect
+GetClientRect
+ClientToScreen
+GetWindowLongPtr
+SetWindowLongPtr
+ShowWindow
+IsWindow
+IsWindowVisible
+GetWindow
+FindWindow
+GetWindowThreadProcessId
+GetAncestor
+GetWindowPlacement
+// window region (glass + hit-testing)
+SetWindowRgn
+CreateRectRgn
+CreateRoundRectRgn
+CombineRgn
+DeleteObject
+GetRgnBox
+// DWM (backdrop, dark mode, corners, borders)
+DwmSetWindowAttribute
+DwmExtendFrameIntoClientArea
+DWMWINDOWATTRIBUTE
+DWM_SYSTEMBACKDROP_TYPE
+DWM_WINDOW_CORNER_PREFERENCE
+MARGINS
+// per-monitor DPI
+GetDpiForWindow
+GetDpiForMonitor
+MonitorFromWindow
+MonitorFromPoint
+GetMonitorInfo
+// focus / foreground
+GetForegroundWindow
+SetForegroundWindow
+BringWindowToTop
+AttachThreadInput
+GetCurrentThreadId
+SwitchToThisWindow
+SetFocus
