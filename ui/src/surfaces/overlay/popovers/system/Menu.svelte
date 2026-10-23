@@ -129,15 +129,25 @@
   .row:focus:not([aria-disabled='true']) { background: var(--accent); color: #fff; }
   .row:focus:not([aria-disabled='true']) .hint { color: rgba(255, 255, 255, 0.78); }
 
-  /* Toggle switch (trailing). Only transform / opacity animate. */
+  /* Toggle switch (trailing). Only transform / opacity animate: the "on" colour is a layer that fades in over the neutral track. */
   .switch {
     position: relative;
+    isolation: isolate;
     width: 26px;
     height: 15px;
     margin-left: 14px;
     border-radius: 8px;
     background: color-mix(in oklab, var(--text) 24%, transparent);
-    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .switch::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: #30d158;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
   }
   .switch::after {
     content: '';
@@ -151,10 +161,9 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     transition: transform var(--dur-fast) var(--ease-out);
   }
-  .switch.on { background: #30d158; }
+  .switch.on::before { opacity: 1; }
   .switch.on::after { transform: translateX(11px); }
   .row:focus:not([aria-disabled='true']) .switch { background: rgba(255, 255, 255, 0.35); }
-  .row:focus:not([aria-disabled='true']) .switch.on { background: #30d158; }
 
   .sep { height: 1px; margin: 5px 10px; background: var(--separator); flex: none; }
 </style>
