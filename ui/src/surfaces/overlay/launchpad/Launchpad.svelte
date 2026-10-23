@@ -185,6 +185,8 @@
       mode: 'pending', picked: editing && !searching, startPage: page, samples: [{ x: e.clientX, t: e.timeStamp }], onBg: false,
     };
     lastX = e.clientX; lastY = e.clientY;
+    // keep receiving moves/up even when the pointer leaves the page (multi-monitor); click is still suppressed for drags below
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* synthetic events / already released */ }
     if (!editing && !searching) {
       clearTimeout(longPressTimer);
       longPressTimer = setTimeout(() => {
@@ -217,6 +219,8 @@
 
   function onPointerMove(e: PointerEvent) {
     if (!ps || e.pointerId !== ps.pointerId) return;
+    // the button was released outside the page and we never saw pointerup: finish the gesture now
+    if (e.pointerType === 'mouse' && e.buttons === 0) { onPointerUp(e); return; }
     lastX = e.clientX; lastY = e.clientY;
     const dx = e.clientX - ps.startX;
     const dy = e.clientY - ps.startY;
@@ -261,6 +265,16 @@
     clearTimeout(longPressTimer);
     if (ps.mode === 'drag') abortDrag();
     if (ps.mode === 'swipe') { dragX = 0; swiping = false; }
+    ps = null;
+    removeWindowListeners();
+  }
+
+  /** Window lost focus mid-gesture (Alt+Tab, another monitor): never leave a half-finished drag behind. */
+  function cancelGestures() {
+    if (!ps && !drag) return;
+    clearTimeout(longPressTimer);
+    if (drag) abortDrag();
+    dragX = 0; swiping = false;
     ps = null;
     removeWindowListeners();
   }
@@ -393,7 +407,7 @@
     launch(app);
   }
   function hide(app: AppEntry) { commit(hideApp(layout, app.id)); }
-  function closeFolder() { openFolderId = null; renameOnOpen = false; }
+  function closeFolder() { openFolderId = null; renameOnOpen = false; searchInput?.focus({ preventScroll: true }); }
   function rename(name: string) { if (openFolderId) commit(renameFolder(layout, openFolderId, name)); }
   function restoreHidden() { commit(unhideAll(layout, apps)); }
 
@@ -472,7 +486,7 @@
   const editHint = $derived(editing && !searching);
 </script>
 
-<svelte:window bind:innerWidth={vw} bind:innerHeight={vh} onkeydown={onKeyDown} onkeyup={onKeyUp} onfocus={() => searchInput?.focus({ preventScroll: true })} />
+<svelte:window bind:innerWidth={vw} bind:innerHeight={vh} onkeydown={onKeyDown} onkeyup={onKeyUp} onfocus={() => searchInput?.focus({ preventScroll: true })} onblur={cancelGestures} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="lp" onpointerdowncapture={rootDownCapture} onpointerdown={bgDown} onwheel={onWheel}>
@@ -495,7 +509,7 @@
     {/if}
   </div>
 
-  <div class="viewport" class:dim={!!folderItem} role="presentation">
+  <div class="viewport" class:dim={!!folderItem} role="presentation" inert={!!folderItem}>
     <div class="track" class:swiping style:transform="translate3d({-page * vw + dragX}px, 0, 0)" role="list" aria-label={t('lp.dialog')}>
       {#each shown as s, i (s.id)}
         {@const pos = slotXY(i)}

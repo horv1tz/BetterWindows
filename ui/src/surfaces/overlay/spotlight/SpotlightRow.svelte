@@ -72,5 +72,5 @@
   .row.sel.confirm { background: var(--sp-danger, #e5382f); }
   .sub.warn { font-weight: 600; color: #fff; }
   .row.sel.confirm .sub, .row.sel.confirm .hint { color: #fff; }
-  :global(:root[data-theme='light']) .row:not(.sel):hover { background: transparent; }
+  :global(:root[data-reduce-motion='true']) .row.intro { animation: none; }
 </style>

@@ -25,7 +25,9 @@
   $effect(() => { if (!editingName) draft = folder.name; });
 
   onMount(async () => {
-    if (autoRename) { await tick(); nameInput?.focus(); nameInput?.select(); }
+    await tick();
+    if (autoRename) { nameInput?.focus(); nameInput?.select(); }
+    else (panelEl?.querySelector('button.tile') as HTMLElement | null)?.focus({ preventScroll: true }); // keyboard users land inside the folder
   });
 
   function commit() {
