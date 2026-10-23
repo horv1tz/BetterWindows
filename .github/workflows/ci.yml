@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  protocol-and-core:
+    name: Protocol + Core tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Protocol is up to date
+        run: node tools/gen-protocol.mjs --check
+      - name: Core tests
+        run: dotnet test tests/BetterWindows.Core.Tests -c Release --logger "trx;LogFileName=core.trx"
+      - name: Compile-check Windows projects
+        run: dotnet build BetterWindows.sln -c Release
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: core-test-results, path: '**/*.trx' }
+
+  ui:
+    name: UI (check, test, build)
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: ui } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: ui/package-lock.json }
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+
+  windows:
+    name: Windows build + tests + smoke
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: 8.0.x }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: ui/package-lock.json }
+      - name: Build UI bundle into Host/wwwroot
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+      - name: Build solution
+        run: dotnet build BetterWindows.sln -c Release
+      - name: Core tests
+        run: dotnet test tests/BetterWindows.Core.Tests -c Release --no-build --logger "trx;LogFileName=core-win.trx"
+      - name: Windows integration tests
+        run: dotnet test tests/BetterWindows.Windows.Tests -c Release --no-build --logger "trx;LogFileName=windows.trx"
+      - name: Diagnose (platform self-check on a real Windows)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse src/BetterWindows.Host/bin -Filter BetterWindows.exe | Select-Object -First 1
+          if ($exe) { & $exe.FullName --diagnose | Tee-Object diagnose.txt } else { "BetterWindows.exe not found" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-results
+          path: |
+            **/*.trx
+            diagnose.txt

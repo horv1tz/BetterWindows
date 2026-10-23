@@ -1,0 +1,109 @@
+{
+  "domain": "settings",
+  "enums": {
+    "DockPosition": ["bottom", "left", "right"],
+    "DockMonitor": ["primary", "all"],
+    "PinnedKind": ["app", "folder"],
+    "TaskbarMode": { "values": ["hidden", "autoHide", "visible"], "doc": "What happens to the native Windows taskbar." },
+    "HotCornerAction": ["none", "missionControl", "launchpad", "spotlight", "showDesktop", "lockScreen", "sleep"],
+    "WallpaperFit": ["fill", "fit", "stretch", "center", "tile"],
+    "WidgetType": ["clock", "calendar", "weather", "reminders", "media", "battery", "notes"],
+    "WidgetSize": ["small", "medium", "large"],
+    "TemperatureUnit": ["c", "f"]
+  },
+  "types": {
+    "AppearanceSettings": {
+      "mode": { "type": "ThemePreference", "default": "auto" },
+      "accent": { "type": "string", "default": "system", "doc": "'system' or a CSS hex colour." },
+      "reduceTransparency": "bool", "reduceMotion": "bool"
+    },
+    "PinnedItem": {
+      "id": { "type": "string", "doc": "Stable id: 'aumid:<AUMID>' | 'exe:<lowercased full path>' | 'dir:<full path>'." },
+      "kind": "PinnedKind", "target": { "type": "string", "doc": "AUMID, exe path or folder path." }, "name": "string?"
+    },
+    "DockSettings": {
+      "enabled": { "type": "bool", "default": true },
+      "position": { "type": "DockPosition", "default": "bottom" },
+      "iconSize": { "type": "int", "default": 56, "doc": "DIP, clamped 32..128." },
+      "magnification": { "type": "bool", "default": true },
+      "magnifiedSize": { "type": "int", "default": 88, "doc": "DIP, clamped to iconSize..192." },
+      "autoHide": { "type": "bool", "default": false },
+      "reserveSpace": { "type": "bool", "default": true, "doc": "Register as AppBar so maximised windows stop above the dock. Ignored when autoHide." },
+      "showIndicators": { "type": "bool", "default": true },
+      "bounceOnLaunch": { "type": "bool", "default": true },
+      "monitor": { "type": "DockMonitor", "default": "primary" },
+      "pins": "PinnedItem[]"
+    },
+    "MenuBarSettings": {
+      "enabled": { "type": "bool", "default": true },
+      "showDate": { "type": "bool", "default": true },
+      "showSeconds": { "type": "bool", "default": false },
+      "use24Hour": { "type": "bool", "default": true },
+      "showBatteryPercent": { "type": "bool", "default": true },
+      "autoHide": { "type": "bool", "default": false },
+      "translucent": { "type": "bool", "default": true },
+      "allMonitors": { "type": "bool", "default": true }
+    },
+    "SpotlightSettings": {
+      "hotkey": { "type": "string", "default": "Alt+Space" },
+      "providers": { "type": "string[]", "default": ["apps", "calc", "settings", "commands", "windows", "files", "web"] },
+      "webSearchUrl": { "type": "string", "default": "https://duckduckgo.com/?q={query}" },
+      "maxResults": { "type": "int", "default": 9 }
+    },
+    "HotkeySettings": {
+      "launchpad": { "type": "string", "default": "Ctrl+Alt+L" },
+      "missionControl": { "type": "string", "default": "Ctrl+Alt+M" },
+      "exit": { "type": "string", "default": "Ctrl+Alt+Q" },
+      "toggleTaskbar": { "type": "string", "default": "Ctrl+Alt+Shift+T" }
+    },
+    "HotCornerSettings": {
+      "enabled": { "type": "bool", "default": true },
+      "topLeft": { "type": "HotCornerAction", "default": "missionControl" },
+      "topRight": { "type": "HotCornerAction", "default": "none" },
+      "bottomLeft": { "type": "HotCornerAction", "default": "none" },
+      "bottomRight": { "type": "HotCornerAction", "default": "none" },
+      "dwellMs": { "type": "int", "default": 150 }
+    },
+    "TaskbarSettings": { "mode": { "type": "TaskbarMode", "default": "hidden" } },
+    "DesktopShortcut": { "id": "string", "name": "string", "target": "string", "x": "int", "y": "int" },
+    "WidgetInstance": {
+      "id": "string", "type": "WidgetType", "size": { "type": "WidgetSize", "default": "medium" },
+      "x": "double", "y": "double", "config": { "type": "any", "doc": "Widget-specific JSON (e.g. notes: { text })." }
+    },
+    "DesktopSettings": {
+      "enabled": { "type": "bool", "default": false, "doc": "Replace the desktop layer (wallpaper, shortcuts, widgets). Off until the user opts in." },
+      "hideNativeIcons": { "type": "bool", "default": true },
+      "wallpaperPath": "string?",
+      "wallpaperFit": { "type": "WallpaperFit", "default": "fill" },
+      "iconSize": { "type": "int", "default": 64 },
+      "gridSnap": { "type": "bool", "default": true },
+      "shortcuts": "DesktopShortcut[]",
+      "widgets": "WidgetInstance[]"
+    },
+    "WeatherSettings": {
+      "locationName": "string", "latitude": "double?", "longitude": "double?",
+      "unit": { "type": "TemperatureUnit", "default": "c" }
+    },
+    "LaunchpadFolder": { "id": "string", "name": "string", "appIds": "string[]" },
+    "LaunchpadSettings": {
+      "folders": "LaunchpadFolder[]",
+      "order": { "type": "string[]", "doc": "App ids in user order; unknown apps are appended alphabetically." },
+      "hidden": "string[]"
+    },
+    "GeneralSettings": {
+      "autostart": { "type": "bool", "default": false },
+      "language": { "type": "string", "default": "auto", "doc": "'auto' | 'en' | 'ru'." },
+      "checkUpdates": { "type": "bool", "default": true },
+      "firstRunDone": { "type": "bool", "default": false },
+      "features": "FeatureFlags"
+    },
+    "Settings": {
+      "$doc": "Root of config.json. Missing fields take the defaults declared here; unknown fields are preserved on save.",
+      "version": { "type": "int", "default": 1 },
+      "appearance": "AppearanceSettings", "dock": "DockSettings", "menuBar": "MenuBarSettings",
+      "spotlight": "SpotlightSettings", "hotkeys": "HotkeySettings", "hotCorners": "HotCornerSettings",
+      "taskbar": "TaskbarSettings", "desktop": "DesktopSettings", "weather": "WeatherSettings",
+      "launchpad": "LaunchpadSettings", "general": "GeneralSettings"
+    }
+  }
+}

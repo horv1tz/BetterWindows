@@ -1,0 +1,21 @@
+{
+  "domain": "apps",
+  "types": {
+    "AppEntry": {
+      "id": { "type": "string", "doc": "'aumid:<AUMID>' when an AUMID is known, else 'exe:<lowercased full path>'." },
+      "name": "string", "path": { "type": "string?", "doc": "Target exe path when known." }, "aumid": "string?",
+      "packaged": "bool", "iconUrl": "string", "category": "string?"
+    },
+    "AppList": { "apps": "AppEntry[]" },
+    "AppLaunchParams": { "appId": "string", "args": "string?" },
+    "AppIdParams": { "appId": "string" }
+  },
+  "events": {
+    "apps.changed": { "dir": "host", "payload": "AppList", "doc": "The installed-app catalog changed (install/uninstall)." }
+  },
+  "calls": {
+    "apps.list": { "params": null, "result": "AppList" },
+    "apps.launch": { "params": "AppLaunchParams", "result": null },
+    "apps.reveal": { "params": "AppIdParams", "result": null, "doc": "Show the app's exe/shortcut in Explorer." }
+  }
+}

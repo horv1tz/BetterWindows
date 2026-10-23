@@ -1,0 +1,183 @@
+{
+  "domain": "common",
+  "enums": {
+    "SurfaceKind": {
+      "values": [
+        "dock",
+        "menubar",
+        "overlay",
+        "desktop"
+      ],
+      "doc": "The four WebView2 surfaces. All load the same UI bundle; the route (#/dock, #/menubar, #/overlay, #/desktop) selects the surface."
+    },
+    "ThemeMode": [
+      "light",
+      "dark"
+    ],
+    "ThemePreference": [
+      "auto",
+      "light",
+      "dark"
+    ],
+    "LogLevel": [
+      "debug",
+      "info",
+      "warn",
+      "error"
+    ]
+  },
+  "types": {
+    "Rect": {
+      "x": "double",
+      "y": "double",
+      "width": "double",
+      "height": "double"
+    },
+    "Point": {
+      "x": "double",
+      "y": "double"
+    },
+    "MonitorInfo": {
+      "$doc": "A display. boundsPx/workAreaPx are in virtual-screen PHYSICAL pixels; every other geometry in the protocol is in DIPs of the surface that owns it.",
+      "id": "string",
+      "index": "int",
+      "primary": "bool",
+      "name": "string",
+      "boundsPx": "Rect",
+      "workAreaPx": "Rect",
+      "scale": {
+        "type": "double",
+        "default": 1.0
+      }
+    },
+    "ThemeState": {
+      "mode": {
+        "type": "ThemeMode",
+        "default": "light"
+      },
+      "accent": {
+        "type": "string",
+        "default": "#0a84ff",
+        "doc": "CSS hex colour."
+      },
+      "reduceTransparency": "bool",
+      "reduceMotion": "bool"
+    },
+    "FeatureFlags": {
+      "$doc": "Experimental features; all off by default and individually switchable in settings.general.features.",
+      "internalVirtualDesktops": "bool",
+      "trayHosting": "bool",
+      "windowChrome": "bool",
+      "globalMenu": "bool",
+      "liveThumbnails": "bool"
+    },
+    "SurfaceReadyParams": {
+      "surface": "SurfaceKind",
+      "monitorId": "string?"
+    },
+    "SurfaceInit": {
+      "$doc": "Everything a surface needs to render its first frame. Returned by surface.ready; the host then also pushes the current state events for the surface.",
+      "surface": "SurfaceKind",
+      "monitor": "MonitorInfo",
+      "theme": "ThemeState",
+      "settings": "Settings",
+      "locale": {
+        "type": "string",
+        "default": "en"
+      },
+      "hostVersion": "string",
+      "protocolVersion": "int",
+      "features": "FeatureFlags",
+      "platform": {
+        "type": "string",
+        "default": "windows",
+        "doc": "'windows' or 'mock'."
+      }
+    },
+    "SurfaceResizeParams": {
+      "width": "double",
+      "height": "double"
+    },
+    "SurfaceVisibility": {
+      "visible": "bool",
+      "reason": "string?"
+    },
+    "LogParams": {
+      "level": "LogLevel",
+      "message": "string",
+      "data": "any"
+    },
+    "SettingsPatchParams": {
+      "patch": {
+        "type": "any",
+        "doc": "A JSON object deep-merged into the settings (objects merge, arrays/primitives replace)."
+      }
+    },
+    "ShapeRect": {
+      "x": "double",
+      "y": "double",
+      "width": "double",
+      "height": "double",
+      "radius": {
+        "type": "double",
+        "doc": "Corner radius in DIPs."
+      }
+    },
+    "SurfaceShapeParams": {
+      "$doc": "The glass panels of a surface, in DIPs relative to the window client area.",
+      "rects": "ShapeRect[]",
+      "blur": {
+        "type": "bool",
+        "default": true,
+        "doc": "Apply DWM blur-behind to exactly these rounded rects (a CSS backdrop-filter cannot see the desktop behind a transparent WebView2 window)."
+      }
+    }
+  },
+  "events": {
+    "surface.resize": {
+      "dir": "ui",
+      "payload": "SurfaceResizeParams",
+      "doc": "Dock only: the UI asks for a window of this DIP size; the host clamps, positions it at its edge and re-reserves space. Sent when content/headroom changes."
+    },
+    "surface.log": {
+      "dir": "ui",
+      "payload": "LogParams",
+      "doc": "UI log line, forwarded to the host log."
+    },
+    "surface.visibility": {
+      "dir": "host",
+      "payload": "SurfaceVisibility",
+      "doc": "The host shows/hides the surface window (fullscreen app, overlay open, ...)."
+    },
+    "theme.changed": {
+      "dir": "host",
+      "payload": "ThemeState"
+    },
+    "settings.changed": {
+      "dir": "host",
+      "payload": "Settings",
+      "doc": "Full settings after any change (from any surface, file edit, or reset)."
+    },
+    "surface.shape": {
+      "dir": "ui",
+      "payload": "SurfaceShapeParams",
+      "doc": "The UI reports where its glass panels are. The host sets DWM blur-behind (DwmEnableBlurBehindWindow with a rounded-rect region) and, for the dock/menubar, the window region used for hit-testing so transparent pixels are click-through. Re-send whenever panels move/resize; the host debounces."
+    }
+  },
+  "calls": {
+    "surface.ready": {
+      "params": "SurfaceReadyParams",
+      "result": "SurfaceInit",
+      "doc": "First message every surface sends. After replying the host pushes all current state events to this surface."
+    },
+    "settings.get": {
+      "params": null,
+      "result": "Settings"
+    },
+    "settings.patch": {
+      "params": "SettingsPatchParams",
+      "result": "Settings",
+      "doc": "Deep-merge, validate/clamp, persist, broadcast settings.changed, return the result."
+    }
+  }
+}

@@ -1,0 +1,3 @@
+// CsWin32 for the Host assembly (window styling, DWM, hit testing, DPI). Each Host stream appends its own block.
+// ---- lifecycle/bridge stream ----
+// ---- surfaces stream ----

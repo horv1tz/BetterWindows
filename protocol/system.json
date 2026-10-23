@@ -1,0 +1,20 @@
+{
+  "domain": "system",
+  "types": {
+    "PowerParams": { "action": "PowerAction" },
+    "OpenParams": { "target": { "type": "string", "doc": "URL, file/folder path or ms-settings: URI; opened via the shell." } },
+    "QuitParams": { "restoreTaskbar": { "type": "bool", "default": true } },
+    "ShowTaskbarParams": { "show": "bool" },
+    "AboutInfo": { "version": "string", "build": "string", "os": "string", "webView2": "string" },
+    "DiagCheck": { "name": "string", "ok": "bool", "detail": "string" },
+    "DiagReport": { "version": "string", "os": "string", "checks": "DiagCheck[]" }
+  },
+  "calls": {
+    "system.power": { "params": "PowerParams", "result": null },
+    "system.open": { "params": "OpenParams", "result": null },
+    "system.quit": { "params": "QuitParams", "result": null, "doc": "Restore the Windows taskbar (unless false) and exit." },
+    "system.showTaskbar": { "params": "ShowTaskbarParams", "result": null, "doc": "Temporarily show/hide the native taskbar without changing settings." },
+    "system.about": { "params": null, "result": "AboutInfo" },
+    "diag.report": { "params": null, "result": "DiagReport", "doc": "Runs every platform self-check (also: BetterWindows.exe --diagnose)." }
+  }
+}

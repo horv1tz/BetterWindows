@@ -1,0 +1,89 @@
+@import '@fontsource-variable/inter';
+
+:root {
+  --font-ui: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --accent: #0a84ff;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
+
+  --blur: 28px;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 220ms;
+  --dur-slow: 360ms;
+
+  --menubar-height: 28px;
+  color-scheme: light dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --text: rgba(0, 0, 0, 0.88);
+  --text-2: rgba(0, 0, 0, 0.55);
+  --text-3: rgba(0, 0, 0, 0.32);
+  --glass-bg: rgba(246, 246, 248, 0.62);
+  --glass-bg-strong: rgba(250, 250, 252, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-edge: rgba(0, 0, 0, 0.12);
+  --hover: rgba(0, 0, 0, 0.07);
+  --press: rgba(0, 0, 0, 0.12);
+  --separator: rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.22), 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.32);
+  --menubar-bg: rgba(255, 255, 255, 0.55);
+  --backdrop-dim: rgba(255, 255, 255, 0.18);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: rgba(255, 255, 255, 0.92);
+  --text-2: rgba(255, 255, 255, 0.62);
+  --text-3: rgba(255, 255, 255, 0.36);
+  --glass-bg: rgba(40, 40, 46, 0.58);
+  --glass-bg-strong: rgba(36, 36, 42, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-edge: rgba(0, 0, 0, 0.45);
+  --hover: rgba(255, 255, 255, 0.1);
+  --press: rgba(255, 255, 255, 0.17);
+  --separator: rgba(255, 255, 255, 0.14);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --menubar-bg: rgba(28, 28, 32, 0.55);
+  --backdrop-dim: rgba(0, 0, 0, 0.28);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent; /* the WebView2 control is transparent; panels paint their own glass */
+  color: var(--text);
+  font: 13px/1.35 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+  cursor: default;
+}
+#app { height: 100%; }
+
+/* Glass panel. Real blur of the desktop comes from DWM (see lib/shape.ts); backdrop-filter only blurs web content. */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--shadow-md);
+}
+:root[data-reduce-transparency='true'] .glass { background: var(--glass-bg-strong); backdrop-filter: none; }
+:root[data-reduce-motion='true'] * { transition-duration: 0s !important; animation-duration: 0s !important; }
+
+button { font: inherit; color: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

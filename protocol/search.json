@@ -1,0 +1,36 @@
+{
+  "domain": "search",
+  "enums": {
+    "SearchProviderId": ["apps", "files", "calc", "settings", "commands", "web", "windows"],
+    "SearchPreviewKind": ["none", "text", "image"]
+  },
+  "types": {
+    "SearchAction": { "id": "string", "label": "string", "primary": "bool" },
+    "SearchPreview": { "kind": "SearchPreviewKind", "text": "string?", "imageUrl": "string?" },
+    "SearchResult": {
+      "id": { "type": "string", "doc": "Unique within one request; resolvable by search.perform until the next query." },
+      "provider": "SearchProviderId", "title": "string", "subtitle": "string?", "iconUrl": "string?",
+      "score": { "type": "double", "doc": "0..1, higher is better; the engine already orders the list." },
+      "actions": { "type": "SearchAction[]", "doc": "First action marked primary runs on Enter." },
+      "preview": "SearchPreview?"
+    },
+    "SearchQueryParams": { "requestId": "string", "query": "string" },
+    "SearchCancelParams": { "requestId": "string" },
+    "SearchPerformParams": { "requestId": "string", "resultId": "string", "actionId": "string?" },
+    "SearchResults": {
+      "requestId": "string",
+      "results": { "type": "SearchResult[]", "doc": "The COMPLETE merged, ordered list so far (replace, don't append)." },
+      "complete": { "type": "bool", "doc": "All providers finished." }
+    },
+    "SearchRecent": { "results": "SearchResult[]" }
+  },
+  "events": {
+    "search.results": { "dir": "host", "payload": "SearchResults", "doc": "Streamed: fast providers answer first, files later. Ignore events whose requestId is not the latest." }
+  },
+  "calls": {
+    "search.query": { "params": "SearchQueryParams", "result": null, "doc": "Starts a search; results arrive as search.results. Starting a new query cancels the previous one." },
+    "search.cancel": { "params": "SearchCancelParams", "result": null },
+    "search.perform": { "params": "SearchPerformParams", "result": null },
+    "search.recent": { "params": null, "result": "SearchRecent", "doc": "Shown when the query is empty." }
+  }
+}

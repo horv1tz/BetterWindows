@@ -1,5 +1,12 @@
 # BetterWindows — техническая архитектура
 
+> **Статус реализации.** Этот документ описывает целевой дизайн и перечень Windows API. Фактическая структура кода
+> уточнена: см. [AGENTS.md](../AGENTS.md) (слои, порты, владение файлами) и [IPC.md](IPC.md). Отличия от текста ниже:
+> `BetterWindows.Interop`/`Ipc` слиты в `BetterWindows.Windows` (namespace `BetterWindows.Native`) и `BetterWindows.Core`;
+> вся логика сервисов вынесена в кроссплатформенный Core за интерфейсами‑портами (тестируется на Linux);
+> протокол описан в `protocol/*.json` и генерируется в C# и TypeScript; поверхность WebView всего четыре
+> (dock, menubar, overlay, desktop), все всплывающие меню рисует overlay.
+
 Документ описывает, **как** реализуется каждая часть оболочки: процессы, окна, IPC,
 сервисы и конкретные Windows API. План и порядок работ — в `docs/PLAN.md`.
 

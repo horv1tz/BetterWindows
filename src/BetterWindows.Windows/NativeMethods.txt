@@ -1,0 +1,5 @@
+// CsWin32 generates only what is listed here. Each stream APPENDS its own block below (keep blocks separate to ease merges).
+// ---- windows/appbar/taskbar/input stream ----
+// ---- apps/icons/files stream ----
+// ---- status stream ----
+// ---- desktops/capture/tray stream ----
